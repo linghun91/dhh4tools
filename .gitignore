@@ -1,0 +1,10 @@
+# Whitelist: ignore everything, then allow only source, build
+# inputs, and docs. Build outputs and runtime files stay out.
+*
+!.gitignore
+!README.md
+!build.bat
+!dk4save.c
+!dk4save.rc
+!dk4save.manifest
+!mingw-endfile.specs
