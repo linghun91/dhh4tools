@@ -91,6 +91,7 @@ enum {
     IDC_CAP_STAT,
     IDC_CAP_SKILL,
     IDC_CAP_PORT,
+    IDC_CAP_STACK,
     IDC_CAP_DERIVED,
     IDC_CAP_READ,
     IDC_CAP_WRITE,
@@ -103,7 +104,9 @@ enum {
     IDC_CAP_LBL_BASE,
     IDC_CAP_LBL_STAT,
     IDC_CAP_LBL_SKILL,
-    IDC_CAP_LBL_PORT
+    IDC_CAP_LBL_PORT,
+    IDC_CAP_LBL_STACK,
+    IDC_CAP_STACK10
 };
 
 static const wchar_t *const kStatName[STAT_COUNT] = {
@@ -1104,7 +1107,10 @@ static void startup_load(void) {
  *   skill = (statA + statB) * (min(total level, skill cap) + 100) / 150.
  *   port commerce/military min(value, port cap), stored uint16 at +0x1e,
  *   later loaded with movzx. One site. Sea-power 9999 is a different
- *   immediate (mov r8d, 9999) and is left alone. */
+ *   immediate (mov r8d, 9999) and is left alone.
+ * Buying a good takes a free cargo slot. Stack N lets the same good share
+ * that slot until it holds N pieces; the next piece takes another slot.
+ * Prices are untouched. */
 static const wchar_t *const kGameExe[4] = {
     L"DK4HD_sc.exe", L"DK4HD_tc.exe", L"DK4HD_jp.exe", L"DK4HD_kr.exe"
 };
@@ -1118,6 +1124,8 @@ typedef struct CapValues {
     uint32_t stat;
     uint32_t skill;
     uint32_t port;
+    /* How many goods occupy one point of cargo space. Vanilla is 1. */
+    uint32_t stack;
 } CapValues;
 
 typedef struct CapWin {
@@ -1128,6 +1136,7 @@ typedef struct CapWin {
     HWND stat;
     HWND skill;
     HWND port;
+    HWND stack;
     HWND derived;
     HWND status;
     int ready;
@@ -1263,6 +1272,239 @@ static int same_u32(const uint32_t *v, int n) {
     return 1;
 }
 
+/* Older builds multiplied free-cargo capacity here. That is not the click
+ * that takes a slot, so a write puts the original 33 bytes back. */
+static const uint8_t kCargoVanilla[] = {
+    0x48, 0x89, 0x4C, 0x24, 0x08, 0x57,
+    0x48, 0x8B, 0x44, 0x24, 0x10,
+    0x48, 0x8B, 0x4C, 0x24, 0x10,
+    0x8B, 0x09,
+    0x8B, 0x40, 0x04,
+    0x2B, 0xC1,
+    0x48, 0x8B, 0x4C, 0x24, 0x10,
+    0x2B, 0x41, 0x08,
+    0x5F, 0xC3
+};
+static const uint8_t kCargoHead[] = {
+    0x48, 0x89, 0x4C, 0x24, 0x08, 0x57,
+    0x48, 0x8B, 0x44, 0x24, 0x10,
+    0x8B, 0x40, 0x04,
+    0x6B, 0xC0
+};
+static const uint8_t kCargoTail[] = {
+    0x48, 0x8B, 0x4C, 0x24, 0x10,
+    0x2B, 0x01,
+    0x48, 0x8B, 0x4C, 0x24, 0x10,
+    0x2B, 0x41, 0x08,
+    0x5F, 0xC3
+};
+_Static_assert(sizeof kCargoVanilla == 33, "vanilla cargo free-space size");
+_Static_assert(sizeof kCargoHead + 1 + sizeof kCargoTail == 34, "stacked cargo free-space size");
+
+static int find_cargo_stack(const uint8_t *data, size_t n, int *at, uint32_t *stack) {
+    size_t i;
+    int hits = 0;
+    int found = 0;
+    *at = -1;
+    *stack = 1;
+    if (n < sizeof kCargoVanilla) return 0;
+    for (i = 0; i + sizeof kCargoVanilla <= n; i++) {
+        if (memcmp(data + i, kCargoVanilla, sizeof kCargoVanilla) == 0) {
+            hits++;
+            *at = (int)i;
+            *stack = 1;
+            found = 1;
+        }
+    }
+    if (n >= sizeof kCargoHead + 1 + sizeof kCargoTail) {
+        for (i = 0; i + sizeof kCargoHead + 1 + sizeof kCargoTail <= n; i++) {
+            if (memcmp(data + i, kCargoHead, sizeof kCargoHead) != 0) continue;
+            if (memcmp(data + i + sizeof kCargoHead + 1, kCargoTail, sizeof kCargoTail) != 0)
+                continue;
+            hits++;
+            *at = (int)i;
+            *stack = data[i + sizeof kCargoHead];
+            found = 2;
+        }
+    }
+    if (hits != 1) return 0;
+    return found;
+}
+
+/* Buy loop: occupied slot -> skip. Same good with room in the slot increments
+ * the quantity instead. Distances are from the jne and are the same in all
+ * four language exes. */
+static const uint8_t kSlotSig[] = {
+    0x48, 0x89, 0x44, 0x24, 0x68,
+    0x48, 0x8B, 0x4C, 0x24, 0x68,
+    0xE8
+};
+static const uint8_t kSlotAfter[] = {
+    0x85, 0xC0, 0x0F, 0x85
+};
+static const uint8_t kSlotNext[] = {
+    0x8B, 0x44, 0x24, 0x44, 0x39, 0x44, 0x24, 0x40
+};
+enum {
+    kSlotJne = 17,
+    kSlotCallQtyA = 0x4B,
+    kSlotCallQtyB = 0x61,
+    kSlotCallB032 = 0x30,
+    kSlotCallBe92 = 0xD6,
+    kSlotCallE9c6 = 0x136,
+    kSlotUi = 0x13B,
+    kSlotCallBc6c = 0x1B5,
+    kSlotSkip = 0x239,
+    kSlotCaveLen = 196,
+    /* mov ecx, imm32. The limit dword starts one byte after the opcode. */
+    kSlotImmAt = 107
+};
+
+static int find_slot_pat(const uint8_t *data, size_t n, int *at) {
+    size_t i;
+    int hits = 0;
+    *at = -1;
+    if (n < 32) return 0;
+    for (i = 0; i + 31 < n; i++) {
+        if (memcmp(data + i, kSlotSig, sizeof kSlotSig) != 0) continue;
+        if (memcmp(data + i + 15, kSlotAfter, sizeof kSlotAfter) != 0) continue;
+        if (memcmp(data + i + 23, kSlotNext, sizeof kSlotNext) != 0) continue;
+        hits++;
+        *at = (int)i;
+    }
+    return hits == 1;
+}
+
+static int slot_call_off(const uint8_t *data, size_t n, int at) {
+    int32_t rel;
+    if (at < 0 || (size_t)at + 5 > n || data[at] != 0xE8) return -1;
+    memcpy(&rel, data + at + 1, 4);
+    return at + 5 + rel;
+}
+
+static int slot_cave_off(const uint8_t *data, size_t n, int pat) {
+    size_t i, end;
+    if (pat < 0) return -1;
+    end = (size_t)pat + 0x300;
+    if (end > n) end = n;
+    /* After the patch the byte after pop/ret is the cave, not CC. */
+    for (i = (size_t)pat; i + 8 < end; i++) {
+        if (data[i] != 0x5F || data[i + 1] != 0xC3) continue;
+        if (data[i + 2] == 0xCC) return (int)(i + 2);
+        if (data[i + 2] == 0x48 && data[i + 3] == 0x8B && data[i + 4] == 0x84)
+            return (int)(i + 2);
+    }
+    return -1;
+}
+
+static int slot_rel(uint8_t *code, int at, int insn_off, int target_off) {
+    int32_t rel = (int32_t)(target_off - (insn_off + 5));
+    memcpy(code + at + 1, &rel, 4);
+    return 1;
+}
+
+static void slot_jcc32(uint8_t *code, int at, int target_at) {
+    int32_t rel = (int32_t)(target_at - (at + 6));
+    memcpy(code + at + 2, &rel, 4);
+}
+
+/* Occupied slot of the same good: add the same piece count a new slot would
+ * get, until that slot holds `stack` pieces. The parent's shadow space is
+ * reused, so this does not push or move rsp. Locals at +0x20/+0x24/+0x28 are
+ * unused on this path. A different good, a full slot, or a zero count jumps
+ * to the original "next slot" path. */
+static int build_slot_cave(uint8_t *code, int cave_off, int bc6c, int be92,
+    int qty_a, int qty_b, int b032, int e9c6, int ui_off, int skip_off, uint32_t stack) {
+    int n = 0;
+    int c_bc6c, c_be92, c_qa, c_qb, c_b032, c_e9c6, j_ui, j_skip;
+    int jne_at, jle_at, ja_at, no_at;
+    uint32_t imm;
+#define EB(x) do { code[n++] = (uint8_t)(x); } while (0)
+    EB(0x48); EB(0x8B); EB(0x84); EB(0x24); EB(0xD0); EB(0x00); EB(0x00); EB(0x00);
+    EB(0x48); EB(0x8B); EB(0x80); EB(0x88); EB(0x05); EB(0x00); EB(0x00);
+    EB(0x48); EB(0x89); EB(0x44); EB(0x24); EB(0x28);
+    EB(0x48); EB(0x8B); EB(0x4C); EB(0x24); EB(0x68);
+    c_bc6c = n; EB(0xE8); EB(0); EB(0); EB(0); EB(0);
+    EB(0x89); EB(0x44); EB(0x24); EB(0x20);
+    EB(0x8B); EB(0x94); EB(0x24); EB(0xD8); EB(0x00); EB(0x00); EB(0x00);
+    EB(0x48); EB(0x8B); EB(0x4C); EB(0x24); EB(0x28);
+    c_be92 = n; EB(0xE8); EB(0); EB(0); EB(0); EB(0);
+    EB(0x3B); EB(0x44); EB(0x24); EB(0x20);
+    jne_at = n; EB(0x0F); EB(0x85); EB(0); EB(0); EB(0); EB(0);
+    EB(0x8B); EB(0x94); EB(0x24); EB(0xD8); EB(0x00); EB(0x00); EB(0x00);
+    EB(0x48); EB(0x8B); EB(0x4C); EB(0x24); EB(0x28);
+    c_qa = n; EB(0xE8); EB(0); EB(0); EB(0); EB(0);
+    EB(0x8B); EB(0xD0);
+    EB(0x48); EB(0x8B); EB(0x4C); EB(0x24); EB(0x28);
+    c_qb = n; EB(0xE8); EB(0); EB(0); EB(0); EB(0);
+    EB(0x89); EB(0x44); EB(0x24); EB(0x24);
+    EB(0x85); EB(0xC0);
+    jle_at = n; EB(0x0F); EB(0x8E); EB(0); EB(0); EB(0); EB(0);
+    EB(0x8B); EB(0x44); EB(0x24); EB(0x24);
+    EB(0xB9); EB(stack); EB(0); EB(0); EB(0);
+    EB(0x48); EB(0x0F); EB(0xAF); EB(0xC1);
+    EB(0x48); EB(0x8B); EB(0x54); EB(0x24); EB(0x68);
+    EB(0x8B); EB(0x4A); EB(0x04);
+    EB(0x44); EB(0x8B); EB(0x44); EB(0x24); EB(0x24);
+    EB(0x49); EB(0x03); EB(0xC8);
+    EB(0x48); EB(0x3B); EB(0xC8);
+    ja_at = n; EB(0x0F); EB(0x87); EB(0); EB(0); EB(0); EB(0);
+    EB(0x48); EB(0x8B); EB(0x44); EB(0x24); EB(0x68);
+    EB(0x44); EB(0x01); EB(0x40); EB(0x04);
+    EB(0x41); EB(0xB8); EB(0x01); EB(0x00); EB(0x00); EB(0x00);
+    EB(0x8B); EB(0x94); EB(0x24); EB(0xD8); EB(0x00); EB(0x00); EB(0x00);
+    EB(0x48); EB(0x8B); EB(0x4C); EB(0x24); EB(0x28);
+    c_b032 = n; EB(0xE8); EB(0); EB(0); EB(0); EB(0);
+    EB(0x8B); EB(0x54); EB(0x24); EB(0x24);
+    EB(0x48); EB(0x8B); EB(0x4C); EB(0x24); EB(0x28);
+    c_e9c6 = n; EB(0xE8); EB(0); EB(0); EB(0); EB(0);
+    j_ui = n; EB(0xE9); EB(0); EB(0); EB(0); EB(0);
+    no_at = n;
+    j_skip = n; EB(0xE9); EB(0); EB(0); EB(0); EB(0);
+#undef EB
+    if (n != kSlotCaveLen) return 0;
+    slot_jcc32(code, jne_at, no_at);
+    slot_jcc32(code, jle_at, no_at);
+    slot_jcc32(code, ja_at, no_at);
+    slot_rel(code, c_bc6c, cave_off + c_bc6c, bc6c);
+    slot_rel(code, c_be92, cave_off + c_be92, be92);
+    slot_rel(code, c_qa, cave_off + c_qa, qty_a);
+    slot_rel(code, c_qb, cave_off + c_qb, qty_b);
+    slot_rel(code, c_b032, cave_off + c_b032, b032);
+    slot_rel(code, c_e9c6, cave_off + c_e9c6, e9c6);
+    slot_rel(code, j_ui, cave_off + j_ui, ui_off);
+    slot_rel(code, j_skip, cave_off + j_skip, skip_off);
+    if (kSlotImmAt + 4 > n || code[kSlotImmAt - 1] != 0xB9) return 0;
+    memcpy(&imm, code + kSlotImmAt, 4);
+    if (imm != stack) return 0;
+    return n;
+}
+
+static int read_slot_stack(const uint8_t *data, size_t n, int pat, int cave, uint32_t *stack) {
+    int32_t rel;
+    int jne, target;
+    if (pat < 0 || (size_t)pat + kSlotJne + 6 > n) return 0;
+    jne = pat + kSlotJne;
+    if (data[jne] != 0x0F || data[jne + 1] != 0x85) return 0;
+    memcpy(&rel, data + jne + 2, 4);
+    target = jne + 6 + rel;
+    if (target == pat + kSlotJne + kSlotSkip) {
+        *stack = 1;
+        return 1;
+    }
+    if (cave >= 0 && target == cave && (size_t)cave + kSlotCaveLen <= n &&
+        data[cave] == 0x48 && data[cave + 1] == 0x8B && data[cave + 2] == 0x84 &&
+        data[cave + kSlotImmAt - 1] == 0xB9) {
+        uint32_t s = 0;
+        memcpy(&s, data + cave + kSlotImmAt, 4);
+        if (s >= 1 && s <= 10) {
+            *stack = s;
+            return 2;
+        }
+    }
+    return 0;
+}
+
 static int read_cap_values(const uint8_t *data, size_t n, CapValues *v, int *xp_off, wchar_t *err, int errn) {
     static const uint8_t pre_lv[] = {0x89, 0x44, 0x24, 0x20, 0x41, 0xB8};
     static const uint8_t post_lv[] = {0x8B, 0x54, 0x24, 0x20, 0x33, 0xC9};
@@ -1339,6 +1581,29 @@ static int read_cap_values(const uint8_t *data, size_t n, CapValues *v, int *xp_
         return 0;
     }
     v->port = val[0];
+    {
+        int free_at = 0, slot_at = 0, cave;
+        uint32_t free_stack = 1, slot_stack = 1;
+        int free_kind, slot_kind;
+        free_kind = find_cargo_stack(data, n, &free_at, &free_stack);
+        if (!free_kind || free_stack < 1 || free_stack > 10) {
+            StringCchCopyW(err, (size_t)errn, L"找不到原来的舱位计算。");
+            return 0;
+        }
+        if (!find_slot_pat(data, n, &slot_at)) {
+            StringCchCopyW(err, (size_t)errn, L"找不到购买商品占舱位的位置。");
+            return 0;
+        }
+        cave = slot_cave_off(data, n, slot_at);
+        slot_kind = read_slot_stack(data, n, slot_at, cave, &slot_stack);
+        if (!slot_kind) {
+            StringCchCopyW(err, (size_t)errn, L"购买占舱位的代码认不出来。");
+            return 0;
+        }
+        /* A previous write only multiplied free space. Show that number until
+         * the slot patch is installed. */
+        v->stack = slot_kind == 2 ? slot_stack : free_stack;
+    }
     return 1;
 }
 
@@ -1385,9 +1650,78 @@ static int patch_cap_buffer(uint8_t *data, size_t n, const CapValues *v, wchar_t
     }
     c = collect_fixed(data, n, pre_port, sizeof pre_port, post_port, sizeof post_port, at, val, 8);
     for (i = 0; i < c; i++) wu32(data + at[i], v->port);
+    {
+        int cargo_at = 0, slot_at = 0, cave, kind, slot_kind;
+        uint32_t cargo_now = 1, slot_now = 1;
+        int bc6c, be92, b032, e9c6, qty_a, qty_b;
+        uint8_t cave_buf[220];
+        int cave_n;
+        int32_t rel;
+        kind = find_cargo_stack(data, n, &cargo_at, &cargo_now);
+        if (!kind) {
+            StringCchCopyW(err, (size_t)errn, L"找不到原来的舱位计算。");
+            return 0;
+        }
+        memcpy(data + cargo_at, kCargoVanilla, sizeof kCargoVanilla);
+        if (kind == 2 && (size_t)cargo_at + 34 <= n)
+            data[cargo_at + (int)sizeof kCargoVanilla] = 0xCC;
+        if (!find_slot_pat(data, n, &slot_at)) {
+            StringCchCopyW(err, (size_t)errn, L"找不到购买商品占舱位的位置。");
+            return 0;
+        }
+        cave = slot_cave_off(data, n, slot_at);
+        if (cave < 0 || (size_t)cave + kSlotCaveLen > n) {
+            StringCchCopyW(err, (size_t)errn, L"购买函数后面没有空位，不能改堆叠。");
+            return 0;
+        }
+        slot_kind = read_slot_stack(data, n, slot_at, cave, &slot_now);
+        if (!slot_kind) {
+            StringCchCopyW(err, (size_t)errn, L"购买占舱位的代码认不出来。");
+            return 0;
+        }
+        if (slot_kind == 1) {
+            size_t c;
+            for (c = 0; c < kSlotCaveLen; c++) {
+                if (data[cave + c] != 0xCC) {
+                    StringCchCopyW(err, (size_t)errn, L"购买函数后面的空位被占用，不能改堆叠。");
+                    return 0;
+                }
+            }
+        }
+        bc6c = slot_call_off(data, n, slot_at + kSlotJne + kSlotCallBc6c);
+        be92 = slot_call_off(data, n, slot_at + kSlotJne + kSlotCallBe92);
+        b032 = slot_call_off(data, n, slot_at + kSlotJne + kSlotCallB032);
+        e9c6 = slot_call_off(data, n, slot_at + kSlotJne + kSlotCallE9c6);
+        qty_a = slot_call_off(data, n, slot_at + kSlotJne + kSlotCallQtyA);
+        qty_b = slot_call_off(data, n, slot_at + kSlotJne + kSlotCallQtyB);
+        if (bc6c < 0 || be92 < 0 || b032 < 0 || e9c6 < 0 || qty_a < 0 || qty_b < 0) {
+            StringCchCopyW(err, (size_t)errn, L"购买函数里的调用对不上。");
+            return 0;
+        }
+        if (v->stack <= 1) {
+            rel = (int32_t)(kSlotSkip - 6);
+            data[slot_at + kSlotJne] = 0x0F;
+            data[slot_at + kSlotJne + 1] = 0x85;
+            memcpy(data + slot_at + kSlotJne + 2, &rel, 4);
+            if (slot_kind == 2)
+                memset(data + cave, 0xCC, kSlotCaveLen);
+        } else {
+            cave_n = build_slot_cave(cave_buf, cave, bc6c, be92, qty_a, qty_b, b032, e9c6,
+                slot_at + kSlotJne + kSlotUi, slot_at + kSlotJne + kSlotSkip, v->stack);
+            if (cave_n != kSlotCaveLen) {
+                StringCchCopyW(err, (size_t)errn, L"商品堆叠的补丁拼不出来。");
+                return 0;
+            }
+            memcpy(data + cave, cave_buf, (size_t)cave_n);
+            rel = (int32_t)(cave - (slot_at + kSlotJne + 6));
+            data[slot_at + kSlotJne] = 0x0F;
+            data[slot_at + kSlotJne + 1] = 0x85;
+            memcpy(data + slot_at + kSlotJne + 2, &rel, 4);
+        }
+    }
     if (!read_cap_values(data, n, &cur, NULL, err, errn)) return 0;
     if (cur.track != v->track || cur.base != v->base || cur.stat != v->stat ||
-        cur.skill != v->skill || cur.port != v->port) {
+        cur.skill != v->skill || cur.port != v->port || cur.stack != v->stack) {
         StringCchCopyW(err, (size_t)errn, L"写入后的数值和输入不一致。");
         return 0;
     }
@@ -1494,7 +1828,7 @@ static int read_game_caps(const wchar_t *dir, CapValues *v, wchar_t *status, int
             first_i = i;
         } else if (cur.track != first.track || cur.base != first.base ||
                  cur.stat != first.stat || cur.skill != first.skill ||
-                 cur.port != first.port) {
+                 cur.port != first.port || cur.stack != first.stack) {
             *v = first;
             StringCchPrintfW(status, (size_t)statusn,
                 L"%s和%s的封顶不一致。下面是先读到的数值，写入后四个版本会变成一样。",
@@ -1547,8 +1881,9 @@ static int write_game_caps(const wchar_t *dir, const CapValues *v, wchar_t *stat
         return 0;
     }
     StringCchPrintfW(status, (size_t)statusn,
-        L"已写入%s。单段 %u，合计 %u，经验 %u，基础属性 %u，结算 %u，技能封顶 %u，港口 %u。",
-        names, v->track, v->track * 2u, 30u * v->track * v->track, v->base, v->stat, v->skill, v->port);
+        L"已写入%s。单段 %u，合计 %u，经验 %u，基础属性 %u，结算 %u，技能封顶 %u，港口 %u，商品堆叠 %u。",
+        names, v->track, v->track * 2u, 30u * v->track * v->track,
+        v->base, v->stat, v->skill, v->port, v->stack);
     return 1;
 }
 
@@ -1578,6 +1913,7 @@ static void cap_apply_values(const CapValues *v) {
     set_edit_int(capw.stat, (int)v->stat);
     set_edit_int(capw.skill, (int)v->skill);
     set_edit_int(capw.port, (int)v->port);
+    set_edit_int(capw.stack, (int)v->stack);
     cap_refresh_derived();
 }
 
@@ -1588,6 +1924,7 @@ static int cap_read_form(CapValues *v, int *clamped) {
     v->stat = (uint32_t)edit_int(capw.stat, 1, 65535, clamped);
     v->skill = (uint32_t)edit_int(capw.skill, 0, 65535, clamped);
     v->port = (uint32_t)edit_int(capw.port, 1, 65535, clamped);
+    v->stack = (uint32_t)edit_int(capw.stack, 1, 10, clamped);
     return 1;
 }
 
@@ -1617,8 +1954,9 @@ static void cap_write_clicked(void) {
     cap_read_form(&v, &clamped);
     cap_apply_values(&v);
     StringCchPrintfW(ask, 360,
-        L"写入这个目录里的主程序？\n单段等级 %u（合计 %u，经验 %u）\n基础属性 %u\n属性结算 %u\n技能封顶 %u\n港口商业/军事 %u\n请先完全退出游戏。",
-        v.track, v.track * 2u, 30u * v.track * v.track, v.base, v.stat, v.skill, v.port);
+        L"写入这个目录里的主程序？\n单段等级 %u（合计 %u，经验 %u）\n基础属性 %u\n属性结算 %u\n技能封顶 %u\n港口商业/军事 %u\n同商品堆叠 %u（同一个舱位堆 %u 件，满了才再占一格）\n请先完全退出游戏和启动器。",
+        v.track, v.track * 2u, 30u * v.track * v.track, v.base, v.stat, v.skill, v.port,
+        v.stack, v.stack);
     if (MessageBoxW(capw.hwnd, ask, L"游戏上限", MB_YESNO | MB_ICONQUESTION) != IDYES)
         return;
     if (!write_game_caps(capw.dir, &v, status, 420)) {
@@ -1683,6 +2021,10 @@ static void cap_layout(void) {
     MoveWindow(GetDlgItem(capw.hwnd, IDC_CAP_LBL_PORT), m, y, labW, row, TRUE);
     MoveWindow(capw.port, m + labW, y, editW, row, TRUE);
     MoveWindow(GetDlgItem(capw.hwnd, IDC_CAP_UNLOCK_PORT), m + labW + editW + gap, y, btnW, row, TRUE);
+    y += row + gap;
+    MoveWindow(GetDlgItem(capw.hwnd, IDC_CAP_LBL_STACK), m, y, labW, row, TRUE);
+    MoveWindow(capw.stack, m + labW, y, editW, row, TRUE);
+    MoveWindow(GetDlgItem(capw.hwnd, IDC_CAP_STACK10), m + labW + editW + gap, y, btnW, row, TRUE);
     y += row + S(16);
     MoveWindow(GetDlgItem(capw.hwnd, IDC_CAP_READ), m, y, btnW, row, TRUE);
     MoveWindow(GetDlgItem(capw.hwnd, IDC_CAP_WRITE), m + (btnW + gap), y, btnW, row, TRUE);
@@ -1712,6 +2054,9 @@ static LRESULT CALLBACK cap_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPar
         cap_ctl(0, L"STATIC", L"港口商业/军事", SS_LEFT | SS_NOPREFIX | SS_CENTERIMAGE, IDC_CAP_LBL_PORT);
         capw.port = cap_ctl(WS_EX_CLIENTEDGE, L"EDIT", L"9999", editStyle, IDC_CAP_PORT);
         cap_ctl(0, L"BUTTON", L"解除港口上限", WS_TABSTOP, IDC_CAP_UNLOCK_PORT);
+        cap_ctl(0, L"STATIC", L"同商品堆叠", SS_LEFT | SS_NOPREFIX | SS_CENTERIMAGE, IDC_CAP_LBL_STACK);
+        capw.stack = cap_ctl(WS_EX_CLIENTEDGE, L"EDIT", L"10", editStyle, IDC_CAP_STACK);
+        cap_ctl(0, L"BUTTON", L"堆叠 10", WS_TABSTOP, IDC_CAP_STACK10);
         cap_ctl(0, L"BUTTON", L"读取当前值", WS_TABSTOP, IDC_CAP_READ);
         cap_ctl(0, L"BUTTON", L"写入主程序", WS_TABSTOP | BS_DEFPUSHBUTTON, IDC_CAP_WRITE);
         cap_ctl(0, L"BUTTON", L"填入原版", WS_TABSTOP, IDC_CAP_VANILLA);
@@ -1721,6 +2066,7 @@ static LRESULT CALLBACK cap_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPar
             L"基础属性存在一个字节里，最高 255。属性结算是升级、分配和结算三处共用的上限，原版 500，最高 65535。\r\n"
             L"技能按 (两项属性之和) × (不超过封顶的等级 + 100) ÷ 150 计算。封顶原版是 200。设成两段之和后，剑术、生命、交易会按真实等级上涨。\r\n"
             L"港口商业和军事存在 16 位无符号数里，原版 9999，最高 65535。点“解除港口上限”填入 65535。海力上限保持 9999。商业度会参与商品定价，提到很高以后物价会跟着变。\r\n"
+            L"同商品堆叠原版是 1：每买 1 件就占 1 个舱位。填 10 以后，同一个商品先堆在同一个舱位里，满 10 件才再占下一个舱位。物价不改。\r\n"
             L"写入前请完全退出游戏。主程序旁边已经有的 .bak 不会覆盖。",
             ES_MULTILINE | ES_READONLY | ES_AUTOVSCROLL, IDC_CAP_NOTE);
         capw.status = cap_ctl(0, L"STATIC", L"", SS_LEFT | SS_NOPREFIX | SS_CENTERIMAGE | SS_ENDELLIPSIS, IDC_CAP_STATUS);
@@ -1729,6 +2075,7 @@ static LRESULT CALLBACK cap_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPar
         SendMessageW(capw.stat, EM_SETLIMITTEXT, 5, 0);
         SendMessageW(capw.skill, EM_SETLIMITTEXT, 5, 0);
         SendMessageW(capw.port, EM_SETLIMITTEXT, 5, 0);
+        SendMessageW(capw.stack, EM_SETLIMITTEXT, 2, 0);
         EnumChildWindows(hwnd, set_font_cb, (LPARAM)g.font);
         SetWindowTextW(capw.path, capw.dir[0] ? capw.dir : L"未选择游戏目录");
         cap_refresh_derived();
@@ -1762,8 +2109,9 @@ static LRESULT CALLBACK cap_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPar
             v.stat = 500;
             v.skill = 200;
             v.port = 9999;
+            v.stack = 1;
             cap_apply_values(&v);
-            cap_set_status(L"已填入原版：单段 100，基础属性 100，结算 500，技能封顶 200，港口 9999。还没写入。");
+            cap_set_status(L"已填入原版：单段 100，基础属性 100，结算 500，技能封顶 200，港口 9999，堆叠 1。还没写入。");
             break;
         }
         case IDC_CAP_UNLOCK: {
@@ -1774,13 +2122,18 @@ static LRESULT CALLBACK cap_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPar
             v.stat = 65535;
             v.skill = 510;
             v.port = (uint32_t)port;
+            v.stack = (uint32_t)edit_int(capw.stack, 1, 10, NULL);
             cap_apply_values(&v);
-            cap_set_status(L"已填入解除值：单段 255，基础属性 255，结算 65535，技能封顶 510。还没写入。");
+            cap_set_status(L"已填入解除值：单段 255，基础属性 255，结算 65535，技能封顶 510。堆叠保持当前输入。还没写入。");
             break;
         }
         case IDC_CAP_UNLOCK_PORT:
             set_edit_int(capw.port, 65535);
             cap_set_status(L"已填入港口上限 65535。点“写入主程序”后才会改主程序。");
+            break;
+        case IDC_CAP_STACK10:
+            set_edit_int(capw.stack, 10);
+            cap_set_status(L"已填入同商品堆叠 10。同一个舱位堆 10 件，第 11 件才再占一格。点“写入主程序”后才会改主程序。");
             break;
         default:
             break;
@@ -1791,7 +2144,7 @@ static LRESULT CALLBACK cap_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPar
     case WM_GETMINMAXINFO: {
         MINMAXINFO *mm = (MINMAXINFO *)lParam;
         mm->ptMinTrackSize.x = S(720);
-        mm->ptMinTrackSize.y = S(500);
+        mm->ptMinTrackSize.y = S(540);
         return 0;
     }
     case WM_CLOSE:
