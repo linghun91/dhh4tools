@@ -106,7 +106,7 @@ enum {
     IDC_CAP_LBL_SKILL,
     IDC_CAP_LBL_PORT,
     IDC_CAP_LBL_STACK,
-    IDC_CAP_STACK10
+    IDC_CAP_STACK9
 };
 
 static const wchar_t *const kStatName[STAT_COUNT] = {
@@ -1877,6 +1877,9 @@ static int patch_stack_extras(uint8_t *data, size_t n, int cave, uint32_t stack,
  * cave starts with a header and ends with a table of the original bytes of
  * every site, so writing stack 1 restores the vanilla bytes exactly. */
 #define V4_MAGIC "DK4STK2"
+/* The price column fits 6 characters: "9x9999" does, "10x1000" does not.
+ * Counts up to 10 written by older versions are still read correctly. */
+enum { kStackMax = 9 };
 enum { kV4Head = 16, kV4Max = 1200 };
 
 typedef struct V4Asm {
@@ -2024,8 +2027,8 @@ static int v4_apply(uint8_t *data, size_t n, uint32_t stack, wchar_t *err, int e
     int L_cnt, L_fmt, L_fmtstr, j1, j2, j3, j4, imm_at, loop;
     int32_t rel;
 
-    if (stack < 2 || stack > 10) return 0;
 #define V4ERR(msg) do { StringCchCopyW(err, (size_t)errn, msg); return 0; } while (0)
+    if (stack < 2 || stack > kStackMax) V4ERR(L"商品堆叠只能填 1 到 9。");
     if (!find_slot_pat(data, n, &slot)) V4ERR(L"找不到购买商品占舱位的位置。");
     jne = slot + kSlotJne;
     if (!v4_is(data, n, jne, "0F 85")) V4ERR(L"购买占舱位的代码不是原版。");
@@ -2745,7 +2748,7 @@ static int cap_read_form(CapValues *v, int *clamped) {
     v->stat = (uint32_t)edit_int(capw.stat, 1, 65535, clamped);
     v->skill = (uint32_t)edit_int(capw.skill, 0, 65535, clamped);
     v->port = (uint32_t)edit_int(capw.port, 1, 65535, clamped);
-    v->stack = (uint32_t)edit_int(capw.stack, 1, 10, clamped);
+    v->stack = (uint32_t)edit_int(capw.stack, 1, kStackMax, clamped);
     return 1;
 }
 
@@ -2845,7 +2848,7 @@ static void cap_layout(void) {
     y += row + gap;
     MoveWindow(GetDlgItem(capw.hwnd, IDC_CAP_LBL_STACK), m, y, labW, row, TRUE);
     MoveWindow(capw.stack, m + labW, y, editW, row, TRUE);
-    MoveWindow(GetDlgItem(capw.hwnd, IDC_CAP_STACK10), m + labW + editW + gap, y, btnW, row, TRUE);
+    MoveWindow(GetDlgItem(capw.hwnd, IDC_CAP_STACK9), m + labW + editW + gap, y, btnW, row, TRUE);
     y += row + S(16);
     MoveWindow(GetDlgItem(capw.hwnd, IDC_CAP_READ), m, y, btnW, row, TRUE);
     MoveWindow(GetDlgItem(capw.hwnd, IDC_CAP_WRITE), m + (btnW + gap), y, btnW, row, TRUE);
@@ -2876,8 +2879,8 @@ static LRESULT CALLBACK cap_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPar
         capw.port = cap_ctl(WS_EX_CLIENTEDGE, L"EDIT", L"9999", editStyle, IDC_CAP_PORT);
         cap_ctl(0, L"BUTTON", L"解除港口上限", WS_TABSTOP, IDC_CAP_UNLOCK_PORT);
         cap_ctl(0, L"STATIC", L"同商品堆叠", SS_LEFT | SS_NOPREFIX | SS_CENTERIMAGE, IDC_CAP_LBL_STACK);
-        capw.stack = cap_ctl(WS_EX_CLIENTEDGE, L"EDIT", L"10", editStyle, IDC_CAP_STACK);
-        cap_ctl(0, L"BUTTON", L"堆叠 10", WS_TABSTOP, IDC_CAP_STACK10);
+        capw.stack = cap_ctl(WS_EX_CLIENTEDGE, L"EDIT", L"9", editStyle, IDC_CAP_STACK);
+        cap_ctl(0, L"BUTTON", L"堆叠 9", WS_TABSTOP, IDC_CAP_STACK9);
         cap_ctl(0, L"BUTTON", L"读取当前值", WS_TABSTOP, IDC_CAP_READ);
         cap_ctl(0, L"BUTTON", L"写入主程序", WS_TABSTOP | BS_DEFPUSHBUTTON, IDC_CAP_WRITE);
         cap_ctl(0, L"BUTTON", L"填入原版", WS_TABSTOP, IDC_CAP_VANILLA);
@@ -2887,7 +2890,7 @@ static LRESULT CALLBACK cap_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPar
             L"基础属性存在一个字节里，最高 255。属性结算是升级、分配和结算三处共用的上限，原版 500，最高 65535。\r\n"
             L"技能按 (两项属性之和) × (不超过封顶的等级 + 100) ÷ 150 计算。封顶原版是 200。设成两段之和后，剑术、生命、交易会按真实等级上涨。\r\n"
             L"港口商业和军事存在 16 位无符号数里，原版 9999，最高 65535。点“解除港口上限”填入 65535。海力上限保持 9999。商业度会参与商品定价，提到很高以后物价会跟着变。\r\n"
-            L"同商品堆叠原版是 1：每买 1 件就占 1 个舱位。填 10 以后，这次交易里买的同一个商品先堆在同一个舱位里，满 10 件才再占下一个舱位；船上原有的货不会并进来。舱位价格显示成“件数x单价”，卖出、退货按件数算钱。物价不改。\r\n"
+            L"同商品堆叠原版是 1：每买 1 件就占 1 个舱位，最高填 9。填 9 以后，这次交易里买的同一个商品先堆在同一个舱位里，满 9 件才再占下一个舱位；船上原有的货不会并进来。舱位价格显示成“件数x单价”，卖出、退货按件数算钱。价格栏只放得下 6 个字符，所以最多 9 件。物价不改。\r\n"
             L"写入前请完全退出游戏。主程序旁边已经有的 .bak 不会覆盖。",
             ES_MULTILINE | ES_READONLY | ES_AUTOVSCROLL, IDC_CAP_NOTE);
         capw.status = cap_ctl(0, L"STATIC", L"", SS_LEFT | SS_NOPREFIX | SS_CENTERIMAGE | SS_ENDELLIPSIS, IDC_CAP_STATUS);
@@ -2943,7 +2946,7 @@ static LRESULT CALLBACK cap_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPar
             v.stat = 65535;
             v.skill = 510;
             v.port = (uint32_t)port;
-            v.stack = (uint32_t)edit_int(capw.stack, 1, 10, NULL);
+            v.stack = (uint32_t)edit_int(capw.stack, 1, kStackMax, NULL);
             cap_apply_values(&v);
             cap_set_status(L"已填入解除值：单段 255，基础属性 255，结算 65535，技能封顶 510。堆叠保持当前输入。还没写入。");
             break;
@@ -2952,9 +2955,9 @@ static LRESULT CALLBACK cap_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPar
             set_edit_int(capw.port, 65535);
             cap_set_status(L"已填入港口上限 65535。点“写入主程序”后才会改主程序。");
             break;
-        case IDC_CAP_STACK10:
-            set_edit_int(capw.stack, 10);
-            cap_set_status(L"已填入同商品堆叠 10。同一个舱位堆 10 件，第 11 件才再占一格。点“写入主程序”后才会改主程序。");
+        case IDC_CAP_STACK9:
+            set_edit_int(capw.stack, kStackMax);
+            cap_set_status(L"已填入同商品堆叠 9。同一个舱位堆 9 件，第 10 件才再占一格。点“写入主程序”后才会改主程序。");
             break;
         default:
             break;
