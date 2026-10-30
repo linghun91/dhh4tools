@@ -1347,17 +1347,26 @@ static const uint8_t kSlotNext[] = {
 };
 enum {
     kSlotJne = 17,
-    kSlotCallQtyA = 0x4B,
-    kSlotCallQtyB = 0x61,
     kSlotCallB032 = 0x30,
     kSlotCallBe92 = 0xD6,
     kSlotCallE9c6 = 0x136,
     kSlotUi = 0x13B,
     kSlotCallBc6c = 0x1B5,
     kSlotSkip = 0x239,
-    kSlotCaveLen = 196,
-    /* mov ecx, imm32. The limit dword starts one byte after the opcode. */
-    kSlotImmAt = 107
+    kSlotBuyLen = 130,
+    kSlotFmtAt = 130,
+    kSlotDispAt = 140,
+    kSlotPadLen = 218,
+    /* cmp dword [rax+8], imm8. The limit byte is 3 after the opcode. */
+    kSlotImmAt = 69,
+    kSlotOldImmAt = 107,
+    kSellPadLen = 147,
+    kSellHookAt = 16,
+    kSellImulAt = 64,
+    kListA0At = 88,
+    kList110At = 116,
+    kPackHookAt = 5,
+    kUnpackHookAt = 16
 };
 
 static int find_slot_pat(const uint8_t *data, size_t n, int *at) {
@@ -1408,17 +1417,24 @@ static void slot_jcc32(uint8_t *code, int at, int target_at) {
     memcpy(code + at + 2, &rel, 4);
 }
 
-/* Occupied slot of the same good: add the same piece count a new slot would
- * get, until that slot holds `stack` pieces. The parent's shadow space is
- * reused, so this does not push or move rsp. Locals at +0x20/+0x24/+0x28 are
- * unused on this path. A different good, a full slot, or a zero count jumps
- * to the original "next slot" path. */
+static void slot_jmp(uint8_t *data, int from, int to) {
+    int32_t rel = (int32_t)(to - (from + 5));
+    data[from] = 0xE9;
+    memcpy(data + from + 1, &rel, 4);
+}
+
+static void slot_lea32(uint8_t *code, int at, int insn_off, int target_off) {
+    int32_t rel = (int32_t)(target_off - (insn_off + 7));
+    memcpy(code + at + 3, &rel, 4);
+}
+
+/* Occupied slot of the same good: [slot+8] is the piece count shown as Nx
+ * and used when selling. [slot+4] stays the unit price. */
 static int build_slot_cave(uint8_t *code, int cave_off, int bc6c, int be92,
-    int qty_a, int qty_b, int b032, int e9c6, int ui_off, int skip_off, uint32_t stack) {
+    int b032, int e9c6, int ui_off, int skip_off, uint32_t stack) {
     int n = 0;
-    int c_bc6c, c_be92, c_qa, c_qb, c_b032, c_e9c6, j_ui, j_skip;
-    int jne_at, jle_at, ja_at, no_at;
-    uint32_t imm;
+    int c_bc6c, c_be92, c_b032, c_e9c6, j_ui, j_skip;
+    int jne_at, jae_at, no_at;
 #define EB(x) do { code[n++] = (uint8_t)(x); } while (0)
     EB(0x48); EB(0x8B); EB(0x84); EB(0x24); EB(0xD0); EB(0x00); EB(0x00); EB(0x00);
     EB(0x48); EB(0x8B); EB(0x80); EB(0x88); EB(0x05); EB(0x00); EB(0x00);
@@ -1431,52 +1447,34 @@ static int build_slot_cave(uint8_t *code, int cave_off, int bc6c, int be92,
     c_be92 = n; EB(0xE8); EB(0); EB(0); EB(0); EB(0);
     EB(0x3B); EB(0x44); EB(0x24); EB(0x20);
     jne_at = n; EB(0x0F); EB(0x85); EB(0); EB(0); EB(0); EB(0);
-    EB(0x8B); EB(0x94); EB(0x24); EB(0xD8); EB(0x00); EB(0x00); EB(0x00);
-    EB(0x48); EB(0x8B); EB(0x4C); EB(0x24); EB(0x28);
-    c_qa = n; EB(0xE8); EB(0); EB(0); EB(0); EB(0);
-    EB(0x8B); EB(0xD0);
-    EB(0x48); EB(0x8B); EB(0x4C); EB(0x24); EB(0x28);
-    c_qb = n; EB(0xE8); EB(0); EB(0); EB(0); EB(0);
-    EB(0x89); EB(0x44); EB(0x24); EB(0x24);
-    EB(0x85); EB(0xC0);
-    jle_at = n; EB(0x0F); EB(0x8E); EB(0); EB(0); EB(0); EB(0);
-    EB(0x8B); EB(0x44); EB(0x24); EB(0x24);
-    EB(0xB9); EB(stack); EB(0); EB(0); EB(0);
-    EB(0x48); EB(0x0F); EB(0xAF); EB(0xC1);
-    EB(0x48); EB(0x8B); EB(0x54); EB(0x24); EB(0x68);
-    EB(0x8B); EB(0x4A); EB(0x04);
-    EB(0x44); EB(0x8B); EB(0x44); EB(0x24); EB(0x24);
-    EB(0x49); EB(0x03); EB(0xC8);
-    EB(0x48); EB(0x3B); EB(0xC8);
-    ja_at = n; EB(0x0F); EB(0x87); EB(0); EB(0); EB(0); EB(0);
     EB(0x48); EB(0x8B); EB(0x44); EB(0x24); EB(0x68);
-    EB(0x44); EB(0x01); EB(0x40); EB(0x04);
+    EB(0x83); EB(0x78); EB(0x08); EB(stack);
+    jae_at = n; EB(0x0F); EB(0x83); EB(0); EB(0); EB(0); EB(0);
+    EB(0xFF); EB(0x40); EB(0x08);
     EB(0x41); EB(0xB8); EB(0x01); EB(0x00); EB(0x00); EB(0x00);
     EB(0x8B); EB(0x94); EB(0x24); EB(0xD8); EB(0x00); EB(0x00); EB(0x00);
     EB(0x48); EB(0x8B); EB(0x4C); EB(0x24); EB(0x28);
     c_b032 = n; EB(0xE8); EB(0); EB(0); EB(0); EB(0);
-    EB(0x8B); EB(0x54); EB(0x24); EB(0x24);
+    EB(0x48); EB(0x8B); EB(0x44); EB(0x24); EB(0x68);
+    EB(0x8B); EB(0x50); EB(0x04);
     EB(0x48); EB(0x8B); EB(0x4C); EB(0x24); EB(0x28);
     c_e9c6 = n; EB(0xE8); EB(0); EB(0); EB(0); EB(0);
     j_ui = n; EB(0xE9); EB(0); EB(0); EB(0); EB(0);
     no_at = n;
     j_skip = n; EB(0xE9); EB(0); EB(0); EB(0); EB(0);
 #undef EB
-    if (n != kSlotCaveLen) return 0;
+    if (n != kSlotBuyLen) return 0;
+    if (kSlotImmAt >= n || code[kSlotImmAt - 3] != 0x83 ||
+        code[kSlotImmAt - 2] != 0x78 || code[kSlotImmAt - 1] != 0x08) return 0;
+    if (code[kSlotImmAt] != (uint8_t)stack) return 0;
     slot_jcc32(code, jne_at, no_at);
-    slot_jcc32(code, jle_at, no_at);
-    slot_jcc32(code, ja_at, no_at);
+    slot_jcc32(code, jae_at, no_at);
     slot_rel(code, c_bc6c, cave_off + c_bc6c, bc6c);
     slot_rel(code, c_be92, cave_off + c_be92, be92);
-    slot_rel(code, c_qa, cave_off + c_qa, qty_a);
-    slot_rel(code, c_qb, cave_off + c_qb, qty_b);
     slot_rel(code, c_b032, cave_off + c_b032, b032);
     slot_rel(code, c_e9c6, cave_off + c_e9c6, e9c6);
     slot_rel(code, j_ui, cave_off + j_ui, ui_off);
     slot_rel(code, j_skip, cave_off + j_skip, skip_off);
-    if (kSlotImmAt + 4 > n || code[kSlotImmAt - 1] != 0xB9) return 0;
-    memcpy(&imm, code + kSlotImmAt, 4);
-    if (imm != stack) return 0;
     return n;
 }
 
@@ -1492,17 +1490,429 @@ static int read_slot_stack(const uint8_t *data, size_t n, int pat, int cave, uin
         *stack = 1;
         return 1;
     }
-    if (cave >= 0 && target == cave && (size_t)cave + kSlotCaveLen <= n &&
-        data[cave] == 0x48 && data[cave + 1] == 0x8B && data[cave + 2] == 0x84 &&
-        data[cave + kSlotImmAt - 1] == 0xB9) {
+    if (cave >= 0 && target == cave && data[cave] == 0x48 &&
+        data[cave + 1] == 0x8B && data[cave + 2] == 0x84) {
         uint32_t s = 0;
-        memcpy(&s, data + cave + kSlotImmAt, 4);
-        if (s >= 1 && s <= 10) {
-            *stack = s;
-            return 2;
+        if ((size_t)cave + kSlotImmAt < n &&
+            data[cave + kSlotImmAt - 3] == 0x83 &&
+            data[cave + kSlotImmAt - 2] == 0x78 &&
+            data[cave + kSlotImmAt - 1] == 0x08) {
+            s = data[cave + kSlotImmAt];
+            if (s >= 1 && s <= 10) {
+                *stack = s;
+                return 2;
+            }
+        }
+        if ((size_t)cave + kSlotOldImmAt + 4 <= n &&
+            data[cave + kSlotOldImmAt - 1] == 0xB9) {
+            memcpy(&s, data + cave + kSlotOldImmAt, 4);
+            if (s >= 1 && s <= 10) {
+                *stack = s;
+                return 2;
+            }
         }
     }
     return 0;
+}
+
+static int find_jmp_to(const uint8_t *data, int lo, int hi, int target) {
+    int i;
+    int32_t rel;
+    if (lo < 0) lo = 0;
+    for (i = lo; i + 5 <= hi; i++) {
+        if (data[i] != 0xE9) continue;
+        memcpy(&rel, data + i + 1, 4);
+        if (i + 5 + rel == target) return i;
+    }
+    return -1;
+}
+
+static int find_sell_site(const uint8_t *data, size_t n, int *at) {
+    static const uint8_t head[] = {0x48, 0x8B, 0x4C, 0x24, 0x28, 0xE8};
+    static const uint8_t tail[] = {0x41, 0xB8, 0x01, 0x00, 0x00, 0x00, 0x8B, 0x54, 0x24, 0x64};
+    static const uint8_t epi[] = {0x48, 0x81, 0xC4, 0x80, 0x00, 0x00, 0x00, 0x5F, 0xC3};
+    size_t i;
+    int hits = 0;
+    *at = -1;
+    for (i = 0; i + 20 <= n; i++) {
+        if (memcmp(data + i, head, 6) != 0) continue;
+        if (memcmp(data + i + 10, tail, 10) != 0) continue;
+        hits++;
+        *at = (int)i;
+    }
+    if (hits == 1) return 1;
+    for (i = 0; i + 9 + kSellPadLen <= n; i++) {
+        int spad, site;
+        if (memcmp(data + i, epi, 9) != 0) continue;
+        spad = (int)(i + 9);
+        if (memcmp(data + spad, head, 6) != 0) continue;
+        site = find_jmp_to(data, spad - 0x200, spad, spad + kSellHookAt);
+        if (site >= 0) {
+            *at = site;
+            return 1;
+        }
+    }
+    return 0;
+}
+
+static int find_sell_pad(const uint8_t *data, size_t n, int sell_at) {
+    static const uint8_t epi[] = {0x48, 0x81, 0xC4, 0x80, 0x00, 0x00, 0x00, 0x5F, 0xC3};
+    size_t i, end;
+    if (sell_at < 0) return -1;
+    end = (size_t)sell_at + 0xC0;
+    if (end > n) end = n;
+    for (i = (size_t)sell_at; i + 9 <= end; i++) {
+        if (memcmp(data + i, epi, 9) != 0) continue;
+        if (i + 9 + kSellPadLen > n) return -1;
+        return (int)(i + 9);
+    }
+    return -1;
+}
+
+static int find_sell_imul(const uint8_t *data, size_t n, int sell_at, int spad) {
+    static const uint8_t pat[] = {
+        0x8B, 0xD0, 0x48, 0x8B, 0x84, 0x24, 0x90, 0x00, 0x00, 0x00
+    };
+    int last = -1, site;
+    size_t i, end;
+    if (sell_at < 0) return -1;
+    if (spad >= 0) {
+        site = find_jmp_to(data, sell_at, sell_at + 0x80, spad + kSellImulAt);
+        if (site >= 0) return site;
+    }
+    end = (size_t)sell_at + 0x80;
+    if (end > n) end = n;
+    for (i = (size_t)sell_at; i + sizeof pat <= end; i++) {
+        if (memcmp(data + i, pat, sizeof pat) == 0) last = (int)i;
+    }
+    return last;
+}
+
+static int find_disp_site(const uint8_t *data, size_t n, int cave, int *at) {
+    static const uint8_t pat[] = {
+        0xEB, 0x34, 0x48, 0x8B, 0x8C, 0x24, 0x68, 0x03, 0x00, 0x00, 0xE8
+    };
+    size_t i;
+    int hits = 0, last = -1, site;
+    *at = -1;
+    for (i = 0; i + sizeof pat <= n; i++) {
+        if (memcmp(data + i, pat, sizeof pat) != 0) continue;
+        hits++;
+        last = (int)i;
+    }
+    if (hits == 2) {
+        *at = last + 2;
+        return 1;
+    }
+    if (cave < 0) return 0;
+    site = find_jmp_to(data, 0, (int)n - 5, cave + kSlotDispAt + 28);
+    if (site < 0) return 0;
+    *at = site;
+    return 1;
+}
+
+static int find_pack_site(const uint8_t *data, size_t n, int *at) {
+    static const uint8_t pat[] = {
+        0x4C, 0x8B, 0x44, 0x24, 0x68, 0x8B, 0x54, 0x24, 0x54,
+        0x48, 0x8B, 0x4C, 0x24, 0x38, 0xE8
+    };
+    size_t i;
+    int hits = 0, pad, site;
+    *at = -1;
+    for (i = 0; i + sizeof pat <= n; i++) {
+        if (memcmp(data + i, pat, sizeof pat) != 0) continue;
+        hits++;
+        *at = (int)i + 14;
+    }
+    if (hits == 1) return 1;
+    for (i = 0; i + 16 <= n; i++) {
+        if (data[i] != 0x5F || data[i + 1] != 0xC3 || data[i + 2] != 0xE8) continue;
+        pad = (int)(i + 2);
+        site = find_jmp_to(data, pad - 0x80, pad, pad + kPackHookAt);
+        if (site >= 0) {
+            *at = site;
+            return 1;
+        }
+    }
+    return 0;
+}
+
+static int find_pack_pad(const uint8_t *data, size_t n, int pack_at) {
+    size_t i, end;
+    if (pack_at < 0) return -1;
+    end = (size_t)pack_at + 0x50;
+    if (end > n) end = n;
+    for (i = (size_t)pack_at; i + 3 < end; i++) {
+        if (data[i] == 0x5F && data[i + 1] == 0xC3 &&
+            (data[i + 2] == 0xCC || data[i + 2] == 0xE8))
+            return (int)(i + 2);
+    }
+    return -1;
+}
+
+static int find_unpack_site(const uint8_t *data, size_t n, int *at) {
+    static const uint8_t pat[] = {
+        0x45, 0x33, 0xC0, 0x48, 0x8B, 0x8C, 0x24, 0xA8, 0x00, 0x00, 0x00,
+        0x48, 0x8B, 0x11, 0x48, 0x8B, 0xC8, 0xE8
+    };
+    static const uint8_t epi[] = {0x48, 0x81, 0xC4, 0xD0, 0x00, 0x00, 0x00, 0x5F, 0xC3};
+    size_t i;
+    int hits = 0, pad, site;
+    *at = -1;
+    for (i = 0; i + sizeof pat <= n; i++) {
+        if (memcmp(data + i, pat, sizeof pat) != 0) continue;
+        hits++;
+        *at = (int)i;
+    }
+    if (hits == 1) return 1;
+    for (i = 0; i + 9 + 16 <= n; i++) {
+        if (memcmp(data + i, epi, 9) != 0) continue;
+        pad = (int)(i + 9);
+        if (memcmp(data + pad, "\x45\x33\xC0", 3) != 0) continue;
+        site = find_jmp_to(data, pad - 0x180, pad, pad + kUnpackHookAt);
+        if (site >= 0) {
+            *at = site;
+            return 1;
+        }
+    }
+    return 0;
+}
+
+static int find_unpack_pad(const uint8_t *data, size_t n, int unpack_at) {
+    static const uint8_t epi[] = {0x48, 0x81, 0xC4, 0xD0, 0x00, 0x00, 0x00, 0x5F, 0xC3};
+    size_t i, end;
+    if (unpack_at < 0) return -1;
+    end = (size_t)unpack_at + 0x180;
+    if (end > n) end = n;
+    for (i = (size_t)unpack_at; i + 9 <= end; i++) {
+        if (memcmp(data + i, epi, 9) != 0) continue;
+        return (int)(i + 9);
+    }
+    return -1;
+}
+
+static int find_list_inc(const uint8_t *data, size_t n, const uint8_t *pat, size_t pn, int hook, int spad, int *at) {
+    size_t i;
+    int hits = 0, site;
+    *at = -1;
+    for (i = 0; i + pn <= n; i++) {
+        if (memcmp(data + i, pat, pn) != 0) continue;
+        hits++;
+        *at = (int)i;
+    }
+    if (hits == 1) return 1;
+    if (spad < 0) return 0;
+    site = find_jmp_to(data, 0, (int)n - 5, spad + hook);
+    if (site < 0) return 0;
+    *at = site;
+    return 1;
+}
+
+static int patch_stack_extras(uint8_t *data, size_t n, int cave, uint32_t stack, wchar_t *err, int errn) {
+    static const uint8_t list_a0[] = {0x8B, 0x84, 0x84, 0xA0, 0x00, 0x00, 0x00, 0xFF, 0xC0};
+    static const uint8_t list_110[] = {0x8B, 0x84, 0x84, 0x10, 0x01, 0x00, 0x00, 0xFF, 0xC0};
+    static const uint8_t fmt[] = {'%', 'd', 'x', ' ', '%', '6', 'd', 0};
+    int sell, spad, imul, disp, la0, l110, npos, i;
+    int pack, ppad, unpack, upad, c151;
+    int c14, c110, cf3;
+    int32_t rel;
+    uint8_t sell_save[16], disp_save[28];
+    uint8_t *p;
+
+    if (!find_sell_site(data, n, &sell)) {
+        StringCchCopyW(err, (size_t)errn, L"找不到卖出商品的位置。");
+        return 0;
+    }
+    spad = find_sell_pad(data, n, sell);
+    if (spad < 0) {
+        StringCchCopyW(err, (size_t)errn, L"卖出函数后面没有空位，不能改堆叠。");
+        return 0;
+    }
+    imul = find_sell_imul(data, n, sell, spad);
+    if (imul < 0) {
+        StringCchCopyW(err, (size_t)errn, L"找不到卖出时的数量计算。");
+        return 0;
+    }
+    if (!find_disp_site(data, n, cave, &disp)) {
+        StringCchCopyW(err, (size_t)errn, L"找不到舱位价格显示的位置。");
+        return 0;
+    }
+    if (!find_list_inc(data, n, list_a0, sizeof list_a0, kListA0At, spad, &la0) ||
+        !find_list_inc(data, n, list_110, sizeof list_110, kList110At, spad, &l110)) {
+        StringCchCopyW(err, (size_t)errn, L"找不到交易所货物计数的位置。");
+        return 0;
+    }
+    if (!find_pack_site(data, n, &pack) || (ppad = find_pack_pad(data, n, pack)) < 0) {
+        StringCchCopyW(err, (size_t)errn, L"找不到关上交易行时写回船上货物的位置。");
+        return 0;
+    }
+    if (!find_unpack_site(data, n, &unpack) || (upad = find_unpack_pad(data, n, unpack)) < 0) {
+        StringCchCopyW(err, (size_t)errn, L"找不到打开交易行时读出船上货物的位置。");
+        return 0;
+    }
+    if (data[pack] == 0xE8) c151 = slot_call_off(data, n, pack);
+    else {
+        memcpy(&rel, data + ppad + 1, 4);
+        c151 = pack + 5 + rel;
+    }
+    if (c151 < 0) {
+        StringCchCopyW(err, (size_t)errn, L"写回船上货物的调用对不上。");
+        return 0;
+    }
+
+    if (data[sell] == 0x48 && data[sell + 5] == 0xE8)
+        c14 = slot_call_off(data, n, sell + 5);
+    else {
+        memcpy(&rel, data + spad + 6, 4);
+        c14 = sell + 10 + rel;
+    }
+    if (data[disp] == 0x48 && data[disp + 8] == 0xE8)
+        cf3 = slot_call_off(data, n, disp + 8);
+    else if ((size_t)cave + kSlotDispAt + 13 <= n && data[cave + kSlotDispAt + 8] == 0xE8) {
+        memcpy(&rel, data + cave + kSlotDispAt + 9, 4);
+        cf3 = disp + 13 + rel;
+    } else cf3 = -1;
+    if (disp >= 0x72 && data[disp - 0x72] == 0xE8)
+        c110 = slot_call_off(data, n, disp - 0x72);
+    else c110 = -1;
+    if (c14 < 0 || cf3 < 0 || c110 < 0) {
+        StringCchCopyW(err, (size_t)errn, L"卖出或显示里的调用对不上。");
+        return 0;
+    }
+
+    if (data[sell] != 0xE9) memcpy(sell_save, data + sell, 16);
+    else memcpy(sell_save, data + spad, 16);
+    if (data[disp] != 0xE9) memcpy(disp_save, data + disp, 28);
+    else memcpy(disp_save, data + cave + kSlotDispAt, 28);
+
+    if (stack <= 1) {
+        if (data[sell] == 0xE9) memcpy(data + sell, sell_save, 16);
+        if (data[imul] == 0xE9)
+            memcpy(data + imul, "\x8B\xD0\x48\x8B\x84\x24\x90\x00\x00\x00", 10);
+        if (data[disp] == 0xE9) memcpy(data + disp, disp_save, 28);
+        if (data[la0] == 0xE9) memcpy(data + la0, list_a0, sizeof list_a0);
+        if (data[l110] == 0xE9) memcpy(data + l110, list_110, sizeof list_110);
+        if (data[pack] == 0xE9) {
+            data[pack] = 0xE8;
+            slot_rel(data, pack, pack, c151);
+        }
+        if (data[unpack] == 0xE9) {
+            memcpy(data + unpack, "\x45\x33\xC0\x48\x8B\x8C\x24\xA8\x00\x00\x00", 11);
+        }
+        memset(data + spad, 0xCC, kSellPadLen);
+        memset(data + ppad, 0xCC, 84);
+        memset(data + upad, 0xCC, 80);
+        return 1;
+    }
+
+    memcpy(data + cave + kSlotFmtAt, fmt, sizeof fmt);
+    memcpy(data + cave + kSlotDispAt, disp_save, 28);
+    memset(data + spad, 0xCC, kSellPadLen);
+    memcpy(data + spad, sell_save, 16);
+
+    p = data + spad;
+    npos = kSellHookAt;
+    p[npos++] = 0x48; p[npos++] = 0x8B; p[npos++] = 0x44; p[npos++] = 0x24; p[npos++] = 0x28;
+    p[npos++] = 0x44; p[npos++] = 0x8B; p[npos++] = 0x40; p[npos++] = 0x08;
+    p[npos++] = 0x45; p[npos++] = 0x85; p[npos++] = 0xC0;
+    p[npos++] = 0x75; p[npos++] = 0x06;
+    p[npos++] = 0x41; p[npos++] = 0xB8; p[npos++] = 0x01; p[npos++] = 0x00; p[npos++] = 0x00; p[npos++] = 0x00;
+    p[npos++] = 0x44; p[npos++] = 0x89; p[npos++] = 0x44; p[npos++] = 0x24; p[npos++] = 0x4C;
+    p[npos++] = 0x48; p[npos++] = 0x8B; p[npos++] = 0xC8;
+    p[npos++] = 0xE8; p[npos++] = 0; p[npos++] = 0; p[npos++] = 0; p[npos++] = 0;
+    slot_rel(p, npos - 5, spad + npos - 5, c14);
+    p[npos++] = 0x44; p[npos++] = 0x8B; p[npos++] = 0x44; p[npos++] = 0x24; p[npos++] = 0x4C;
+    p[npos++] = 0xE9; p[npos++] = 0; p[npos++] = 0; p[npos++] = 0; p[npos++] = 0;
+    slot_rel(p, npos - 5, spad + npos - 5, sell + 16);
+    slot_jmp(data, sell, spad + kSellHookAt);
+    for (i = 5; i < 16; i++) data[sell + i] = 0x90;
+
+    npos = kSellImulAt;
+    p[npos++] = 0x8B; p[npos++] = 0xD0;
+    p[npos++] = 0x0F; p[npos++] = 0xAF; p[npos++] = 0x54; p[npos++] = 0x24; p[npos++] = 0x4C;
+    p[npos++] = 0x48; p[npos++] = 0x8B; p[npos++] = 0x84; p[npos++] = 0x24;
+    p[npos++] = 0x90; p[npos++] = 0x00; p[npos++] = 0x00; p[npos++] = 0x00;
+    p[npos++] = 0xE9; p[npos++] = 0; p[npos++] = 0; p[npos++] = 0; p[npos++] = 0;
+    slot_rel(p, npos - 5, spad + npos - 5, imul + 10);
+    slot_jmp(data, imul, spad + kSellImulAt);
+    for (i = 5; i < 10; i++) data[imul + i] = 0x90;
+
+    npos = kListA0At;
+    p[npos++] = 0x8B; p[npos++] = 0x84; p[npos++] = 0x84;
+    p[npos++] = 0xA0; p[npos++] = 0x00; p[npos++] = 0x00; p[npos++] = 0x00;
+    p[npos++] = 0x48; p[npos++] = 0x8B; p[npos++] = 0x8C; p[npos++] = 0x24;
+    p[npos++] = 0x68; p[npos++] = 0x04; p[npos++] = 0x00; p[npos++] = 0x00;
+    p[npos++] = 0x03; p[npos++] = 0x41; p[npos++] = 0x08;
+    p[npos++] = 0xE9; p[npos++] = 0; p[npos++] = 0; p[npos++] = 0; p[npos++] = 0;
+    slot_rel(p, npos - 5, spad + npos - 5, la0 + 9);
+    slot_jmp(data, la0, spad + kListA0At);
+    for (i = 5; i < 9; i++) data[la0 + i] = 0x90;
+
+    npos = kList110At;
+    p[npos++] = 0x8B; p[npos++] = 0x84; p[npos++] = 0x84;
+    p[npos++] = 0x10; p[npos++] = 0x01; p[npos++] = 0x00; p[npos++] = 0x00;
+    p[npos++] = 0x48; p[npos++] = 0x8B; p[npos++] = 0x8C; p[npos++] = 0x24;
+    p[npos++] = 0x78; p[npos++] = 0x04; p[npos++] = 0x00; p[npos++] = 0x00;
+    p[npos++] = 0x03; p[npos++] = 0x41; p[npos++] = 0x08;
+    p[npos++] = 0xE9; p[npos++] = 0; p[npos++] = 0; p[npos++] = 0; p[npos++] = 0;
+    slot_rel(p, npos - 5, spad + npos - 5, l110 + 9);
+    slot_jmp(data, l110, spad + kList110At);
+    for (i = 5; i < 9; i++) data[l110 + i] = 0x90;
+
+    p = data + cave + kSlotDispAt + 28;
+    npos = 0;
+    p[npos++] = 0x48; p[npos++] = 0x8B; p[npos++] = 0x8C; p[npos++] = 0x24;
+    p[npos++] = 0x68; p[npos++] = 0x03; p[npos++] = 0x00; p[npos++] = 0x00;
+    p[npos++] = 0xE8; p[npos++] = 0; p[npos++] = 0; p[npos++] = 0; p[npos++] = 0;
+    slot_rel(p, npos - 5, cave + kSlotDispAt + 28 + npos - 5, c110);
+    p[npos++] = 0x44; p[npos++] = 0x8B; p[npos++] = 0xC0;
+    p[npos++] = 0x48; p[npos++] = 0x8B; p[npos++] = 0x8C; p[npos++] = 0x24;
+    p[npos++] = 0x68; p[npos++] = 0x03; p[npos++] = 0x00; p[npos++] = 0x00;
+    p[npos++] = 0xE8; p[npos++] = 0; p[npos++] = 0; p[npos++] = 0; p[npos++] = 0;
+    slot_rel(p, npos - 5, cave + kSlotDispAt + 28 + npos - 5, cf3);
+    p[npos++] = 0x44; p[npos++] = 0x8B; p[npos++] = 0xC8;
+    p[npos++] = 0x48; p[npos++] = 0x8D; p[npos++] = 0x15; p[npos++] = 0; p[npos++] = 0; p[npos++] = 0; p[npos++] = 0;
+    slot_lea32(p, npos - 7, cave + kSlotDispAt + 28 + npos - 7, cave + kSlotFmtAt);
+    p[npos++] = 0x48; p[npos++] = 0x8D; p[npos++] = 0x4C; p[npos++] = 0x24; p[npos++] = 0x38;
+    p[npos++] = 0xE9; p[npos++] = 0; p[npos++] = 0; p[npos++] = 0; p[npos++] = 0;
+    slot_rel(p, npos - 5, cave + kSlotDispAt + 28 + npos - 5, disp + 28);
+    slot_jmp(data, disp, cave + kSlotDispAt + 28);
+    for (i = 5; i < 28; i++) data[disp + i] = 0x90;
+
+    /* Close exchange: copy slot+8 into the 8-byte ship record at +3. */
+    if (data[pack] != 0xE9) memcpy(data + ppad, data + pack, 5);
+    p = data + ppad;
+    npos = kPackHookAt;
+    p[npos++] = 0xE8; p[npos++] = 0; p[npos++] = 0; p[npos++] = 0; p[npos++] = 0;
+    slot_rel(p, npos - 5, ppad + npos - 5, c151);
+    p[npos++] = 0x48; p[npos++] = 0x8B; p[npos++] = 0x44; p[npos++] = 0x24; p[npos++] = 0x68;
+    p[npos++] = 0x8B; p[npos++] = 0x48; p[npos++] = 0x08;
+    p[npos++] = 0x85; p[npos++] = 0xC9;
+    p[npos++] = 0x75; p[npos++] = 0x05;
+    p[npos++] = 0xB9; p[npos++] = 0x01; p[npos++] = 0x00; p[npos++] = 0x00; p[npos++] = 0x00;
+    p[npos++] = 0x8B; p[npos++] = 0x44; p[npos++] = 0x24; p[npos++] = 0x54;
+    p[npos++] = 0x48; p[npos++] = 0x63; p[npos++] = 0xC0;
+    p[npos++] = 0x48; p[npos++] = 0x8B; p[npos++] = 0x54; p[npos++] = 0x24; p[npos++] = 0x38;
+    p[npos++] = 0x88; p[npos++] = 0x4C; p[npos++] = 0xC2; p[npos++] = 0x5B;
+    p[npos++] = 0xE9; p[npos++] = 0; p[npos++] = 0; p[npos++] = 0; p[npos++] = 0;
+    slot_rel(p, npos - 5, ppad + npos - 5, pack + 5);
+    slot_jmp(data, pack, ppad + kPackHookAt);
+
+    /* Open exchange: restore slot+8 from ship record byte +3. */
+    if (data[unpack] != 0xE9) memcpy(data + upad, data + unpack, 11);
+    p = data + upad;
+    npos = kUnpackHookAt;
+    p[npos++] = 0x48; p[npos++] = 0x8B; p[npos++] = 0x8C; p[npos++] = 0x24;
+    p[npos++] = 0xA8; p[npos++] = 0x00; p[npos++] = 0x00; p[npos++] = 0x00;
+    p[npos++] = 0x44; p[npos++] = 0x0F; p[npos++] = 0xB6; p[npos++] = 0x41; p[npos++] = 0x03;
+    p[npos++] = 0x45; p[npos++] = 0x85; p[npos++] = 0xC0;
+    p[npos++] = 0x75; p[npos++] = 0x06;
+    p[npos++] = 0x41; p[npos++] = 0xB8; p[npos++] = 0x01; p[npos++] = 0x00; p[npos++] = 0x00; p[npos++] = 0x00;
+    p[npos++] = 0xE9; p[npos++] = 0; p[npos++] = 0; p[npos++] = 0; p[npos++] = 0;
+    slot_rel(p, npos - 5, upad + npos - 5, unpack + 11);
+    slot_jmp(data, unpack, upad + kUnpackHookAt);
+    for (i = 5; i < 11; i++) data[unpack + i] = 0x90;
+    return 1;
 }
 
 static int read_cap_values(const uint8_t *data, size_t n, CapValues *v, int *xp_off, wchar_t *err, int errn) {
@@ -1653,7 +2063,7 @@ static int patch_cap_buffer(uint8_t *data, size_t n, const CapValues *v, wchar_t
     {
         int cargo_at = 0, slot_at = 0, cave, kind, slot_kind;
         uint32_t cargo_now = 1, slot_now = 1;
-        int bc6c, be92, b032, e9c6, qty_a, qty_b;
+        int bc6c, be92, b032, e9c6;
         uint8_t cave_buf[220];
         int cave_n;
         int32_t rel;
@@ -1670,7 +2080,7 @@ static int patch_cap_buffer(uint8_t *data, size_t n, const CapValues *v, wchar_t
             return 0;
         }
         cave = slot_cave_off(data, n, slot_at);
-        if (cave < 0 || (size_t)cave + kSlotCaveLen > n) {
+        if (cave < 0 || (size_t)cave + kSlotPadLen > n) {
             StringCchCopyW(err, (size_t)errn, L"购买函数后面没有空位，不能改堆叠。");
             return 0;
         }
@@ -1681,7 +2091,7 @@ static int patch_cap_buffer(uint8_t *data, size_t n, const CapValues *v, wchar_t
         }
         if (slot_kind == 1) {
             size_t c;
-            for (c = 0; c < kSlotCaveLen; c++) {
+            for (c = 0; c < kSlotPadLen; c++) {
                 if (data[cave + c] != 0xCC) {
                     StringCchCopyW(err, (size_t)errn, L"购买函数后面的空位被占用，不能改堆叠。");
                     return 0;
@@ -1692,23 +2102,22 @@ static int patch_cap_buffer(uint8_t *data, size_t n, const CapValues *v, wchar_t
         be92 = slot_call_off(data, n, slot_at + kSlotJne + kSlotCallBe92);
         b032 = slot_call_off(data, n, slot_at + kSlotJne + kSlotCallB032);
         e9c6 = slot_call_off(data, n, slot_at + kSlotJne + kSlotCallE9c6);
-        qty_a = slot_call_off(data, n, slot_at + kSlotJne + kSlotCallQtyA);
-        qty_b = slot_call_off(data, n, slot_at + kSlotJne + kSlotCallQtyB);
-        if (bc6c < 0 || be92 < 0 || b032 < 0 || e9c6 < 0 || qty_a < 0 || qty_b < 0) {
+        if (bc6c < 0 || be92 < 0 || b032 < 0 || e9c6 < 0) {
             StringCchCopyW(err, (size_t)errn, L"购买函数里的调用对不上。");
             return 0;
         }
         if (v->stack <= 1) {
+            if (!patch_stack_extras(data, n, cave, 1, err, errn)) return 0;
             rel = (int32_t)(kSlotSkip - 6);
             data[slot_at + kSlotJne] = 0x0F;
             data[slot_at + kSlotJne + 1] = 0x85;
             memcpy(data + slot_at + kSlotJne + 2, &rel, 4);
             if (slot_kind == 2)
-                memset(data + cave, 0xCC, kSlotCaveLen);
+                memset(data + cave, 0xCC, kSlotPadLen);
         } else {
-            cave_n = build_slot_cave(cave_buf, cave, bc6c, be92, qty_a, qty_b, b032, e9c6,
+            cave_n = build_slot_cave(cave_buf, cave, bc6c, be92, b032, e9c6,
                 slot_at + kSlotJne + kSlotUi, slot_at + kSlotJne + kSlotSkip, v->stack);
-            if (cave_n != kSlotCaveLen) {
+            if (cave_n != kSlotBuyLen) {
                 StringCchCopyW(err, (size_t)errn, L"商品堆叠的补丁拼不出来。");
                 return 0;
             }
@@ -1717,6 +2126,7 @@ static int patch_cap_buffer(uint8_t *data, size_t n, const CapValues *v, wchar_t
             data[slot_at + kSlotJne] = 0x0F;
             data[slot_at + kSlotJne + 1] = 0x85;
             memcpy(data + slot_at + kSlotJne + 2, &rel, 4);
+            if (!patch_stack_extras(data, n, cave, v->stack, err, errn)) return 0;
         }
     }
     if (!read_cap_values(data, n, &cur, NULL, err, errn)) return 0;
