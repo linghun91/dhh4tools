@@ -1877,7 +1877,7 @@ static int patch_stack_extras(uint8_t *data, size_t n, int cave, uint32_t stack,
  * cave starts with a header and ends with a table of the original bytes of
  * every site, so writing stack 1 restores the vanilla bytes exactly. */
 #define V4_MAGIC "DK4STK2"
-enum { kV4Head = 16, kV4Max = 1100 };
+enum { kV4Head = 16, kV4Max = 1200 };
 
 typedef struct V4Asm {
     uint8_t *b;
@@ -2019,7 +2019,7 @@ static int v4_apply(uint8_t *data, size_t n, uint32_t stack, wchar_t *err, int e
     int ns = 0, i;
     int slot, jne, sell, disp, la0, l110, f110b8, fc662, f14d80, cave, run;
     int imul, unbuy, unbuy_after, sell_own, sell_all, unsell;
-    int dispA, dispB, dispS, fmt6;
+    int dispA, dispB, dispS, dispPA, dispPS, fmt6;
     int c_bc6c, c_be92, c_b032, c_e9c6, c_price, c_quote, c_14d3a, c_833c, c_a3c6;
     int L_cnt, L_fmt, L_fmtstr, j1, j2, j3, j4, imm_at, loop;
     int32_t rel;
@@ -2064,9 +2064,15 @@ static int v4_apply(uint8_t *data, size_t n, uint32_t stack, wchar_t *err, int e
     dispA = disp - 0x26;
     dispB = disp + 0x10;
     dispS = disp + 0x3062;
+    dispPA = disp - 0x176;      /* left column: purchase price, owned cargo */
+    dispPS = dispS - 0x119;     /* sell list left column: purchase price */
     if (!v4_is(data, n, dispA - 3, "44 8B C0 48 8D 15") || !v4_is(data, n, dispA + 7, "48 8D 4C 24 38 FF 15") ||
         !v4_is(data, n, dispB - 3, "44 8B C0 48 8D 15") || !v4_is(data, n, dispB + 7, "48 8D 4C 24 38 FF 15") ||
         !v4_is(data, n, dispS - 3, "44 8B C0 48 8D 15") || !v4_is(data, n, dispS + 7, "48 8D 4C 24 38 FF 15") ||
+        !v4_is(data, n, dispPA - 3, "44 8B C0 48 8D 15") || !v4_is(data, n, dispPA + 7, "48 8D 4C 24 38 FF 15") ||
+        !v4_is(data, n, dispPA - 0x10, "48 8B 8C 24 68 03 00 00 E8") ||
+        !v4_is(data, n, dispPS - 3, "44 8B C0 48 8D 15") || !v4_is(data, n, dispPS + 7, "48 8D 4C 24 38 FF 15") ||
+        !v4_is(data, n, dispPS - 0x10, "48 8B 8C 24 C8 02 00 00 E8") ||
         !v4_is(data, n, dispS - 0x43, "48 8B 8C 24 C8 02 00 00"))
         V4ERR(L"价格显示的代码和原版对不上。");
     memcpy(&rel, data + dispB + 3, 4);
@@ -2075,6 +2081,10 @@ static int v4_apply(uint8_t *data, size_t n, uint32_t stack, wchar_t *err, int e
     if (dispA + 7 + rel != fmt6) V4ERR(L"价格显示用的格式对不上。");
     memcpy(&rel, data + dispS + 3, 4);
     if (dispS + 7 + rel != fmt6) V4ERR(L"价格显示用的格式对不上。");
+    memcpy(&rel, data + dispPA + 3, 4);
+    if (dispPA + 7 + rel != fmt6) V4ERR(L"价格显示用的格式对不上。");
+    memcpy(&rel, data + dispPS + 3, 4);
+    if (dispPS + 7 + rel != fmt6) V4ERR(L"价格显示用的格式对不上。");
 
     if (!v4_find(data, n, "8B 84 84 A0 00 00 00 FF C0", &la0) ||
         !v4_find(data, n, "8B 84 84 10 01 00 00 FF C0", &l110) ||
@@ -2131,7 +2141,8 @@ static int v4_apply(uint8_t *data, size_t n, uint32_t stack, wchar_t *err, int e
     rel = (int32_t)(cave + L_fmtstr - (cave + j4 + 7));
     memcpy(code + j4 + 3, &rel, 4);
 
-    /* Price columns: owned cargo, bought this visit, sell list. */
+    /* Price columns: owned cargo, bought this visit, sell list, and the
+     * purchase price that the price toggle shows in the left column. */
 #define V4_DISP(siteoff, load) do { \
         site[ns].at = siteoff; site[ns].len = a.n; ns++; \
         v4_hex(&a, load); \
@@ -2142,6 +2153,8 @@ static int v4_apply(uint8_t *data, size_t n, uint32_t stack, wchar_t *err, int e
     V4_DISP(dispA, "48 8B 8C 24 68 03 00 00");
     V4_DISP(dispB, "48 8B 8C 24 68 03 00 00");
     V4_DISP(dispS, "48 8B 8C 24 C8 02 00 00");
+    V4_DISP(dispPA, "48 8B 8C 24 68 03 00 00");
+    V4_DISP(dispPS, "48 8B 8C 24 C8 02 00 00");
 #undef V4_DISP
 
     /* Buy: occupied slot. Same good, bought this visit, below the limit:
@@ -2249,8 +2262,9 @@ static int v4_apply(uint8_t *data, size_t n, uint32_t stack, wchar_t *err, int e
     /* Every jump site above: site[k].len holds the entry offset in the cave
      * for now. Convert to (entry, length overwritten). */
     {
-        static const int lens[] = {12, 12, 12, 6, 6, 16, 10, 10, 10, 10, 9, 15, 9, 15, 12};
-        int entry[16];
+        static const int lens[] = {12, 12, 12, 12, 12, 6, 6, 16, 10, 10, 10, 10, 9, 15, 9, 15, 12};
+        enum { kBuySite = 5, kJumpSites = 17 };
+        int entry[kJumpSites];
         if (ns != (int)(sizeof lens / sizeof lens[0])) V4ERR(L"商品堆叠的补丁拼不出来。");
         for (i = 0; i < ns; i++) {
             entry[i] = site[i].len;
@@ -2280,9 +2294,9 @@ static int v4_apply(uint8_t *data, size_t n, uint32_t stack, wchar_t *err, int e
         if (a.bad || a.n > run) V4ERR(L"舱位显示函数后面的空位不够，不能改堆叠。");
 
         memcpy(data + cave, code, (size_t)a.n);
-        for (i = 0; i < 15; i++) {
+        for (i = 0; i < kJumpSites; i++) {
             int at = site[i].at, k;
-            if (i == 3) {           /* buy: jne rel32 into the cave */
+            if (i == kBuySite) {    /* buy: jne rel32 into the cave */
                 rel = (int32_t)(cave + entry[i] - (at + 6));
                 memcpy(data + at + 2, &rel, 4);
                 continue;
