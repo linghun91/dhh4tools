@@ -1412,11 +1412,6 @@ static int slot_rel(uint8_t *code, int at, int insn_off, int target_off) {
     return 1;
 }
 
-static void slot_jcc32(uint8_t *code, int at, int target_at) {
-    int32_t rel = (int32_t)(target_at - (at + 6));
-    memcpy(code + at + 2, &rel, 4);
-}
-
 static void slot_jmp(uint8_t *data, int from, int to) {
     int32_t rel = (int32_t)(to - (from + 5));
     data[from] = 0xE9;
@@ -1426,56 +1421,6 @@ static void slot_jmp(uint8_t *data, int from, int to) {
 static void slot_lea32(uint8_t *code, int at, int insn_off, int target_off) {
     int32_t rel = (int32_t)(target_off - (insn_off + 7));
     memcpy(code + at + 3, &rel, 4);
-}
-
-/* Occupied slot of the same good: [slot+8] is the piece count shown as Nx
- * and used when selling. [slot+4] stays the unit price. */
-static int build_slot_cave(uint8_t *code, int cave_off, int bc6c, int be92,
-    int b032, int e9c6, int ui_off, int skip_off, uint32_t stack) {
-    int n = 0;
-    int c_bc6c, c_be92, c_b032, c_e9c6, j_ui, j_skip;
-    int jne_at, jae_at, no_at;
-#define EB(x) do { code[n++] = (uint8_t)(x); } while (0)
-    EB(0x48); EB(0x8B); EB(0x84); EB(0x24); EB(0xD0); EB(0x00); EB(0x00); EB(0x00);
-    EB(0x48); EB(0x8B); EB(0x80); EB(0x88); EB(0x05); EB(0x00); EB(0x00);
-    EB(0x48); EB(0x89); EB(0x44); EB(0x24); EB(0x28);
-    EB(0x48); EB(0x8B); EB(0x4C); EB(0x24); EB(0x68);
-    c_bc6c = n; EB(0xE8); EB(0); EB(0); EB(0); EB(0);
-    EB(0x89); EB(0x44); EB(0x24); EB(0x20);
-    EB(0x8B); EB(0x94); EB(0x24); EB(0xD8); EB(0x00); EB(0x00); EB(0x00);
-    EB(0x48); EB(0x8B); EB(0x4C); EB(0x24); EB(0x28);
-    c_be92 = n; EB(0xE8); EB(0); EB(0); EB(0); EB(0);
-    EB(0x3B); EB(0x44); EB(0x24); EB(0x20);
-    jne_at = n; EB(0x0F); EB(0x85); EB(0); EB(0); EB(0); EB(0);
-    EB(0x48); EB(0x8B); EB(0x44); EB(0x24); EB(0x68);
-    EB(0x83); EB(0x78); EB(0x08); EB(stack);
-    jae_at = n; EB(0x0F); EB(0x83); EB(0); EB(0); EB(0); EB(0);
-    EB(0xFF); EB(0x40); EB(0x08);
-    EB(0x41); EB(0xB8); EB(0x01); EB(0x00); EB(0x00); EB(0x00);
-    EB(0x8B); EB(0x94); EB(0x24); EB(0xD8); EB(0x00); EB(0x00); EB(0x00);
-    EB(0x48); EB(0x8B); EB(0x4C); EB(0x24); EB(0x28);
-    c_b032 = n; EB(0xE8); EB(0); EB(0); EB(0); EB(0);
-    EB(0x48); EB(0x8B); EB(0x44); EB(0x24); EB(0x68);
-    EB(0x8B); EB(0x50); EB(0x04);
-    EB(0x48); EB(0x8B); EB(0x4C); EB(0x24); EB(0x28);
-    c_e9c6 = n; EB(0xE8); EB(0); EB(0); EB(0); EB(0);
-    j_ui = n; EB(0xE9); EB(0); EB(0); EB(0); EB(0);
-    no_at = n;
-    j_skip = n; EB(0xE9); EB(0); EB(0); EB(0); EB(0);
-#undef EB
-    if (n != kSlotBuyLen) return 0;
-    if (kSlotImmAt >= n || code[kSlotImmAt - 3] != 0x83 ||
-        code[kSlotImmAt - 2] != 0x78 || code[kSlotImmAt - 1] != 0x08) return 0;
-    if (code[kSlotImmAt] != (uint8_t)stack) return 0;
-    slot_jcc32(code, jne_at, no_at);
-    slot_jcc32(code, jae_at, no_at);
-    slot_rel(code, c_bc6c, cave_off + c_bc6c, bc6c);
-    slot_rel(code, c_be92, cave_off + c_be92, be92);
-    slot_rel(code, c_b032, cave_off + c_b032, b032);
-    slot_rel(code, c_e9c6, cave_off + c_e9c6, e9c6);
-    slot_rel(code, j_ui, cave_off + j_ui, ui_off);
-    slot_rel(code, j_skip, cave_off + j_skip, skip_off);
-    return n;
 }
 
 static int read_slot_stack(const uint8_t *data, size_t n, int pat, int cave, uint32_t *stack) {
@@ -1915,6 +1860,460 @@ static int patch_stack_extras(uint8_t *data, size_t n, int cave, uint32_t stack,
     return 1;
 }
 
+/* Stacking, second layout ("DK4STK2").
+ *
+ * Every 8-byte cargo record (exchange slot, ship hold, sell list) keeps the
+ * piece count in byte +3, which the vanilla game never uses. 0 or anything
+ * above 10 means one piece. [slot+8] keeps its vanilla meaning: non-zero
+ * means "bought during this visit", so clicks, refunds and "sell all" route
+ * exactly as in the original game.
+ *
+ * In place:  the record copy also copies byte +3, the record clear and the
+ *            record builder write 0 to it.
+ * Hooks:     buy (stack onto a slot of the same good bought this visit),
+ *            undo-buy, sell, sell all, cancel sell, the three price columns
+ *            and the trade statistics at commit.
+ * All new code sits in the int3 run after the cargo list draw function. The
+ * cave starts with a header and ends with a table of the original bytes of
+ * every site, so writing stack 1 restores the vanilla bytes exactly. */
+#define V4_MAGIC "DK4STK2"
+enum { kV4Head = 16, kV4Max = 1100 };
+
+typedef struct V4Asm {
+    uint8_t *b;
+    int n;
+    int base;
+    int bad;
+} V4Asm;
+
+static void v4_hex(V4Asm *a, const char *s) {
+    int hi = -1;
+    for (; *s; s++) {
+        int v;
+        if (*s >= '0' && *s <= '9') v = *s - '0';
+        else if (*s >= 'a' && *s <= 'f') v = *s - 'a' + 10;
+        else if (*s >= 'A' && *s <= 'F') v = *s - 'A' + 10;
+        else continue;
+        if (hi < 0) hi = v;
+        else {
+            if (a->n >= kV4Max) { a->bad = 1; return; }
+            a->b[a->n++] = (uint8_t)(hi * 16 + v);
+            hi = -1;
+        }
+    }
+}
+
+static void v4_rel(V4Asm *a, uint8_t op, int target) {
+    int32_t rel;
+    if (a->n + 5 > kV4Max) { a->bad = 1; return; }
+    rel = (int32_t)(target - (a->base + a->n + 5));
+    a->b[a->n++] = op;
+    memcpy(a->b + a->n, &rel, 4);
+    a->n += 4;
+}
+
+static void v4_call(V4Asm *a, int target) { v4_rel(a, 0xE8, target); }
+static void v4_jmp(V4Asm *a, int target) { v4_rel(a, 0xE9, target); }
+
+/* 0F cc rel32, target filled in by v4_fix. */
+static int v4_jcc(V4Asm *a, uint8_t cc) {
+    int at = a->n;
+    v4_hex(a, "0F");
+    if (a->n >= kV4Max) { a->bad = 1; return at; }
+    a->b[a->n++] = cc;
+    v4_hex(a, "00 00 00 00");
+    return at;
+}
+
+static void v4_fix(V4Asm *a, int at, int label) {
+    int32_t rel = (int32_t)(label - (at + 6));
+    memcpy(a->b + at + 2, &rel, 4);
+}
+
+static void v4_lea_rdx(V4Asm *a, int target) {
+    int32_t rel;
+    v4_hex(a, "48 8D 15");
+    if (a->n + 4 > kV4Max) { a->bad = 1; return; }
+    rel = (int32_t)(target - (a->base + a->n + 4));
+    memcpy(a->b + a->n, &rel, 4);
+    a->n += 4;
+}
+
+static int v4_find(const uint8_t *data, size_t n, const char *hex, int *at) {
+    uint8_t pat[96];
+    V4Asm a;
+    size_t i;
+    int hits = 0;
+    a.b = pat; a.n = 0; a.base = 0; a.bad = 0;
+    v4_hex(&a, hex);
+    *at = -1;
+    if (a.bad || a.n == 0 || (size_t)a.n > n) return 0;
+    for (i = 0; i + (size_t)a.n <= n; i++) {
+        if (memcmp(data + i, pat, (size_t)a.n) != 0) continue;
+        hits++;
+        *at = (int)i;
+    }
+    return hits == 1;
+}
+
+static int v4_is(const uint8_t *data, size_t n, int at, const char *hex) {
+    uint8_t pat[96];
+    V4Asm a;
+    a.b = pat; a.n = 0; a.base = 0; a.bad = 0;
+    v4_hex(&a, hex);
+    if (a.bad || at < 0 || (size_t)at + (size_t)a.n > n) return 0;
+    return memcmp(data + at, pat, (size_t)a.n) == 0;
+}
+
+static int v4_cave(const uint8_t *data, size_t n) {
+    size_t i;
+    static const uint8_t m[8] = V4_MAGIC;
+    for (i = 0x400; i + kV4Head <= n; i++) {
+        if (data[i] != 'D' || memcmp(data + i, m, 8) != 0) continue;
+        if (data[i + 8] < 2 || data[i + 8] > 10) continue;
+        return (int)i;
+    }
+    return -1;
+}
+
+static int v4_u16(const uint8_t *p) { return p[0] | (p[1] << 8); }
+
+/* Put the vanilla bytes back. Returns 0 if the table does not look right,
+ * in which case nothing is changed. */
+static int v4_restore(uint8_t *data, size_t n, int cave) {
+    int tab = v4_u16(data + cave + 10), used = v4_u16(data + cave + 12);
+    int cnt = data[cave + 9], p, i;
+    if (used <= kV4Head || used > kV4Max || (size_t)cave + (size_t)used > n) return 0;
+    if (tab < kV4Head || tab >= used) return 0;
+    for (p = cave + tab, i = 0; i < cnt; i++) {
+        uint32_t off;
+        int len;
+        if (p + 5 > cave + used) return 0;
+        memcpy(&off, data + p, 4);
+        len = data[p + 4];
+        if (len == 0 || p + 5 + len > cave + used || (size_t)off + (size_t)len > n) return 0;
+        p += 5 + len;
+    }
+    for (p = cave + tab, i = 0; i < cnt; i++) {
+        uint32_t off;
+        int len;
+        memcpy(&off, data + p, 4);
+        len = data[p + 4];
+        memcpy(data + off, data + p + 5, (size_t)len);
+        p += 5 + len;
+    }
+    memset(data + cave, 0xCC, (size_t)used);
+    return 1;
+}
+
+typedef struct V4Site {
+    int at;
+    int len;
+} V4Site;
+
+/* data must hold vanilla bytes at every site (old patches removed). */
+static int v4_apply(uint8_t *data, size_t n, uint32_t stack, wchar_t *err, int errn) {
+    uint8_t code[kV4Max];
+    V4Asm a;
+    V4Site site[24];
+    int ns = 0, i;
+    int slot, jne, sell, disp, la0, l110, f110b8, fc662, f14d80, cave, run;
+    int imul, unbuy, unbuy_after, sell_own, sell_all, unsell;
+    int dispA, dispB, dispS, fmt6;
+    int c_bc6c, c_be92, c_b032, c_e9c6, c_price, c_quote, c_14d3a, c_833c, c_a3c6;
+    int L_cnt, L_fmt, L_fmtstr, j1, j2, j3, j4, imm_at, loop;
+    int32_t rel;
+
+    if (stack < 2 || stack > 10) return 0;
+#define V4ERR(msg) do { StringCchCopyW(err, (size_t)errn, msg); return 0; } while (0)
+    if (!find_slot_pat(data, n, &slot)) V4ERR(L"找不到购买商品占舱位的位置。");
+    jne = slot + kSlotJne;
+    if (!v4_is(data, n, jne, "0F 85")) V4ERR(L"购买占舱位的代码不是原版。");
+    c_bc6c = slot_call_off(data, n, jne + kSlotCallBc6c);
+    c_be92 = slot_call_off(data, n, jne + kSlotCallBe92);
+    c_b032 = slot_call_off(data, n, jne + kSlotCallB032);
+    c_e9c6 = slot_call_off(data, n, jne + kSlotCallE9c6);
+    c_price = slot_call_off(data, n, jne + 0x4B);
+    c_quote = slot_call_off(data, n, jne + 0x61);
+    if (c_bc6c < 0 || c_be92 < 0 || c_b032 < 0 || c_e9c6 < 0 || c_price < 0 || c_quote < 0)
+        V4ERR(L"购买函数里的调用对不上。");
+
+    if (!find_sell_site(data, n, &sell) || data[sell] != 0x48) V4ERR(L"找不到退货的位置。");
+    c_14d3a = slot_call_off(data, n, sell + 5);
+    unbuy = sell - 0x7E;
+    unbuy_after = sell - 0x41;
+    imul = sell + 0x56;
+    sell_own = sell + 0x289;
+    sell_all = sell - 0x246;
+    unsell = sell + 0x96A;
+    if (c_14d3a < 0 ||
+        !v4_is(data, n, unbuy, "45 33 C9 45 33 C0 8B 54 24 44 48 8B 84 24 90 00 00 00 48 8B 88 88 05 00 00 E8") ||
+        !v4_is(data, n, unbuy + 0x1E, "8B 54 24 44 48 8B 84 24 90 00 00 00 48 8B 88 88 05 00 00 E8") ||
+        !v4_is(data, n, unbuy_after, "C7 44 24 64 00 00 00 00") ||
+        !v4_is(data, n, imul, "8B D0 48 8B 84 24 90 00 00 00 48 8B 88 88 05 00 00 E8") ||
+        !v4_is(data, n, sell_own, "8B D0 48 8B 84 24 80 00 00 00 48 8B 88 88 05 00 00 E8") ||
+        !v4_is(data, n, sell_all, "8B D0 48 8B 84 24 90 00 00 00 48 8B 88 88 05 00 00 E8") ||
+        !v4_is(data, n, unsell, "8B D0 48 8B 84 24 80 00 00 00 48 8B 88 88 05 00 00 E8"))
+        V4ERR(L"卖出、退货的代码和原版对不上。");
+    c_833c = slot_call_off(data, n, unbuy + 0x19);
+    c_a3c6 = slot_call_off(data, n, unbuy + 0x31);
+    if (c_833c < 0 || c_a3c6 < 0) V4ERR(L"退货里的调用对不上。");
+
+    if (!find_disp_site(data, n, -1, &disp) || !v4_is(data, n, disp, "48 8B 8C 24 68 03 00 00 E8"))
+        V4ERR(L"找不到舱位价格显示的位置。");
+    dispA = disp - 0x26;
+    dispB = disp + 0x10;
+    dispS = disp + 0x3062;
+    if (!v4_is(data, n, dispA - 3, "44 8B C0 48 8D 15") || !v4_is(data, n, dispA + 7, "48 8D 4C 24 38 FF 15") ||
+        !v4_is(data, n, dispB - 3, "44 8B C0 48 8D 15") || !v4_is(data, n, dispB + 7, "48 8D 4C 24 38 FF 15") ||
+        !v4_is(data, n, dispS - 3, "44 8B C0 48 8D 15") || !v4_is(data, n, dispS + 7, "48 8D 4C 24 38 FF 15") ||
+        !v4_is(data, n, dispS - 0x43, "48 8B 8C 24 C8 02 00 00"))
+        V4ERR(L"价格显示的代码和原版对不上。");
+    memcpy(&rel, data + dispB + 3, 4);
+    fmt6 = dispB + 7 + rel;
+    memcpy(&rel, data + dispA + 3, 4);
+    if (dispA + 7 + rel != fmt6) V4ERR(L"价格显示用的格式对不上。");
+    memcpy(&rel, data + dispS + 3, 4);
+    if (dispS + 7 + rel != fmt6) V4ERR(L"价格显示用的格式对不上。");
+
+    if (!v4_find(data, n, "8B 84 84 A0 00 00 00 FF C0", &la0) ||
+        !v4_find(data, n, "8B 84 84 10 01 00 00 FF C0", &l110) ||
+        !v4_is(data, n, la0 + 0x5F, "48 8B 8C 24 98 05 00 00 03 84 8C 50 03 00 00") ||
+        !v4_is(data, n, l110 + 0x6F, "48 8B 8C 24 A8 05 00 00 03 84 8C C0 03 00 00") ||
+        !v4_is(data, n, l110 + 0xAC, "48 8B 84 24 B8 05 00 00 8B 00 FF C0 48 8B 8C 24 B8 05 00 00"))
+        V4ERR(L"找不到交易统计的位置。");
+
+    if (!v4_find(data, n, "48 89 54 24 10 48 89 4C 24 08 57 48 8B 44 24 10 48 8B 4C 24 18 0F B6 09 88 08"
+                          " 48 8B 44 24 10 48 8B 4C 24 18 0F B6 49 01 88 48 01", &f110b8) ||
+        !v4_find(data, n, "48 8B 4C 24 40 88 41 01 48 8B 44 24 40 C6 40 02 62 48 8B 44 24 40"
+                          " C7 40 04 00 00 00 00 48 83 C4 30 5F C3", &fc662) ||
+        !v4_find(data, n, "48 8B 4C 24 30 88 41 02 48 8B 44 24 30 8B 4C 24 50 89 48 04 48 83 C4 20 5F C3", &f14d80))
+        V4ERR(L"找不到货物记录的读写函数。");
+
+    for (i = disp; i < disp + 0x200 && (size_t)i + 10 < n; i++)
+        if (v4_is(data, n, i, "48 81 C4 E8 05 00 00 5F 5E C3")) break;
+    if (i >= disp + 0x200) V4ERR(L"找不到舱位显示函数的结尾。");
+    cave = i + 10;
+    for (run = 0; (size_t)(cave + run) < n && data[cave + run] == 0xCC; run++) {}
+
+    a.b = code; a.n = 0; a.base = cave; a.bad = 0;
+    memset(code, 0xCC, sizeof code);
+    memcpy(code, V4_MAGIC, 8);
+    code[8] = (uint8_t)stack;
+    a.n = kV4Head;
+
+    /* cnt: rcx = record -> ecx = pieces (1..10). Touches only ecx/flags. */
+    L_cnt = a.n;
+    v4_hex(&a, "0F B6 49 03  FF C9  83 F9 09  76 02  33 C9  FF C1  C3");
+
+    /* fmt: rcx = record, r8d = price -> rdx = format, r8d/r9d = args.
+     * "%dx%d" only when it is no longer than the vanilla "%6d" output. */
+    L_fmt = a.n;
+    v4_call(&a, cave + L_cnt);
+    v4_hex(&a, "83 F9 01");                 /* cmp ecx,1 */
+    j1 = v4_jcc(&a, 0x86);                  /* jbe vanilla */
+    v4_hex(&a, "B8 10 27 00 00  83 F9 0A");  /* mov eax,10000; cmp ecx,10 */
+    j2 = v4_jcc(&a, 0x82);                  /* jb keep */
+    v4_hex(&a, "B8 E8 03 00 00");           /* mov eax,1000 */
+    v4_fix(&a, j2, a.n);
+    v4_hex(&a, "44 3B C0");                 /* cmp r8d,eax */
+    j3 = v4_jcc(&a, 0x83);                  /* jae vanilla */
+    v4_hex(&a, "45 8B C8  44 8B C1");        /* mov r9d,r8d; mov r8d,ecx */
+    j4 = a.n;
+    v4_lea_rdx(&a, 0);                      /* lea rdx,[fmt2], fixed below */
+    v4_hex(&a, "C3");
+    v4_fix(&a, j1, a.n);
+    v4_fix(&a, j3, a.n);
+    v4_lea_rdx(&a, fmt6);
+    v4_hex(&a, "C3");
+    L_fmtstr = a.n;
+    v4_hex(&a, "25 64 78 25 64 00");        /* "%dx%d" */
+    rel = (int32_t)(cave + L_fmtstr - (cave + j4 + 7));
+    memcpy(code + j4 + 3, &rel, 4);
+
+    /* Price columns: owned cargo, bought this visit, sell list. */
+#define V4_DISP(siteoff, load) do { \
+        site[ns].at = siteoff; site[ns].len = a.n; ns++; \
+        v4_hex(&a, load); \
+        v4_call(&a, cave + L_fmt); \
+        v4_hex(&a, "48 8D 4C 24 38"); \
+        v4_jmp(&a, (siteoff) + 12); \
+    } while (0)
+    V4_DISP(dispA, "48 8B 8C 24 68 03 00 00");
+    V4_DISP(dispB, "48 8B 8C 24 68 03 00 00");
+    V4_DISP(dispS, "48 8B 8C 24 C8 02 00 00");
+#undef V4_DISP
+
+    /* Buy: occupied slot. Same good, bought this visit, below the limit:
+     * one more piece in this slot, priced like a vanilla buy. */
+    site[ns].at = jne; site[ns].len = a.n; ns++;
+    v4_hex(&a, "48 8B 84 24 D0 00 00 00  48 8B 80 88 05 00 00  48 89 44 24 28");
+    v4_hex(&a, "48 8B 4C 24 68");
+    v4_call(&a, c_bc6c);
+    v4_hex(&a, "89 44 24 20  8B 94 24 D8 00 00 00  48 8B 4C 24 28");
+    v4_call(&a, c_be92);
+    v4_hex(&a, "3B 44 24 20");
+    j1 = v4_jcc(&a, 0x85);
+    v4_hex(&a, "48 8B 44 24 68  83 78 08 00");
+    j2 = v4_jcc(&a, 0x84);
+    v4_hex(&a, "48 8B C8");
+    v4_call(&a, cave + L_cnt);
+    v4_hex(&a, "83 F9");
+    imm_at = a.n;
+    code[a.n++] = (uint8_t)stack;
+    j3 = v4_jcc(&a, 0x83);
+    v4_hex(&a, "FF C1  88 48 03");
+    v4_hex(&a, "41 B8 01 00 00 00  8B 94 24 D8 00 00 00  48 8B 4C 24 28");
+    v4_call(&a, c_b032);
+    v4_hex(&a, "8B 94 24 D8 00 00 00  48 8B 4C 24 28");
+    v4_call(&a, c_price);
+    v4_hex(&a, "8B D0  48 8B 4C 24 28");
+    v4_call(&a, c_quote);
+    v4_hex(&a, "8B D0  48 8B 4C 24 28");
+    v4_call(&a, c_e9c6);
+    v4_jmp(&a, jne + kSlotUi);
+    v4_fix(&a, j1, a.n);
+    v4_fix(&a, j2, a.n);
+    v4_fix(&a, j3, a.n);
+    v4_jmp(&a, jne + kSlotSkip);
+
+    /* Undo a buy: the per-piece bookkeeping runs once per piece. */
+    site[ns].at = unbuy; site[ns].len = a.n; ns++;
+    v4_hex(&a, "48 8B 4C 24 28");
+    v4_call(&a, cave + L_cnt);
+    v4_hex(&a, "89 4C 24 4C");
+    loop = a.n;
+    v4_hex(&a, "45 33 C9  45 33 C0  8B 54 24 44  48 8B 84 24 90 00 00 00  48 8B 88 88 05 00 00");
+    v4_call(&a, c_833c);
+    v4_hex(&a, "8B 54 24 44  48 8B 84 24 90 00 00 00  48 8B 88 88 05 00 00");
+    v4_call(&a, c_a3c6);
+    v4_hex(&a, "FF 4C 24 4C");
+    j1 = v4_jcc(&a, 0x85);
+    v4_fix(&a, j1, loop);
+    v4_jmp(&a, unbuy_after);
+
+    /* Undo a buy: supply back and refund for every piece. */
+    site[ns].at = sell; site[ns].len = a.n; ns++;
+    v4_hex(&a, "48 8B 4C 24 28");
+    v4_call(&a, cave + L_cnt);
+    v4_hex(&a, "89 4C 24 4C  48 8B 4C 24 28");
+    v4_call(&a, c_14d3a);
+    v4_hex(&a, "44 8B 44 24 4C");
+    v4_jmp(&a, sell + 16);
+    site[ns].at = imul; site[ns].len = a.n; ns++;
+    v4_hex(&a, "8B D0  0F AF 54 24 4C  48 8B 84 24 90 00 00 00");
+    v4_jmp(&a, imul + 10);
+
+    /* Sell, sell all, cancel a sale: price times pieces. */
+#define V4_PRICE(siteoff, rec, frame) do { \
+        site[ns].at = siteoff; site[ns].len = a.n; ns++; \
+        v4_hex(&a, "8B D0"); \
+        v4_hex(&a, rec); \
+        v4_call(&a, cave + L_cnt); \
+        v4_hex(&a, "0F AF D1"); \
+        v4_hex(&a, frame); \
+        v4_jmp(&a, (siteoff) + 10); \
+    } while (0)
+    V4_PRICE(sell_own, "48 8B 4C 24 58", "48 8B 84 24 80 00 00 00");
+    V4_PRICE(sell_all, "48 8B 4C 24 70", "48 8B 84 24 90 00 00 00");
+    V4_PRICE(unsell, "48 8B 4C 24 58", "48 8B 84 24 80 00 00 00");
+#undef V4_PRICE
+
+    /* Trade statistics at commit count pieces, not slots. */
+    site[ns].at = la0; site[ns].len = a.n; ns++;
+    v4_hex(&a, "8B 84 84 A0 00 00 00  48 8B 8C 24 68 04 00 00");
+    v4_call(&a, cave + L_cnt);
+    v4_hex(&a, "03 C1");
+    v4_jmp(&a, la0 + 9);
+    site[ns].at = la0 + 0x5F; site[ns].len = a.n; ns++;
+    v4_hex(&a, "48 8B 8C 24 68 04 00 00");
+    v4_call(&a, cave + L_cnt);
+    v4_hex(&a, "0F AF C1  48 8B 8C 24 98 05 00 00  03 84 8C 50 03 00 00");
+    v4_jmp(&a, la0 + 0x5F + 15);
+    site[ns].at = l110; site[ns].len = a.n; ns++;
+    v4_hex(&a, "8B 84 84 10 01 00 00  48 8B 8C 24 78 04 00 00");
+    v4_call(&a, cave + L_cnt);
+    v4_hex(&a, "03 C1");
+    v4_jmp(&a, l110 + 9);
+    site[ns].at = l110 + 0x6F; site[ns].len = a.n; ns++;
+    v4_hex(&a, "48 8B 8C 24 78 04 00 00");
+    v4_call(&a, cave + L_cnt);
+    v4_hex(&a, "0F AF C1  48 8B 8C 24 A8 05 00 00  03 84 8C C0 03 00 00");
+    v4_jmp(&a, l110 + 0x6F + 15);
+    site[ns].at = l110 + 0xAC; site[ns].len = a.n; ns++;
+    v4_hex(&a, "48 8B 8C 24 78 04 00 00");
+    v4_call(&a, cave + L_cnt);
+    v4_hex(&a, "48 8B 84 24 B8 05 00 00  8B 00  03 C1");
+    v4_jmp(&a, l110 + 0xAC + 12);
+
+    /* Every jump site above: site[k].len holds the entry offset in the cave
+     * for now. Convert to (entry, length overwritten). */
+    {
+        static const int lens[] = {12, 12, 12, 6, 6, 16, 10, 10, 10, 10, 9, 15, 9, 15, 12};
+        int entry[16];
+        if (ns != (int)(sizeof lens / sizeof lens[0])) V4ERR(L"商品堆叠的补丁拼不出来。");
+        for (i = 0; i < ns; i++) {
+            entry[i] = site[i].len;
+            site[i].len = lens[i];
+        }
+        /* In-place sites follow; they have no cave entry. */
+        site[ns].at = f110b8 + 11; site[ns].len = 18; ns++;
+        site[ns].at = fc662 + 8; site[ns].len = 21; ns++;
+        site[ns].at = f14d80; site[ns].len = 20; ns++;
+
+        /* Table of original bytes. */
+        code[10] = (uint8_t)(a.n & 0xFF);
+        code[11] = (uint8_t)(a.n >> 8);
+        code[9] = (uint8_t)ns;
+        for (i = 0; i < ns; i++) {
+            uint32_t off = (uint32_t)site[i].at;
+            if (a.n + 5 + site[i].len > kV4Max) { a.bad = 1; break; }
+            memcpy(code + a.n, &off, 4);
+            code[a.n + 4] = (uint8_t)site[i].len;
+            memcpy(code + a.n + 5, data + site[i].at, (size_t)site[i].len);
+            a.n += 5 + site[i].len;
+        }
+        code[12] = (uint8_t)(a.n & 0xFF);
+        code[13] = (uint8_t)(a.n >> 8);
+        code[14] = (uint8_t)(imm_at & 0xFF);
+        code[15] = (uint8_t)(imm_at >> 8);
+        if (a.bad || a.n > run) V4ERR(L"舱位显示函数后面的空位不够，不能改堆叠。");
+
+        memcpy(data + cave, code, (size_t)a.n);
+        for (i = 0; i < 15; i++) {
+            int at = site[i].at, k;
+            if (i == 3) {           /* buy: jne rel32 into the cave */
+                rel = (int32_t)(cave + entry[i] - (at + 6));
+                memcpy(data + at + 2, &rel, 4);
+                continue;
+            }
+            slot_jmp(data, at, cave + entry[i]);
+            for (k = 5; k < site[i].len; k++) data[at + k] = 0x90;
+        }
+    }
+    /* Record copy: all eight bytes. */
+    memcpy(data + f110b8 + 11,
+        "\x48\x8B\x44\x24\x10\x48\x8B\x4C\x24\x18\x48\x8B\x09\x48\x89\x08\x5F\xC3", 18);
+    /* Record clear: byte +3 = 0 together with +2 = 0x62. */
+    memcpy(data + fc662 + 8,
+        "\x48\x8B\x44\x24\x40\x66\xC7\x40\x02\x62\x00\xC7\x40\x04\x00\x00\x00\x00\x90\x90\x90", 21);
+    /* Record build: byte +3 = 0 (al comes from movzx). rax stays the record. */
+    memcpy(data + f14d80,
+        "\x48\x8B\x4C\x24\x30\x66\x89\x41\x02\x8B\x44\x24\x50\x89\x41\x04\x48\x8B\xC1\x90", 20);
+#undef V4ERR
+    return 1;
+}
+
+/* 0 = not installed, otherwise the stack limit. */
+static uint32_t v4_stack(const uint8_t *data, size_t n) {
+    int cave = v4_cave(data, n), imm;
+    if (cave < 0) return 0;
+    imm = v4_u16(data + cave + 14);
+    if (imm <= kV4Head || (size_t)cave + (size_t)imm >= n) return 0;
+    if (data[cave + imm] != data[cave + 8]) return 0;
+    return data[cave + 8];
+}
+
 static int read_cap_values(const uint8_t *data, size_t n, CapValues *v, int *xp_off, wchar_t *err, int errn) {
     static const uint8_t pre_lv[] = {0x89, 0x44, 0x24, 0x20, 0x41, 0xB8};
     static const uint8_t post_lv[] = {0x8B, 0x54, 0x24, 0x20, 0x33, 0xC9};
@@ -2000,6 +2399,11 @@ static int read_cap_values(const uint8_t *data, size_t n, CapValues *v, int *xp_
             StringCchCopyW(err, (size_t)errn, L"找不到原来的舱位计算。");
             return 0;
         }
+        slot_stack = v4_stack(data, n);
+        if (slot_stack) {
+            v->stack = slot_stack;
+            return 1;
+        }
         if (!find_slot_pat(data, n, &slot_at)) {
             StringCchCopyW(err, (size_t)errn, L"找不到购买商品占舱位的位置。");
             return 0;
@@ -2064,8 +2468,6 @@ static int patch_cap_buffer(uint8_t *data, size_t n, const CapValues *v, wchar_t
         int cargo_at = 0, slot_at = 0, cave, kind, slot_kind;
         uint32_t cargo_now = 1, slot_now = 1;
         int bc6c, be92, b032, e9c6;
-        uint8_t cave_buf[220];
-        int cave_n;
         int32_t rel;
         kind = find_cargo_stack(data, n, &cargo_at, &cargo_now);
         if (!kind) {
@@ -2075,6 +2477,13 @@ static int patch_cap_buffer(uint8_t *data, size_t n, const CapValues *v, wchar_t
         memcpy(data + cargo_at, kCargoVanilla, sizeof kCargoVanilla);
         if (kind == 2 && (size_t)cargo_at + 34 <= n)
             data[cargo_at + (int)sizeof kCargoVanilla] = 0xCC;
+        {
+            int c4 = v4_cave(data, n);
+            if (c4 >= 0 && !v4_restore(data, n, c4)) {
+                StringCchCopyW(err, (size_t)errn, L"已写入的商品堆叠认不出来，不能改。");
+                return 0;
+            }
+        }
         if (!find_slot_pat(data, n, &slot_at)) {
             StringCchCopyW(err, (size_t)errn, L"找不到购买商品占舱位的位置。");
             return 0;
@@ -2106,28 +2515,16 @@ static int patch_cap_buffer(uint8_t *data, size_t n, const CapValues *v, wchar_t
             StringCchCopyW(err, (size_t)errn, L"购买函数里的调用对不上。");
             return 0;
         }
-        if (v->stack <= 1) {
-            if (!patch_stack_extras(data, n, cave, 1, err, errn)) return 0;
-            rel = (int32_t)(kSlotSkip - 6);
-            data[slot_at + kSlotJne] = 0x0F;
-            data[slot_at + kSlotJne + 1] = 0x85;
-            memcpy(data + slot_at + kSlotJne + 2, &rel, 4);
-            if (slot_kind == 2)
-                memset(data + cave, 0xCC, kSlotPadLen);
-        } else {
-            cave_n = build_slot_cave(cave_buf, cave, bc6c, be92, b032, e9c6,
-                slot_at + kSlotJne + kSlotUi, slot_at + kSlotJne + kSlotSkip, v->stack);
-            if (cave_n != kSlotBuyLen) {
-                StringCchCopyW(err, (size_t)errn, L"商品堆叠的补丁拼不出来。");
-                return 0;
-            }
-            memcpy(data + cave, cave_buf, (size_t)cave_n);
-            rel = (int32_t)(cave - (slot_at + kSlotJne + 6));
-            data[slot_at + kSlotJne] = 0x0F;
-            data[slot_at + kSlotJne + 1] = 0x85;
-            memcpy(data + slot_at + kSlotJne + 2, &rel, 4);
-            if (!patch_stack_extras(data, n, cave, v->stack, err, errn)) return 0;
-        }
+        /* Take out the older layouts (1150da3 and v3.1) first. They kept the
+         * count in [slot+8], the game's "bought this visit" flag. */
+        if (!patch_stack_extras(data, n, cave, 1, err, errn)) return 0;
+        rel = (int32_t)(kSlotSkip - 6);
+        data[slot_at + kSlotJne] = 0x0F;
+        data[slot_at + kSlotJne + 1] = 0x85;
+        memcpy(data + slot_at + kSlotJne + 2, &rel, 4);
+        if (slot_kind == 2)
+            memset(data + cave, 0xCC, kSlotPadLen);
+        if (v->stack > 1 && !v4_apply(data, n, v->stack, err, errn)) return 0;
     }
     if (!read_cap_values(data, n, &cur, NULL, err, errn)) return 0;
     if (cur.track != v->track || cur.base != v->base || cur.stat != v->stat ||
@@ -2476,7 +2873,7 @@ static LRESULT CALLBACK cap_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPar
             L"基础属性存在一个字节里，最高 255。属性结算是升级、分配和结算三处共用的上限，原版 500，最高 65535。\r\n"
             L"技能按 (两项属性之和) × (不超过封顶的等级 + 100) ÷ 150 计算。封顶原版是 200。设成两段之和后，剑术、生命、交易会按真实等级上涨。\r\n"
             L"港口商业和军事存在 16 位无符号数里，原版 9999，最高 65535。点“解除港口上限”填入 65535。海力上限保持 9999。商业度会参与商品定价，提到很高以后物价会跟着变。\r\n"
-            L"同商品堆叠原版是 1：每买 1 件就占 1 个舱位。填 10 以后，同一个商品先堆在同一个舱位里，满 10 件才再占下一个舱位。物价不改。\r\n"
+            L"同商品堆叠原版是 1：每买 1 件就占 1 个舱位。填 10 以后，这次交易里买的同一个商品先堆在同一个舱位里，满 10 件才再占下一个舱位；船上原有的货不会并进来。舱位价格显示成“件数x单价”，卖出、退货按件数算钱。物价不改。\r\n"
             L"写入前请完全退出游戏。主程序旁边已经有的 .bak 不会覆盖。",
             ES_MULTILINE | ES_READONLY | ES_AUTOVSCROLL, IDC_CAP_NOTE);
         capw.status = cap_ctl(0, L"STATIC", L"", SS_LEFT | SS_NOPREFIX | SS_CENTERIMAGE | SS_ENDELLIPSIS, IDC_CAP_STATUS);
