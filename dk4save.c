@@ -2424,6 +2424,92 @@ static uint32_t v4_stack(const uint8_t *data, size_t n) {
     return data[cave + 8];
 }
 
+/* PROXY_BUY_BEGIN
+ * Local fleets (地方舰队) and the player's NPC fleets pay for goods as
+ *   cost * (1000 - ability + rand(100)) / 1000
+ * where ability is the captain's trade skill. The game expects ability
+ * <= 500. Above 1000 the factor turns negative, the unsigned divide makes
+ * each purchase cost millions, and the monthly report shows a loss in the
+ * hundreds of millions. The fix replaces
+ *   mov ecx,1000 / sub ecx,eax / mov eax,ecx
+ * with a call to a stub after the function that first limits ability to
+ * 500, the vanilla maximum. */
+static const uint8_t kProxyBuyVanilla[] = {0xB9, 0xE8, 0x03, 0x00, 0x00, 0x2B, 0xC8, 0x8B, 0xC1};
+static const uint8_t kProxyBuyTail[] = {
+    0x89, 0x84, 0x24, 0x70, 0x03, 0x00, 0x00, 0xB9, 0x64, 0x00, 0x00, 0x00, 0xE8
+};
+static const uint8_t kProxyBuyEpi[] = {0x48, 0x81, 0xC4, 0xA0, 0x03, 0x00, 0x00, 0x5F, 0xC3};
+static const uint8_t kProxyBuyStub[] = {
+    0x3D, 0xF4, 0x01, 0x00, 0x00,   /* cmp eax,500 */
+    0x7E, 0x05,                     /* jle +5 */
+    0xB8, 0xF4, 0x01, 0x00, 0x00,   /* mov eax,500 */
+    0xB9, 0xE8, 0x03, 0x00, 0x00,   /* mov ecx,1000 */
+    0x2B, 0xC8,                     /* sub ecx,eax */
+    0x8B, 0xC1,                     /* mov eax,ecx */
+    0xC3                            /* ret */
+};
+
+/* 0 = not found, 1 = vanilla, 2 = fix installed. */
+static int find_proxy_buy(const uint8_t *data, size_t n, int *site, int *stub) {
+    size_t i, k, end;
+    int hits = 0, kind = 0, at = -1, pad = -1;
+    for (i = 5; i + sizeof kProxyBuyVanilla + sizeof kProxyBuyTail <= n; i++) {
+        int this_kind;
+        if (data[i - 5] != 0xE8) continue;
+        if (memcmp(data + i + sizeof kProxyBuyVanilla, kProxyBuyTail, sizeof kProxyBuyTail) != 0)
+            continue;
+        if (memcmp(data + i, kProxyBuyVanilla, sizeof kProxyBuyVanilla) == 0)
+            this_kind = 1;
+        else if (data[i] == 0xE8 && memcmp(data + i + 5, "\x90\x90\x90\x90", 4) == 0)
+            this_kind = 2;
+        else
+            continue;
+        hits++;
+        kind = this_kind;
+        at = (int)i;
+    }
+    if (hits != 1) return 0;
+    end = (size_t)at + 0x800;
+    if (end > n) end = n;
+    for (i = (size_t)at; i + sizeof kProxyBuyEpi <= end; i++) {
+        if (memcmp(data + i, kProxyBuyEpi, sizeof kProxyBuyEpi) == 0) {
+            pad = (int)(i + sizeof kProxyBuyEpi);
+            break;
+        }
+    }
+    if (pad < 0 || (size_t)pad + sizeof kProxyBuyStub > n) return 0;
+    if (kind == 1) {
+        for (k = 0; k < sizeof kProxyBuyStub; k++)
+            if (data[pad + k] != 0xCC) return 0;
+    } else {
+        int32_t rel;
+        memcpy(&rel, data + at + 1, 4);
+        if (at + 5 + rel != pad) return 0;
+        if (memcmp(data + pad, kProxyBuyStub, sizeof kProxyBuyStub) != 0) return 0;
+    }
+    *site = at;
+    *stub = pad;
+    return kind;
+}
+
+static int patch_proxy_buy(uint8_t *data, size_t n, wchar_t *err, int errn) {
+    int site, stub, kind;
+    int32_t rel;
+    kind = find_proxy_buy(data, n, &site, &stub);
+    if (!kind) {
+        StringCchCopyW(err, (size_t)errn, L"找不到地方舰队买货的成本计算，不能修正舰队亏损。");
+        return 0;
+    }
+    if (kind == 2) return 1;
+    memcpy(data + stub, kProxyBuyStub, sizeof kProxyBuyStub);
+    rel = (int32_t)(stub - (site + 5));
+    data[site] = 0xE8;
+    memcpy(data + site + 1, &rel, 4);
+    memset(data + site + 5, 0x90, 4);
+    return 1;
+}
+/* PROXY_BUY_END */
+
 static int read_cap_values(const uint8_t *data, size_t n, CapValues *v, int *xp_off, wchar_t *err, int errn) {
     static const uint8_t pre_lv[] = {0x89, 0x44, 0x24, 0x20, 0x41, 0xB8};
     static const uint8_t post_lv[] = {0x8B, 0x54, 0x24, 0x20, 0x33, 0xC9};
@@ -2636,6 +2722,15 @@ static int patch_cap_buffer(uint8_t *data, size_t n, const CapValues *v, wchar_t
             memset(data + cave, 0xCC, kSlotPadLen);
         if (v->stack > 1 && !v4_apply(data, n, v->stack, err, errn)) return 0;
     }
+    /* Harmless at the vanilla cap, so it goes in on every write. */
+    if (!patch_proxy_buy(data, n, err, errn)) return 0;
+    {
+        int site, stub;
+        if (find_proxy_buy(data, n, &site, &stub) != 2) {
+            StringCchCopyW(err, (size_t)errn, L"地方舰队亏损修正写入后校验失败。");
+            return 0;
+        }
+    }
     if (!read_cap_values(data, n, &cur, NULL, err, errn)) return 0;
     if (cur.track != v->track || cur.base != v->base || cur.stat != v->stat ||
         cur.skill != v->skill || cur.port != v->port || cur.stack != v->stack) {
@@ -2720,7 +2815,7 @@ static int save_exe_bytes(const wchar_t *path, const uint8_t *data, size_t n, wc
 }
 
 static int read_game_caps(const wchar_t *dir, CapValues *v, wchar_t *status, int statusn) {
-    int i, found = 0, xp_off = 0, first_i = 0;
+    int i, found = 0, xp_off = 0, first_i = 0, no_fix = 0;
     CapValues first, cur;
     wchar_t path[MAX_PATH], err[240], names[120];
     memset(&first, 0, sizeof first);
@@ -2728,7 +2823,7 @@ static int read_game_caps(const wchar_t *dir, CapValues *v, wchar_t *status, int
     for (i = 0; i < 4; i++) {
         uint8_t *data = NULL;
         size_t n = 0;
-        int bad = 0;
+        int bad = 0, site, stub;
         StringCchPrintfW(path, MAX_PATH, L"%s\\%s", dir, kGameExe[i]);
         if (GetFileAttributesW(path) == INVALID_FILE_ATTRIBUTES) continue;
         if (!load_exe_bytes(path, &data, &n, err, 240) ||
@@ -2737,6 +2832,7 @@ static int read_game_caps(const wchar_t *dir, CapValues *v, wchar_t *status, int
             StringCchPrintfW(status, (size_t)statusn, L"%s：%s", kGameExeName[i], err);
             return 0;
         }
+        if (find_proxy_buy(data, n, &site, &stub) != 2) no_fix = 1;
         free(data);
         if (!found) {
             first = cur;
@@ -2761,10 +2857,12 @@ static int read_game_caps(const wchar_t *dir, CapValues *v, wchar_t *status, int
     }
     *v = first;
     StringCchPrintfW(status, (size_t)statusn,
-        xp_off
-            ? L"已读取%s。经验上限和单段等级对不上，写入时会按 30×等级² 重写。"
-            : L"已读取%s。",
-        names);
+        L"%s已读取%s。%s",
+        (no_fix && first.stat > 500)
+            ? L"还没有地方舰队亏损修正，属性结算超过 500 时舰队每月会巨亏，请再点一次“写入主程序”。"
+            : L"",
+        names,
+        xp_off ? L"经验上限和单段等级对不上，写入时会按 30×等级² 重写。" : L"");
     return 1;
 }
 
@@ -2796,7 +2894,7 @@ static int write_game_caps(const wchar_t *dir, const CapValues *v, wchar_t *stat
         return 0;
     }
     StringCchPrintfW(status, (size_t)statusn,
-        L"已写入%s。单段 %u，合计 %u，经验 %u，基础属性 %u，结算 %u，技能封顶 %u，港口 %u，商品堆叠 %u。",
+        L"已写入%s。单段 %u，合计 %u，经验 %u，基础属性 %u，结算 %u，技能封顶 %u，港口 %u，商品堆叠 %u。已修正地方舰队买货亏损。",
         names, v->track, v->track * 2u, 30u * v->track * v->track,
         v->base, v->stat, v->skill, v->port, v->stack);
     return 1;
@@ -3061,6 +3159,7 @@ static LRESULT CALLBACK cap_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPar
             L"单段等级最高 255。再高时，游戏用 32 位计算平方根会溢出，等级会变成 0。经验上限按 30×单段等级² 自动写入。\r\n"
             L"基础属性存在一个字节里，最高 255。属性结算是升级、分配和结算三处共用的上限，原版 500，最高 65535。\r\n"
             L"技能按 (两项属性之和) × (不超过封顶的等级 + 100) ÷ 150 计算。封顶原版是 200。设成两段之和后，剑术、生命、交易会按真实等级上涨。\r\n"
+            L"地方舰队和下属 NPC 舰队买货时，游戏按船长交易能力打折，只考虑了能力不超过 500 的情况。能力超过 1000 后每月会亏上亿金币。每次写入主程序都会顺带修正：这里的能力按 500 算，和原版满能力一样，其他地方不受影响。\r\n"
             L"港口商业和军事存在 16 位无符号数里，原版 9999，最高 65535。点“解除港口上限”填入 65535。海力上限保持 9999。商业度会参与商品定价，提到很高以后物价会跟着变。\r\n"
             L"同商品堆叠原版是 1：每买 1 件就占 1 个舱位，最高填 9。填 9 以后，这次交易里买的同一个商品先堆在同一个舱位里，满 9 件才再占下一个舱位；船上原有的货不会并进来。舱位价格显示成“件数x单价”，卖出、退货按件数算钱。价格栏只放得下 6 个字符，所以最多 9 件。物价不改。\r\n"
             L"写入前请完全退出游戏。第一次写入时，原主程序存为 DK4HD_*.exe.bak，以后不再覆盖；之后每次写入前的主程序另存为 DK4HD_*.exe.日期-时间.bak，每个只留最近 10 份。\r\n"
