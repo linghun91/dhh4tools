@@ -106,7 +106,8 @@ enum {
     IDC_CAP_LBL_SKILL,
     IDC_CAP_LBL_PORT,
     IDC_CAP_LBL_STACK,
-    IDC_CAP_STACK9
+    IDC_CAP_STACK9,
+    IDC_CAP_RESTORE
 };
 
 static const wchar_t *const kStatName[STAT_COUNT] = {
@@ -428,6 +429,97 @@ static void person_name(Save *s, int index, wchar_t *dst, int dstn) {
         StringCchPrintfW(dst, (size_t)dstn, L"记录%d", index);
 }
 
+/* Backups next to a file the tool writes:
+ *   name.bak                       the file before the tool first changed it,
+ *                                  never overwritten
+ *   name.YYYYMMDD-HHMMSS-mmm.bak   the file right before each later write,
+ *                                  the newest kKeepSteps are kept */
+enum { kKeepSteps = 10, kStepStamp = 19 };
+
+static const wchar_t *file_part(const wchar_t *path) {
+    const wchar_t *slash = wcsrchr(path, L'\\');
+    return slash ? slash + 1 : path;
+}
+
+/* name.<19-char stamp>.bak for this file */
+static int is_step_backup(const wchar_t *base, const wchar_t *name) {
+    size_t bn = wcslen(base), nn = wcslen(name), i;
+    const wchar_t *stamp;
+    if (nn != bn + 1 + kStepStamp + 4) return 0;
+    if (_wcsnicmp(name, base, bn) != 0 || name[bn] != L'.') return 0;
+    if (_wcsicmp(name + nn - 4, L".bak") != 0) return 0;
+    stamp = name + bn + 1;
+    for (i = 0; i < kStepStamp; i++) {
+        if (i == 8 || i == 15) {
+            if (stamp[i] != L'-') return 0;
+        } else if (stamp[i] < L'0' || stamp[i] > L'9') {
+            return 0;
+        }
+    }
+    return 1;
+}
+
+static int cmp_wname(const void *a, const void *b) {
+    return _wcsicmp((const wchar_t *)a, (const wchar_t *)b);
+}
+
+static void prune_step_backups(const wchar_t *path) {
+    wchar_t pattern[MAX_PATH], dir[MAX_PATH], full[MAX_PATH];
+    wchar_t (*names)[MAX_PATH] = NULL;
+    const wchar_t *base = file_part(path);
+    WIN32_FIND_DATAW fd;
+    HANDLE h;
+    int count = 0, cap = 0, i;
+    StringCchCopyW(dir, MAX_PATH, path);
+    dir[base - path] = 0;
+    StringCchPrintfW(pattern, MAX_PATH, L"%s.*.bak", path);
+    h = FindFirstFileW(pattern, &fd);
+    if (h == INVALID_HANDLE_VALUE) return;
+    do {
+        if (fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) continue;
+        if (!is_step_backup(base, fd.cFileName)) continue;
+        if (count == cap) {
+            int ncap = cap ? cap * 2 : 16;
+            wchar_t (*grown)[MAX_PATH] = realloc(names, (size_t)ncap * sizeof *names);
+            if (!grown) break;
+            names = grown;
+            cap = ncap;
+        }
+        StringCchCopyW(names[count++], MAX_PATH, fd.cFileName);
+    } while (FindNextFileW(h, &fd));
+    FindClose(h);
+    if (count > kKeepSteps) {
+        qsort(names, (size_t)count, sizeof *names, cmp_wname);
+        for (i = 0; i < count - kKeepSteps; i++) {
+            StringCchPrintfW(full, MAX_PATH, L"%s%s", dir, names[i]);
+            DeleteFileW(full);
+        }
+    }
+    free(names);
+}
+
+/* Call before overwriting path. 1 = made name.bak, 2 = made a step backup,
+ * 3 = nothing to back up (path does not exist), 0 = failed. */
+static int backup_before_write(const wchar_t *path, wchar_t *made, int maden) {
+    wchar_t bak[MAX_PATH];
+    SYSTEMTIME t;
+    if (made && maden > 0) made[0] = 0;
+    if (GetFileAttributesW(path) == INVALID_FILE_ATTRIBUTES) return 3;
+    StringCchPrintfW(bak, MAX_PATH, L"%s.bak", path);
+    if (GetFileAttributesW(bak) == INVALID_FILE_ATTRIBUTES) {
+        if (!CopyFileW(path, bak, TRUE)) return 0;
+        if (made) StringCchCopyW(made, (size_t)maden, bak);
+        return 1;
+    }
+    GetLocalTime(&t);
+    StringCchPrintfW(bak, MAX_PATH, L"%s.%04u%02u%02u-%02u%02u%02u-%03u.bak", path,
+        t.wYear, t.wMonth, t.wDay, t.wHour, t.wMinute, t.wSecond, t.wMilliseconds);
+    if (!CopyFileW(path, bak, TRUE)) return 0;
+    if (made) StringCchCopyW(made, (size_t)maden, bak);
+    prune_step_backups(path);
+    return 2;
+}
+
 static int load_save(Save *s, const wchar_t *path, wchar_t *err, int errn) {
     FILE *fp;
     long sz;
@@ -475,15 +567,16 @@ static int write_save(Save *s, wchar_t *msg, int msgn) {
     wchar_t extra[160];
     FILE *fp;
     uint32_t stored = 0;
-    int copied = 0;
+    int copied;
     if (!s->data) {
         StringCchCopyW(msg, (size_t)msgn, L"没有打开存档。");
         return 0;
     }
     if (s->size >= 0x18) stored = ru32(s->data + 0x14);
-    StringCchPrintfW(bak, MAX_PATH, L"%s.bak", s->path);
-    if (GetFileAttributesW(bak) == INVALID_FILE_ATTRIBUTES) {
-        copied = CopyFileW(s->path, bak, TRUE) ? 1 : -1;
+    copied = backup_before_write(s->path, bak, MAX_PATH);
+    if (!copied) {
+        StringCchCopyW(msg, (size_t)msgn, L"备份失败，没有写入。");
+        return 0;
     }
     fp = _wfopen(s->path, L"wb");
     if (!fp) {
@@ -498,11 +591,11 @@ static int write_save(Save *s, wchar_t *msg, int msgn) {
     fclose(fp);
     s->dirty = 0;
     if (copied == 1)
-        StringCchPrintfW(msg, (size_t)msgn, L"已写入。备份 %s", bak);
-    else if (copied == -1)
-        StringCchCopyW(msg, (size_t)msgn, L"已写入。备份失败，原文件已经被覆盖。");
+        StringCchPrintfW(msg, (size_t)msgn, L"已写入。原文件备份为 %s", file_part(bak));
+    else if (copied == 2)
+        StringCchPrintfW(msg, (size_t)msgn, L"已写入。写入前的文件另存为 %s", file_part(bak));
     else
-        StringCchPrintfW(msg, (size_t)msgn, L"已写入。已有备份，没有覆盖 %s", bak);
+        StringCchCopyW(msg, (size_t)msgn, L"已写入。");
     if (stored != (uint32_t)s->size) {
         StringCchPrintfW(extra, 160, L" 长度字段是 %u，文件是 %u，未改长度字段。",
             stored, (unsigned)s->size);
@@ -2591,11 +2684,11 @@ static int load_exe_bytes(const wchar_t *path, uint8_t **out, size_t *outn, wcha
     return 1;
 }
 
+/* Write next to path, back up the current file, then swap it in. */
 static int save_exe_bytes(const wchar_t *path, const uint8_t *data, size_t n, wchar_t *err, int errn) {
-    wchar_t bak[MAX_PATH], tmp[MAX_PATH];
+    wchar_t tmp[MAX_PATH];
     HANDLE h;
     DWORD wrote, done;
-    StringCchPrintfW(bak, MAX_PATH, L"%s.bak", path);
     StringCchPrintfW(tmp, MAX_PATH, L"%s.writing", path);
     h = CreateFileW(tmp, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
     if (h == INVALID_HANDLE_VALUE) {
@@ -2613,12 +2706,10 @@ static int save_exe_bytes(const wchar_t *path, const uint8_t *data, size_t n, wc
         done += wrote;
     }
     CloseHandle(h);
-    if (GetFileAttributesW(bak) == INVALID_FILE_ATTRIBUTES) {
-        if (!CopyFileW(path, bak, TRUE)) {
-            DeleteFileW(tmp);
-            StringCchCopyW(err, (size_t)errn, L"备份失败，没有改主程序。");
-            return 0;
-        }
+    if (!backup_before_write(path, NULL, 0)) {
+        DeleteFileW(tmp);
+        StringCchCopyW(err, (size_t)errn, L"备份失败，没有改主程序。");
+        return 0;
     }
     if (!MoveFileExW(tmp, path, MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH)) {
         DeleteFileW(tmp);
@@ -2711,6 +2802,60 @@ static int write_game_caps(const wchar_t *dir, const CapValues *v, wchar_t *stat
     return 1;
 }
 
+/* Put DK4HD_*.exe.bak back. The file being replaced gets a step backup
+ * first, so a restore can be undone too. */
+static int restore_game_exes(const wchar_t *dir, wchar_t *status, int statusn) {
+    int i, done = 0, same = 0, none = 0;
+    wchar_t path[MAX_PATH], bak[MAX_PATH], err[240], names[120];
+    names[0] = 0;
+    for (i = 0; i < 4; i++) {
+        uint8_t *orig = NULL, *cur = NULL;
+        size_t on = 0, cn = 0;
+        StringCchPrintfW(path, MAX_PATH, L"%s\\%s", dir, kGameExe[i]);
+        StringCchPrintfW(bak, MAX_PATH, L"%s.bak", path);
+        if (GetFileAttributesW(bak) == INVALID_FILE_ATTRIBUTES) {
+            if (GetFileAttributesW(path) != INVALID_FILE_ATTRIBUTES) none++;
+            continue;
+        }
+        if (!load_exe_bytes(bak, &orig, &on, err, 240)) {
+            StringCchPrintfW(status, (size_t)statusn, L"%s的备份读不出来，没有还原。%s", kGameExeName[i], err);
+            if (done) StringCchCatW(status, (size_t)statusn, L" 前面的版本已经还原。");
+            return 0;
+        }
+        if (GetFileAttributesW(path) != INVALID_FILE_ATTRIBUTES &&
+            load_exe_bytes(path, &cur, &cn, err, 240) && cn == on && memcmp(cur, orig, on) == 0) {
+            free(cur);
+            free(orig);
+            same++;
+            continue;
+        }
+        free(cur);
+        if (!save_exe_bytes(path, orig, on, err, 240)) {
+            free(orig);
+            StringCchPrintfW(status, (size_t)statusn, L"%s没有还原。%s", kGameExeName[i], err);
+            if (done) StringCchCatW(status, (size_t)statusn, L" 前面的版本已经还原。");
+            return 0;
+        }
+        free(orig);
+        if (names[0]) StringCchCatW(names, 120, L"、");
+        StringCchCatW(names, 120, kGameExeName[i]);
+        done++;
+    }
+    if (!done && !same) {
+        StringCchCopyW(status, (size_t)statusn, none
+            ? L"主程序旁边没有 .bak，这个目录还没被本工具写过，主程序就是原文件。"
+            : L"这个目录里没有 DK4HD 主程序。");
+        return 0;
+    }
+    if (done)
+        StringCchPrintfW(status, (size_t)statusn, L"已还原%s。还原前的主程序另存为 主程序名.日期-时间.bak。", names);
+    else
+        StringCchCopyW(status, (size_t)statusn, L"主程序已经是原文件，没有改动。");
+    if (done && same) StringCchCatW(status, (size_t)statusn, L" 其余版本本来就是原文件。");
+    if (none) StringCchCatW(status, (size_t)statusn, L" 有的版本没有 .bak，没动。");
+    return 1;
+}
+
 static HWND cap_ctl(DWORD ex, const wchar_t *cls, const wchar_t *text, DWORD style, int id) {
     return CreateWindowExW(ex, cls, text, style | WS_CHILD | WS_VISIBLE,
         0, 0, 10, 10, capw.hwnd, (HMENU)(INT_PTR)id, g.inst, NULL);
@@ -2793,6 +2938,31 @@ static void cap_write_clicked(void) {
     remember_game_dir(capw.dir);
 }
 
+static void cap_restore_clicked(void) {
+    wchar_t status[420];
+    CapValues v;
+    if (!dir_has_game(capw.dir)) {
+        cap_set_status(L"请先选择游戏主程序。");
+        return;
+    }
+    if (MessageBoxW(capw.hwnd,
+            L"把四个主程序还原成本工具第一次写入前的原文件（DK4HD_*.exe.bak）？\n"
+            L"等级、属性、技能、港口上限和商品堆叠都会回到写入前的样子。\n"
+            L"还原前的主程序会另存一份，存档不受影响。\n请先完全退出游戏和启动器。",
+            L"还原原版主程序", MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON2) != IDYES)
+        return;
+    if (!restore_game_exes(capw.dir, status, 420)) {
+        MessageBoxW(capw.hwnd, status, L"还原原版主程序", MB_ICONWARNING);
+        cap_set_status(status);
+        return;
+    }
+    {
+        wchar_t tmp[360];
+        if (read_game_caps(capw.dir, &v, tmp, 360)) cap_apply_values(&v);
+    }
+    cap_set_status(status);
+}
+
 static void cap_browse(void) {
     wchar_t file[MAX_PATH];
     OPENFILENAMEW ofn;
@@ -2854,6 +3024,7 @@ static void cap_layout(void) {
     MoveWindow(GetDlgItem(capw.hwnd, IDC_CAP_WRITE), m + (btnW + gap), y, btnW, row, TRUE);
     MoveWindow(GetDlgItem(capw.hwnd, IDC_CAP_VANILLA), m + (btnW + gap) * 2, y, btnW, row, TRUE);
     MoveWindow(GetDlgItem(capw.hwnd, IDC_CAP_UNLOCK), m + (btnW + gap) * 3, y, btnW, row, TRUE);
+    MoveWindow(GetDlgItem(capw.hwnd, IDC_CAP_RESTORE), m + (btnW + gap) * 4, y, btnW, row, TRUE);
     y += row + S(12);
     MoveWindow(GetDlgItem(capw.hwnd, IDC_CAP_NOTE), m, y, w - m * 2, rc.bottom - y - m - row - gap, TRUE);
     MoveWindow(capw.status, m, rc.bottom - m - row, w - m * 2, row, TRUE);
@@ -2885,14 +3056,16 @@ static LRESULT CALLBACK cap_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPar
         cap_ctl(0, L"BUTTON", L"写入主程序", WS_TABSTOP | BS_DEFPUSHBUTTON, IDC_CAP_WRITE);
         cap_ctl(0, L"BUTTON", L"填入原版", WS_TABSTOP, IDC_CAP_VANILLA);
         cap_ctl(0, L"BUTTON", L"解除上限", WS_TABSTOP, IDC_CAP_UNLOCK);
+        cap_ctl(0, L"BUTTON", L"还原原版主程序", WS_TABSTOP, IDC_CAP_RESTORE);
         cap_ctl(WS_EX_CLIENTEDGE, L"EDIT",
             L"单段等级最高 255。再高时，游戏用 32 位计算平方根会溢出，等级会变成 0。经验上限按 30×单段等级² 自动写入。\r\n"
             L"基础属性存在一个字节里，最高 255。属性结算是升级、分配和结算三处共用的上限，原版 500，最高 65535。\r\n"
             L"技能按 (两项属性之和) × (不超过封顶的等级 + 100) ÷ 150 计算。封顶原版是 200。设成两段之和后，剑术、生命、交易会按真实等级上涨。\r\n"
             L"港口商业和军事存在 16 位无符号数里，原版 9999，最高 65535。点“解除港口上限”填入 65535。海力上限保持 9999。商业度会参与商品定价，提到很高以后物价会跟着变。\r\n"
             L"同商品堆叠原版是 1：每买 1 件就占 1 个舱位，最高填 9。填 9 以后，这次交易里买的同一个商品先堆在同一个舱位里，满 9 件才再占下一个舱位；船上原有的货不会并进来。舱位价格显示成“件数x单价”，卖出、退货按件数算钱。价格栏只放得下 6 个字符，所以最多 9 件。物价不改。\r\n"
-            L"写入前请完全退出游戏。主程序旁边已经有的 .bak 不会覆盖。",
-            ES_MULTILINE | ES_READONLY | ES_AUTOVSCROLL, IDC_CAP_NOTE);
+            L"写入前请完全退出游戏。第一次写入时，原主程序存为 DK4HD_*.exe.bak，以后不再覆盖；之后每次写入前的主程序另存为 DK4HD_*.exe.日期-时间.bak，每个只留最近 10 份。\r\n"
+            L"“还原原版主程序”用 .bak 把四个主程序还原成第一次写入前的样子，还原前的主程序同样另存一份。",
+            ES_MULTILINE | ES_READONLY | ES_AUTOVSCROLL | WS_VSCROLL, IDC_CAP_NOTE);
         capw.status = cap_ctl(0, L"STATIC", L"", SS_LEFT | SS_NOPREFIX | SS_CENTERIMAGE | SS_ENDELLIPSIS, IDC_CAP_STATUS);
         SendMessageW(capw.track, EM_SETLIMITTEXT, 3, 0);
         SendMessageW(capw.base, EM_SETLIMITTEXT, 3, 0);
@@ -2925,6 +3098,9 @@ static LRESULT CALLBACK cap_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPar
             break;
         case IDC_CAP_WRITE:
             cap_write_clicked();
+            break;
+        case IDC_CAP_RESTORE:
+            cap_restore_clicked();
             break;
         case IDC_CAP_VANILLA: {
             CapValues v;
@@ -2968,7 +3144,7 @@ static LRESULT CALLBACK cap_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPar
     case WM_GETMINMAXINFO: {
         MINMAXINFO *mm = (MINMAXINFO *)lParam;
         mm->ptMinTrackSize.x = S(720);
-        mm->ptMinTrackSize.y = S(540);
+        mm->ptMinTrackSize.y = S(600);
         return 0;
     }
     case WM_CLOSE:
@@ -3006,7 +3182,7 @@ static void open_cap_window(void) {
     rc.left = 0;
     rc.top = 0;
     rc.right = S(760);
-    rc.bottom = S(520);
+    rc.bottom = S(600);
     AdjustWindowRect(&rc, style, FALSE);
     x = CW_USEDEFAULT;
     y = CW_USEDEFAULT;
@@ -3133,7 +3309,7 @@ static void create_controls(HWND hwnd) {
     g.fillLevelBtn = add_ctl(0, L"BUTTON", L"等级 510", WS_TABSTOP, IDC_FILL_LEVEL);
     g.batchBtn = add_ctl(0, L"BUTTON", L"应用到主角和已招收", WS_TABSTOP, IDC_BATCH);
     g.hint = add_ctl(0, L"STATIC",
-        L"六维上限 255。等级是两段之和，每段最高 255，合计 510。改等级时按当前两段的比例分配。健康、心情和技能没有单独字段，由游戏按六维和等级计算。改动先留在内存里。点“保存到原文件”或按 Ctrl+S 才写回，第一次保存会生成 .bak。",
+        L"六维上限 255。等级是两段之和，每段最高 255，合计 510。改等级时按当前两段的比例分配。健康、心情和技能没有单独字段，由游戏按六维和等级计算。改动先留在内存里。点“保存到原文件”或按 Ctrl+S 才写回。第一次保存把原存档存为 .bak，之后每次保存前的存档另存为 .日期-时间.bak，只留最近 10 份。",
         SS_LEFT | SS_NOPREFIX, IDC_HINT);
     g.saveBtn = add_ctl(0, L"BUTTON", L"保存到原文件", WS_TABSTOP, IDC_SAVE);
     g.status = add_ctl(0, L"STATIC", L"", SS_LEFT | SS_NOPREFIX | SS_CENTERIMAGE | SS_ENDELLIPSIS, IDC_STATUS);
