@@ -1968,8 +1968,10 @@ static int patch_stack_extras(uint8_t *data, size_t n, int cave, uint32_t stack,
  *            undo-buy, sell, sell all, cancel sell, the five price columns,
  *            the trade statistics at commit, ship save/load (the save file
  *            has no byte for +3, so the count rides in the top byte of the
- *            saved purchase price), and the auto-trade of fleets that belong
- *            to the player's force (capacity, loading, selling).
+ *            saved purchase price), the auto-trade of fleets that belong
+ *            to the player's force (capacity, loading, selling), and the
+ *            fleet cargo count / take used by requests, story and event
+ *            scripts (pieces, not slots).
  * All new code sits in the int3 pad after the incremental-link jump thunks.
  * The cave starts with a header and ends with a table of the original bytes
  * of every site, so writing stack 1 restores the vanilla bytes exactly.
@@ -2245,6 +2247,7 @@ static int v5_apply(uint8_t *data, size_t n, uint32_t stack, wchar_t *err, int e
     int dispA, dispB, dispS, dispPA, dispPS, fmt6, c_draw, iat_fmt, iat_key;
     int c_bc6c, c_be92, c_b032, c_e9c6, c_price, c_quote, c_14d3a, c_833c, c_a3c6;
     int shift, c_buy, xfer[2], c_xfer[2], np_price, np_kind, np_fash, cap1, cap2, c_cap, np_load, c_mine;
+    int q_cnt, q_take, q_cap, q_done, c_6474;
     int L_cnt, L_disp, L_fmt2, L_fmtn, L_ncnt, j1, j2, j3, j4, imm_at, loop, hits[4];
     uint32_t key_rva;
     int32_t rel;
@@ -2392,6 +2395,30 @@ static int v5_apply(uint8_t *data, size_t n, uint32_t stack, wchar_t *err, int e
         V4ERR(L"舰队装货的代码和原版对不上。");
     c_mine = slot_call_off(data, n, hits[0] - 0xC5);
     if (c_mine < 0) V4ERR(L"舰队装货的调用对不上。");
+
+    /* Requests, story and event scripts check and take cargo through two
+     * fleet functions: count(fleet, good) and add(fleet, good, ..., n), where
+     * n < 0 takes. For the player's fleets vanilla counts slots and takes
+     * whole slots. Both get pieces instead.
+     * count, inner loop: ship at [rsp+0x48], j at [rsp+0x54], result [rsp+0x20]. */
+    if (v4_findall(data, n, "48 8B 4C 24 48 E8 ? ? ? ? 48 8B C8 E8 ? ? ? ? 3B 84 24 88 00 00 00 75 0A"
+                            " 8B 44 24 20 FF C0 89 44 24 20 EB", hits, 4) != 1)
+        V4ERR(L"找不到统计舰队货物的位置。");
+    q_cnt = hits[0] + 0x1B;
+    /* take, player branch: ship at [rsp+0x2D8], j at [rsp+0x2E4], n at [rsp+0x358]
+     *   clear(ship, j) / n-- / if (n > 0) next / else jmp done */
+    if (v4_findall(data, n, "8B 94 24 E4 02 00 00 48 8B 8C 24 D8 02 00 00 E8 ? ? ? ? 8B 84 24 58 03 00 00 FF C8"
+                            " 89 84 24 58 03 00 00 83 BC 24 58 03 00 00 00 7F 05 E9", hits, 4) != 1)
+        V4ERR(L"找不到扣除舰队货物的位置。");
+    q_take = hits[0];
+    c_6474 = slot_call_off(data, n, q_take + 15);
+    memcpy(&rel, data + q_take + 0x2F, 4);
+    q_done = q_take + 0x33 + rel;
+    /* take: n = min(25, -n), 25 being the most slots a fleet has. */
+    if (v4_findall(data, n, "8B 84 24 58 03 00 00 F7 D8 8B D0 B9 19 00 00 00 E8", hits, 4) != 1 ||
+        q_take - hits[0] != 0xD6 || c_6474 < 0)
+        V4ERR(L"扣除舰队货物的代码和原版对不上。");
+    q_cap = hits[0] + 12;
 
     /* The cave: the int3 pad after the jump thunk table. */
     cave = -1;
@@ -2699,12 +2726,38 @@ static int v5_apply(uint8_t *data, size_t n, uint32_t stack, wchar_t *err, int e
     v4_hex(&a, "48 8B 4C 24 48  48 63 54 24 64  88 44 D1 5B  29 84 24 B8 00 00 00");
     v4_jmp(&a, np_load + 16);
 
+    /* Requests and events, count: add the pieces of a matching slot. */
+    SITE(q_cnt, 10, 0);
+    v4_hex(&a, "48 8B 4C 24 48  48 63 44 24 54  48 8D 4C C1 58");
+    v4_call(&a, cave + L_cnt);
+    v4_hex(&a, "01 4C 24 20");
+    v4_jmp(&a, q_cnt + 10);
+
+    /* Requests and events, take: a slot with no more pieces than still owed
+     * is cleared as in vanilla; otherwise only the owed pieces come off it. */
+    SITE(q_take, 7, 0);
+    v4_hex(&a, "48 8B 8C 24 D8 02 00 00  48 63 84 24 E4 02 00 00  48 8D 4C C1 58");
+    v4_call(&a, cave + L_cnt);
+    v4_hex(&a, "8B 84 24 58 03 00 00  39 C1");
+    j1 = v4_jcc(&a, 0x8F);                      /* jg part */
+    v4_hex(&a, "29 C8  89 84 24 58 03 00 00");
+    v4_hex(&a, "8B 94 24 E4 02 00 00  48 8B 8C 24 D8 02 00 00");
+    v4_call(&a, c_6474);
+    v4_hex(&a, "83 BC 24 58 03 00 00 00");
+    j2 = v4_jcc(&a, 0x8F);                      /* jg next slot */
+    v4_fix(&a, j2, q_take + 0x33 - cave);
+    v4_jmp(&a, q_done);
+    v4_fix(&a, j1, a.n);                        /* part: */
+    v4_hex(&a, "29 C1  48 8B 94 24 D8 02 00 00  48 63 84 24 E4 02 00 00  88 4C C2 5B");
+    v4_jmp(&a, q_done);
+
     {
         int jumps = ns;
         /* In-place sites follow; they have no cave entry. */
         SITE(f110b8 + 11, 18, 3);
         SITE(fc662 + 8, 21, 3);
         SITE(f14d80, 20, 3);
+        SITE(q_cap, 4, 3);
 
         /* Table of original bytes. */
         code[10] = (uint8_t)(a.n & 0xFF);
@@ -2748,6 +2801,9 @@ static int v5_apply(uint8_t *data, size_t n, uint32_t stack, wchar_t *err, int e
     /* Record build: byte +3 = 0 (al comes from movzx). rax stays the record. */
     memcpy(data + f14d80,
         "\x48\x8B\x4C\x24\x30\x66\x89\x41\x02\x8B\x44\x24\x50\x89\x41\x04\x48\x8B\xC1\x90", 20);
+    /* Taking cargo: at most 25 slots of pieces, so "take everything" still
+     * empties a full fleet. */
+    wu32(data + q_cap, 25u * stack);
 #undef SITE
 #undef V4ERR
     return 1;
