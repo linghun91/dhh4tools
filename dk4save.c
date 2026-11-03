@@ -107,7 +107,16 @@ enum {
     IDC_CAP_LBL_PORT,
     IDC_CAP_LBL_STACK,
     IDC_CAP_STACKMAX,
-    IDC_CAP_RESTORE
+    IDC_CAP_RESTORE,
+    IDC_CAP_LBL_FTHR,
+    IDC_CAP_FTHR,
+    IDC_CAP_LBL_FDIV,
+    IDC_CAP_FDIV,
+    IDC_CAP_LBL_FL1,
+    IDC_CAP_FL1,
+    IDC_CAP_LBL_FL2,
+    IDC_CAP_FL2,
+    IDC_CAP_FSCALE
 };
 
 static const wchar_t *const kStatName[STAT_COUNT] = {
@@ -1219,6 +1228,14 @@ typedef struct CapValues {
     uint32_t port;
     /* How many goods occupy one point of cargo space. Vanilla is 1. */
     uint32_t stack;
+    /* Selling fashion goods at the exchange (vanilla 1, 6, 10, 16):
+     * share needs pieces >= hold slots * fthr / 2, share gain is
+     * pieces / fdiv + 1, introduction letter at fl1..fl2-1 pieces,
+     * recommendation letter at fl2 pieces. */
+    uint32_t fthr;
+    uint32_t fdiv;
+    uint32_t fl1;
+    uint32_t fl2;
 } CapValues;
 
 typedef struct CapWin {
@@ -1230,6 +1247,10 @@ typedef struct CapWin {
     HWND skill;
     HWND port;
     HWND stack;
+    HWND fthr;
+    HWND fdiv;
+    HWND fl1;
+    HWND fl2;
     HWND derived;
     HWND status;
     int ready;
@@ -2829,6 +2850,198 @@ static uint32_t v4_stack(const uint8_t *data, size_t n) {
     return data[cave + 8];
 }
 
+/* Fashion goods at the exchange ("DK4FSH1").
+ *
+ * When the trade is confirmed (CTrade::CommitDeal), the two goods in fashion
+ * in this town change the player's share. Vanilla, with x = pieces of both
+ * fashion goods sold this visit (the stacking patch already counts pieces):
+ *   share < 80:  each good needs >= ceil(hold slots / 2) pieces,
+ *                then share += x / 6 + 1 (the game caps share at 100);
+ *   share >= 80: x in 10..15 gives an introduction letter, x >= 16 a
+ *                recommendation letter (or turns an introduction into one).
+ * The constants were made for one piece per slot. This patch makes them
+ * settable: slots * fthr / 2 (rounded up), x / fdiv + 1, fl1..fl2-1, fl2.
+ *
+ * In place: the half-the-slots computation and the divisor.
+ * Hooks:    the four "cmp [rsp+0x564], imm8 / jcc" letter checks, which
+ *           need imm32, jump to stubs in the int3 pad after the jump thunks.
+ * The cave sits at the end of that pad (the stacking cave sits at the
+ * start), with the same header and original-byte table as DK4STK3, and the
+ * four values at +16. All vanilla values write nothing. */
+#define FS_MAGIC "DK4FSH1"
+enum { kFsHead = 32, kFsMax = 0x200, kFsThrLen = 61 };
+enum { kFashThr = 1, kFashDiv = 6, kFashL1 = 10, kFashL2 = 16 };
+
+typedef struct FashSites {
+    int thr;        /* s4D0 = ceil(s4A4 / 2), 61 bytes */
+    int div;        /* mov eax,[x] / cdq / mov ecx,6 / idiv */
+    int l1;         /* cmp x,10 / jl l2a */
+    int l1h;        /* cmp x,15 / jg l2a */
+    int l2a;        /* cmp x,16 / jl (no letter yet) */
+    int l2b;        /* cmp x,16 / jl (holds an introduction letter) */
+} FashSites;
+
+static int fash_jcc_target(const uint8_t *data, int at) {
+    int32_t rel;
+    memcpy(&rel, data + at + 10, 4);
+    return at + 14 + rel;
+}
+
+/* Needs vanilla bytes (an installed patch removed first). */
+static int fash_find(const uint8_t *data, size_t n, FashSites *s) {
+    int hits[4];
+    if (v4_findall(data, n, "8B 84 24 A4 04 00 00 99 83 E0 01 33 C2 2B C2 85 C0 74 17"
+                            " 8B 84 24 A4 04 00 00 99 2B C2 D1 F8 FF C0 89 84 24 D0 04 00 00 EB 13"
+                            " 8B 84 24 A4 04 00 00 99 2B C2 D1 F8 89 84 24 D0 04 00 00", hits, 4) != 1)
+        return 0;
+    s->thr = hits[0];
+    if (v4_findall(data, n, "8B 84 24 60 05 00 00 99 B9 06 00 00 00 F7 F9 FF C0 89 84 24", hits, 4) != 1)
+        return 0;
+    s->div = hits[0];
+    if (v4_findall(data, n, "83 BC 24 64 05 00 00 0A 0F 8C", hits, 4) != 1) return 0;
+    s->l1 = hits[0];
+    s->l1h = s->l1 + 14;
+    if (!v4_is(data, n, s->l1h, "83 BC 24 64 05 00 00 0F 0F 8F")) return 0;
+    if (v4_findall(data, n, "83 BC 24 64 05 00 00 10 0F 8C", hits, 4) != 2) return 0;
+    s->l2a = fash_jcc_target(data, s->l1);
+    if (fash_jcc_target(data, s->l1h) != s->l2a) return 0;
+    if (hits[0] == s->l2a) s->l2b = hits[1];
+    else if (hits[1] == s->l2a) s->l2b = hits[0];
+    else return 0;
+    /* All inside CommitDeal, in this order. */
+    if (!(s->thr < s->div && s->div < s->l1 && s->l1 < s->l2a && s->l2a < s->l2b) ||
+        s->l2b - s->thr > 0x2000)
+        return 0;
+    return 1;
+}
+
+static int fash_cave(const uint8_t *data, size_t n) { return stk_cave(data, n, FS_MAGIC, 1, 1); }
+
+static int fash_is_vanilla(const CapValues *v) {
+    return v->fthr == kFashThr && v->fdiv == kFashDiv && v->fl1 == kFashL1 && v->fl2 == kFashL2;
+}
+
+/* Values in the exe, vanilla when the patch is not installed. */
+static int fash_read(const uint8_t *data, size_t n, CapValues *v) {
+    int cave = fash_cave(data, n);
+    v->fthr = kFashThr;
+    v->fdiv = kFashDiv;
+    v->fl1 = kFashL1;
+    v->fl2 = kFashL2;
+    if (cave < 0) return 1;
+    if ((size_t)cave + kFsHead > n) return 0;
+    v->fthr = ru32(data + cave + 16);
+    v->fdiv = ru32(data + cave + 20);
+    v->fl1 = ru32(data + cave + 24);
+    v->fl2 = ru32(data + cave + 28);
+    return 1;
+}
+
+static int fash_remove(uint8_t *data, size_t n) {
+    int cave = fash_cave(data, n);
+    return cave < 0 || stk_restore(data, n, cave, kFsMax);
+}
+
+/* data must hold vanilla bytes at every site (fash_remove first). */
+static int fash_apply(uint8_t *data, size_t n, const CapValues *v, wchar_t *err, int errn) {
+    uint8_t code[kFsMax];
+    V4Asm a;
+    V4Site site[8];
+    FashSites s;
+    int ns = 0, i, j, cave, tx_raw, tx_size, tx_delta, at;
+#define FSERR(msg) do { StringCchCopyW(err, (size_t)errn, msg); return 0; } while (0)
+#define FSITE(where, length, how) do { \
+        site[ns].at = (where); site[ns].len = (length); site[ns].kind = (how); \
+        site[ns].entry = a.n; ns++; \
+    } while (0)
+    if (fash_is_vanilla(v)) return 1;
+    if (v->fdiv < 1 || v->fl1 < 1 || v->fl2 <= v->fl1 || v->fthr > 0x7FFFFF || v->fl2 > 0x7FFFFFFF)
+        FSERR(L"流行品的数值不对：除数至少 1，推荐信件数要大于介绍信件数。");
+    if (!fash_find(data, n, &s)) FSERR(L"找不到交易所卖流行品的代码，或和原版对不上。");
+
+    /* The end of the int3 pad after the jump thunk table. */
+    if (!pe_text(data, n, &tx_raw, &tx_size, &tx_delta)) FSERR(L"主程序的 .text 段认不出来。");
+    cave = -1;
+    for (i = tx_raw; i < tx_raw + tx_size; ) {
+        if (data[i] != 0xCC) { i++; continue; }
+        for (j = i; j < tx_raw + tx_size && data[j] == 0xCC; j++) {}
+        if (j - i >= 0x8000) {
+            cave = (j - kFsMax - 16) & ~15;
+            /* Keep clear of the stacking cave at the start of the pad. */
+            if (cave - i < kV5Max + 0x100) cave = -1;
+            break;
+        }
+        i = j;
+    }
+    if (cave < 0) FSERR(L"主程序里找不到放流行品补丁的空位。");
+
+    a.b = code; a.n = 0; a.base = cave; a.cap = kFsMax; a.bad = 0;
+    memset(code, 0xCC, sizeof code);
+    memcpy(code, FS_MAGIC, 8);
+    code[8] = 1;
+    wu32(code + 16, v->fthr);
+    wu32(code + 20, v->fdiv);
+    wu32(code + 24, v->fl1);
+    wu32(code + 28, v->fl2);
+    a.n = kFsHead;
+
+    /* cmp dword [rsp+0x564], imm32 / jcc original target / jmp back. */
+#define FS_CMP(where, imm, cc) do { \
+        FSITE(where, 14, 0); \
+        v4_hex(&a, "81 BC 24 64 05 00 00"); \
+        v4_u32(&a, (imm)); \
+        at = v4_jcc(&a, (cc)); \
+        v4_fix(&a, at, fash_jcc_target(data, (where)) - cave); \
+        v4_jmp(&a, (where) + 14); \
+    } while (0)
+    FS_CMP(s.l1, v->fl1, 0x8C);
+    FS_CMP(s.l1h, v->fl2 - 1, 0x8F);
+    FS_CMP(s.l2a, v->fl2, 0x8C);
+    FS_CMP(s.l2b, v->fl2, 0x8C);
+#undef FS_CMP
+    {
+        int jumps = ns;
+        FSITE(s.thr, kFsThrLen, 3);
+        FSITE(s.div + 9, 4, 3);
+        code[9] = (uint8_t)ns;
+        code[10] = (uint8_t)(a.n & 0xFF);
+        code[11] = (uint8_t)(a.n >> 8);
+        for (i = 0; i < ns; i++) {
+            uint32_t off = (uint32_t)site[i].at;
+            if (a.n + 5 + site[i].len > kFsMax) { a.bad = 1; break; }
+            memcpy(code + a.n, &off, 4);
+            code[a.n + 4] = (uint8_t)site[i].len;
+            memcpy(code + a.n + 5, data + site[i].at, (size_t)site[i].len);
+            a.n += 5 + site[i].len;
+        }
+        code[12] = (uint8_t)(a.n & 0xFF);
+        code[13] = (uint8_t)(a.n >> 8);
+        if (a.bad) FSERR(L"流行品补丁放不下。");
+        for (i = 0; i < a.n; i++)
+            if (data[cave + i] != 0xCC) FSERR(L"放流行品补丁的空位被占用。");
+        memcpy(data + cave, code, (size_t)a.n);
+        for (i = 0; i < jumps; i++) {
+            int k;
+            slot_jmp(data, site[i].at, cave + site[i].entry);
+            for (k = 5; k < site[i].len; k++) data[site[i].at + k] = 0x90;
+        }
+    }
+    /* s4D0 = (s4A4 * fthr + 1) >> 1, i.e. half of slots * fthr, rounded up. */
+    {
+        uint8_t *p = data + s.thr;
+        memset(p, 0x90, kFsThrLen);
+        memcpy(p, "\x8B\x84\x24\xA4\x04\x00\x00\x69\xC0", 9);
+        wu32(p + 9, v->fthr);
+        memcpy(p + 13, "\xFF\xC0\xD1\xE8\x89\x84\x24\xD0\x04\x00\x00", 11);
+        p[24] = 0xEB;
+        p[25] = (uint8_t)(kFsThrLen - 26);
+    }
+    wu32(data + s.div + 9, v->fdiv);
+#undef FSITE
+#undef FSERR
+    return 1;
+}
+
 /* PROXY_BUY_BEGIN
  * Local fleets (地方舰队) and the player's NPC fleets pay for goods as
  *   cost * (1000 - ability + rand(100)) / 1000
@@ -2991,6 +3204,10 @@ static int read_cap_values(const uint8_t *data, size_t n, CapValues *v, int *xp_
         return 0;
     }
     v->port = val[0];
+    if (!fash_read(data, n, v)) {
+        StringCchCopyW(err, (size_t)errn, L"已写入的流行品设置认不出来。");
+        return 0;
+    }
     {
         int free_at = 0, slot_at = 0, cave;
         uint32_t free_stack = 1, slot_stack = 1;
@@ -3070,6 +3287,10 @@ static int patch_cap_buffer(uint8_t *data, size_t n, const CapValues *v, wchar_t
         uint32_t cargo_now = 1, slot_now = 1;
         int bc6c, be92, b032, e9c6;
         int32_t rel;
+        if (!fash_remove(data, n)) {
+            StringCchCopyW(err, (size_t)errn, L"已写入的流行品设置认不出来，不能改。");
+            return 0;
+        }
         kind = find_cargo_stack(data, n, &cargo_at, &cargo_now);
         if (!kind) {
             StringCchCopyW(err, (size_t)errn, L"找不到原来的舱位计算。");
@@ -3131,6 +3352,7 @@ static int patch_cap_buffer(uint8_t *data, size_t n, const CapValues *v, wchar_t
         if (slot_kind == 2)
             memset(data + cave, 0xCC, kSlotPadLen);
         if (v->stack > 1 && !v5_apply(data, n, v->stack, err, errn)) return 0;
+        if (!fash_apply(data, n, v, err, errn)) return 0;
     }
     /* Harmless at the vanilla cap, so it goes in on every write. */
     if (!patch_proxy_buy(data, n, err, errn)) return 0;
@@ -3143,7 +3365,8 @@ static int patch_cap_buffer(uint8_t *data, size_t n, const CapValues *v, wchar_t
     }
     if (!read_cap_values(data, n, &cur, NULL, err, errn)) return 0;
     if (cur.track != v->track || cur.base != v->base || cur.stat != v->stat ||
-        cur.skill != v->skill || cur.port != v->port || cur.stack != v->stack) {
+        cur.skill != v->skill || cur.port != v->port || cur.stack != v->stack ||
+        cur.fthr != v->fthr || cur.fdiv != v->fdiv || cur.fl1 != v->fl1 || cur.fl2 != v->fl2) {
         StringCchCopyW(err, (size_t)errn, L"写入后的数值和输入不一致。");
         return 0;
     }
@@ -3249,7 +3472,9 @@ static int read_game_caps(const wchar_t *dir, CapValues *v, wchar_t *status, int
             first_i = i;
         } else if (cur.track != first.track || cur.base != first.base ||
                  cur.stat != first.stat || cur.skill != first.skill ||
-                 cur.port != first.port || cur.stack != first.stack) {
+                 cur.port != first.port || cur.stack != first.stack ||
+                 cur.fthr != first.fthr || cur.fdiv != first.fdiv ||
+                 cur.fl1 != first.fl1 || cur.fl2 != first.fl2) {
             *v = first;
             StringCchPrintfW(status, (size_t)statusn,
                 L"%s和%s的封顶不一致。下面是先读到的数值，写入后四个版本会变成一样。",
@@ -3304,9 +3529,9 @@ static int write_game_caps(const wchar_t *dir, const CapValues *v, wchar_t *stat
         return 0;
     }
     StringCchPrintfW(status, (size_t)statusn,
-        L"已写入%s。单段 %u，合计 %u，经验 %u，基础属性 %u，结算 %u，技能封顶 %u，港口 %u，商品堆叠 %u。已修正地方舰队买货亏损。",
+        L"已写入%s。单段 %u，合计 %u，经验 %u，基础属性 %u，结算 %u，技能封顶 %u，港口 %u，商品堆叠 %u，流行品 %u/%u/%u/%u。已修正地方舰队买货亏损。",
         names, v->track, v->track * 2u, 30u * v->track * v->track,
-        v->base, v->stat, v->skill, v->port, v->stack);
+        v->base, v->stat, v->skill, v->port, v->stack, v->fthr, v->fdiv, v->fl1, v->fl2);
     return 1;
 }
 
@@ -3391,6 +3616,10 @@ static void cap_apply_values(const CapValues *v) {
     set_edit_int(capw.skill, (int)v->skill);
     set_edit_int(capw.port, (int)v->port);
     set_edit_int(capw.stack, (int)v->stack);
+    set_edit_int(capw.fthr, (int)v->fthr);
+    set_edit_int(capw.fdiv, (int)v->fdiv);
+    set_edit_int(capw.fl1, (int)v->fl1);
+    set_edit_int(capw.fl2, (int)v->fl2);
     cap_refresh_derived();
 }
 
@@ -3402,6 +3631,14 @@ static int cap_read_form(CapValues *v, int *clamped) {
     v->skill = (uint32_t)edit_int(capw.skill, 0, 65535, clamped);
     v->port = (uint32_t)edit_int(capw.port, 1, 65535, clamped);
     v->stack = (uint32_t)edit_int(capw.stack, 1, kStackMax, clamped);
+    v->fthr = (uint32_t)edit_int(capw.fthr, 0, 65535, clamped);
+    v->fdiv = (uint32_t)edit_int(capw.fdiv, 1, 9999999, clamped);
+    v->fl1 = (uint32_t)edit_int(capw.fl1, 1, 9999998, clamped);
+    v->fl2 = (uint32_t)edit_int(capw.fl2, 2, 9999999, clamped);
+    if (v->fl2 <= v->fl1) {
+        v->fl2 = v->fl1 + 1;
+        if (clamped) *clamped = 1;
+    }
     return 1;
 }
 
@@ -3431,9 +3668,10 @@ static void cap_write_clicked(void) {
     cap_read_form(&v, &clamped);
     cap_apply_values(&v);
     StringCchPrintfW(ask, 360,
-        L"写入这个目录里的主程序？\n单段等级 %u（合计 %u，经验 %u）\n基础属性 %u\n属性结算 %u\n技能封顶 %u\n港口商业/军事 %u\n同商品堆叠 %u（同一个舱位堆 %u 件，满了才再占一格）\n请先完全退出游戏和启动器。",
+        L"写入这个目录里的主程序？\n单段等级 %u（合计 %u，经验 %u）\n基础属性 %u\n属性结算 %u\n技能封顶 %u\n港口商业/军事 %u\n同商品堆叠 %u（同一个舱位堆 %u 件，满了才再占一格）\n"
+        L"卖流行品：门槛 货舱格数×%u÷2 件，占有率 +件数÷%u+1，介绍信 %u 件，推荐信 %u 件\n请先完全退出游戏和启动器。",
         v.track, v.track * 2u, 30u * v.track * v.track, v.base, v.stat, v.skill, v.port,
-        v.stack, v.stack);
+        v.stack, v.stack, v.fthr, v.fdiv, v.fl1, v.fl2);
     if (MessageBoxW(capw.hwnd, ask, L"游戏上限", MB_YESNO | MB_ICONQUESTION) != IDYES)
         return;
     if (!write_game_caps(capw.dir, &v, status, 420)) {
@@ -3527,6 +3765,20 @@ static void cap_layout(void) {
     MoveWindow(GetDlgItem(capw.hwnd, IDC_CAP_LBL_STACK), m, y, labW, row, TRUE);
     MoveWindow(capw.stack, m + labW, y, editW, row, TRUE);
     MoveWindow(GetDlgItem(capw.hwnd, IDC_CAP_STACKMAX), m + labW + editW + gap, y, btnW, row, TRUE);
+    {
+        int x2 = m + labW + editW + S(24);
+        y += row + gap;
+        MoveWindow(GetDlgItem(capw.hwnd, IDC_CAP_LBL_FTHR), m, y, labW, row, TRUE);
+        MoveWindow(capw.fthr, m + labW, y, editW, row, TRUE);
+        MoveWindow(GetDlgItem(capw.hwnd, IDC_CAP_LBL_FDIV), x2, y, labW, row, TRUE);
+        MoveWindow(capw.fdiv, x2 + labW, y, editW, row, TRUE);
+        MoveWindow(GetDlgItem(capw.hwnd, IDC_CAP_FSCALE), x2 + labW + editW + gap, y, btnW, row, TRUE);
+        y += row + gap;
+        MoveWindow(GetDlgItem(capw.hwnd, IDC_CAP_LBL_FL1), m, y, labW, row, TRUE);
+        MoveWindow(capw.fl1, m + labW, y, editW, row, TRUE);
+        MoveWindow(GetDlgItem(capw.hwnd, IDC_CAP_LBL_FL2), x2, y, labW, row, TRUE);
+        MoveWindow(capw.fl2, x2 + labW, y, editW, row, TRUE);
+    }
     y += row + S(16);
     MoveWindow(GetDlgItem(capw.hwnd, IDC_CAP_READ), m, y, btnW, row, TRUE);
     MoveWindow(GetDlgItem(capw.hwnd, IDC_CAP_WRITE), m + (btnW + gap), y, btnW, row, TRUE);
@@ -3560,6 +3812,15 @@ static LRESULT CALLBACK cap_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPar
         cap_ctl(0, L"STATIC", L"同商品堆叠", SS_LEFT | SS_NOPREFIX | SS_CENTERIMAGE, IDC_CAP_LBL_STACK);
         capw.stack = cap_ctl(WS_EX_CLIENTEDGE, L"EDIT", L"99", editStyle, IDC_CAP_STACK);
         cap_ctl(0, L"BUTTON", L"堆叠 255", WS_TABSTOP, IDC_CAP_STACKMAX);
+        cap_ctl(0, L"STATIC", L"流行品门槛(每格)", SS_LEFT | SS_NOPREFIX | SS_CENTERIMAGE, IDC_CAP_LBL_FTHR);
+        capw.fthr = cap_ctl(WS_EX_CLIENTEDGE, L"EDIT", L"1", editStyle, IDC_CAP_FTHR);
+        cap_ctl(0, L"STATIC", L"占有率涨幅除数", SS_LEFT | SS_NOPREFIX | SS_CENTERIMAGE, IDC_CAP_LBL_FDIV);
+        capw.fdiv = cap_ctl(WS_EX_CLIENTEDGE, L"EDIT", L"6", editStyle, IDC_CAP_FDIV);
+        cap_ctl(0, L"BUTTON", L"按堆叠等比", WS_TABSTOP, IDC_CAP_FSCALE);
+        cap_ctl(0, L"STATIC", L"介绍信件数", SS_LEFT | SS_NOPREFIX | SS_CENTERIMAGE, IDC_CAP_LBL_FL1);
+        capw.fl1 = cap_ctl(WS_EX_CLIENTEDGE, L"EDIT", L"10", editStyle, IDC_CAP_FL1);
+        cap_ctl(0, L"STATIC", L"推荐信件数", SS_LEFT | SS_NOPREFIX | SS_CENTERIMAGE, IDC_CAP_LBL_FL2);
+        capw.fl2 = cap_ctl(WS_EX_CLIENTEDGE, L"EDIT", L"16", editStyle, IDC_CAP_FL2);
         cap_ctl(0, L"BUTTON", L"读取当前值", WS_TABSTOP, IDC_CAP_READ);
         cap_ctl(0, L"BUTTON", L"写入主程序", WS_TABSTOP | BS_DEFPUSHBUTTON, IDC_CAP_WRITE);
         cap_ctl(0, L"BUTTON", L"填入原版", WS_TABSTOP, IDC_CAP_VANILLA);
@@ -3575,6 +3836,9 @@ static LRESULT CALLBACK cap_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPar
             L"舱位价格放得下时显示成“件数x单价”，放不下时分两行：上行“件数x”，下行单价。卖出、退货按件数算钱，存档、读档保留件数。"
             L"玩家势力的舰队（地方舰队、下属 NPC 舰队）自动买货时也按 N 件一格装货，卖货按件数结算；其他势力的 NPC 保持原版。物价不改。"
             L"存过堆叠货物的存档不要再用原版主程序读：原版会把件数当成买入价的一部分。\r\n"
+            L"卖流行品（在交易所确认交易时）：占有率不到 80 时，每种流行品要卖到 货舱格数×门槛÷2 件（向上取整），占有率才加 两种流行品件数÷除数+1（最多加到 100）；"
+            L"占有率 80 以上时，卖到“介绍信件数”给介绍信，卖到“推荐信件数”给推荐信（已有介绍信时升级成推荐信）。原版是 1、6、10、16，是按一格一件定的。"
+            L"“按堆叠等比”填入 N、6N、10N、16N（N 是上面的堆叠数），一满格等于原版一格。门槛填 0 表示卖一件就算。这些只管玩家自己在交易所卖货，舰队自动交易不受影响。\r\n"
             L"写入前请完全退出游戏。第一次写入时，原主程序存为 DK4HD_*.exe.bak，以后不再覆盖；之后每次写入前的主程序另存为 DK4HD_*.exe.日期-时间.bak，每个只留最近 10 份。\r\n"
             L"“还原原版主程序”用 .bak 把四个主程序还原成第一次写入前的样子，还原前的主程序同样另存一份。",
             ES_MULTILINE | ES_READONLY | ES_AUTOVSCROLL | WS_VSCROLL, IDC_CAP_NOTE);
@@ -3585,6 +3849,10 @@ static LRESULT CALLBACK cap_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPar
         SendMessageW(capw.skill, EM_SETLIMITTEXT, 5, 0);
         SendMessageW(capw.port, EM_SETLIMITTEXT, 5, 0);
         SendMessageW(capw.stack, EM_SETLIMITTEXT, 3, 0);
+        SendMessageW(capw.fthr, EM_SETLIMITTEXT, 5, 0);
+        SendMessageW(capw.fdiv, EM_SETLIMITTEXT, 7, 0);
+        SendMessageW(capw.fl1, EM_SETLIMITTEXT, 7, 0);
+        SendMessageW(capw.fl2, EM_SETLIMITTEXT, 7, 0);
         EnumChildWindows(hwnd, set_font_cb, (LPARAM)g.font);
         SetWindowTextW(capw.path, capw.dir[0] ? capw.dir : L"未选择游戏目录");
         cap_refresh_derived();
@@ -3622,13 +3890,18 @@ static LRESULT CALLBACK cap_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPar
             v.skill = 200;
             v.port = 9999;
             v.stack = 1;
+            v.fthr = kFashThr;
+            v.fdiv = kFashDiv;
+            v.fl1 = kFashL1;
+            v.fl2 = kFashL2;
             cap_apply_values(&v);
-            cap_set_status(L"已填入原版：单段 100，基础属性 100，结算 500，技能封顶 200，港口 9999，堆叠 1。还没写入。");
+            cap_set_status(L"已填入原版：单段 100，基础属性 100，结算 500，技能封顶 200，港口 9999，堆叠 1，流行品 1/6/10/16。还没写入。");
             break;
         }
         case IDC_CAP_UNLOCK: {
             CapValues v;
             int port = edit_int(capw.port, 1, 65535, NULL);
+            cap_read_form(&v, NULL);
             v.track = 255;
             v.base = 255;
             v.stat = 65535;
@@ -3636,13 +3909,25 @@ static LRESULT CALLBACK cap_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPar
             v.port = (uint32_t)port;
             v.stack = (uint32_t)edit_int(capw.stack, 1, kStackMax, NULL);
             cap_apply_values(&v);
-            cap_set_status(L"已填入解除值：单段 255，基础属性 255，结算 65535，技能封顶 510。堆叠保持当前输入。还没写入。");
+            cap_set_status(L"已填入解除值：单段 255，基础属性 255，结算 65535，技能封顶 510。堆叠和流行品保持当前输入。还没写入。");
             break;
         }
         case IDC_CAP_UNLOCK_PORT:
             set_edit_int(capw.port, 65535);
             cap_set_status(L"已填入港口上限 65535。点“写入主程序”后才会改主程序。");
             break;
+        case IDC_CAP_FSCALE: {
+            int n = edit_int(capw.stack, 1, kStackMax, NULL);
+            wchar_t line[200];
+            set_edit_int(capw.fthr, kFashThr * n);
+            set_edit_int(capw.fdiv, kFashDiv * n);
+            set_edit_int(capw.fl1, kFashL1 * n);
+            set_edit_int(capw.fl2, kFashL2 * n);
+            StringCchPrintfW(line, 200, L"已按堆叠 %d 填入流行品：门槛 %d，除数 %d，介绍信 %d 件，推荐信 %d 件。还没写入。",
+                n, kFashThr * n, kFashDiv * n, kFashL1 * n, kFashL2 * n);
+            cap_set_status(line);
+            break;
+        }
         case IDC_CAP_STACKMAX:
             set_edit_int(capw.stack, kStackMax);
             cap_set_status(L"已填入同商品堆叠 255。同一个舱位堆 255 件，第 256 件才再占一格。点“写入主程序”后才会改主程序。");
@@ -3656,7 +3941,7 @@ static LRESULT CALLBACK cap_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPar
     case WM_GETMINMAXINFO: {
         MINMAXINFO *mm = (MINMAXINFO *)lParam;
         mm->ptMinTrackSize.x = S(720);
-        mm->ptMinTrackSize.y = S(600);
+        mm->ptMinTrackSize.y = S(680);
         return 0;
     }
     case WM_CLOSE:
@@ -3694,7 +3979,7 @@ static void open_cap_window(void) {
     rc.left = 0;
     rc.top = 0;
     rc.right = S(760);
-    rc.bottom = S(600);
+    rc.bottom = S(680);
     AdjustWindowRect(&rc, style, FALSE);
     x = CW_USEDEFAULT;
     y = CW_USEDEFAULT;
