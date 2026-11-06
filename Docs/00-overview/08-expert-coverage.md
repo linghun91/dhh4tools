@@ -83,4 +83,4 @@
 | --- | --- |
 | HD 古宝系统 | `09-items/04-ancient-treasures-hd.md` |
 | 遗迹 + 解谜（最值得搞） | `01-world/11-remains-puzzle-system.md` |
-| 7×uint 与母港地理带 = **文化圈** | 已改正 `02-factions/01-forces.md`；专篇 `02-factions/06-seven-culture-circles.md`。七格 = 霸者之证七区（北海…新大陆），不是 9 个 NPC 形象圈，不是 21 个港口 region。 |
+| 7×uint / 文化圈 | **已纠正**：七大海域 + 21 文化圈。见 `02-factions/06-seven-culture-circles.md`。7 格 RTC 名是 `eSeaArea` 上界 7；21 是 `CCulture` 槽 `0x15`。不要把 7 格再写成文化圈。 |

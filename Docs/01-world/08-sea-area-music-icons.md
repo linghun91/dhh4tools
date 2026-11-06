@@ -31,11 +31,11 @@
 | `eSeaArea` | 25，`INVALID_SEAAREA=-1` | 航海分区、`SEAAREA_BITS`、`NUM_NEXTBASETOWN=25` | 主键 | [确认] `SeaAreaID.h`、`num_values.json` |
 | 港口 `region` / `CCulture` 槽 | 21（`region` 0–20；容器循环 `0x15`） | 国家档、文化块 105 word | **不是**海域 | [确认] `towns_world0.json`、`CCultureElement.cpp` |
 | NPC 文化圈 | 9 个文案 | 设施换装 | 势力文档 | [确认] `02-countries-culture-fashion.md` |
-| 霸权大区 | 7（+「全世界」） | 霸者之证、部分 `SeaAreaMessage` | 叙事，不是 `eSeaArea` | [确认] mesfile `0x1e247` 起；exe `0x58ab4c` |
+| 七大海域 | 7（文案另有「全世界」） | `CForce+0x10`；RTC `eSeaArea` 上界 7；`SeaAreaMessage` | 与 `NUM_SEAAREA=25` 同时存在 | [确认] exe `0x58ab4c`、`CForce.cpp` |
 
 `CCulture` 21 槽对应 **21 档港口 region**，不是 25 海域。[确认] 容器长度 21；[推断] 下标与 `town.region` 对齐，依据见势力文档，本篇不升格。
 
-RTC 局部名 `eSeaArea` 在 `fn_140008b6b` / `fn_14000a8c1` 里循环上界是 **7** 不是 25。[确认] `fn_140107150.cpp` `fn_14010be70.cpp`。这 7 与霸权大区同数，**不能**当成 25 海域名单已还原。
+RTC 局部名 `eSeaArea` 在 `fn_140008b6b` / `fn_14010be70` 里上界是 **7**。[确认] 这 7 个就是七大海域（北海…新大陆），不是把 `NUM_SEAAREA` 改写成 7。25 仍是另一套航海分区。
 
 ### 2.2 25 个海域显示名：exe / mesfile 里没有
 

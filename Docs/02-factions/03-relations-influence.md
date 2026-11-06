@@ -97,7 +97,7 @@
 ```
 Amity[force_a][force_b] : uchar
 RelationFlag[force_a][force_b] : bool          # 原版 +0x1F
-Influence[force_id][theater_id] : ushort       # 原版 7 格；theater 表长可配
+Influence[force_id][major_sea_id] : ushort     # 原版 7 格 = 七大海域；不是文化圈
 ShareSlot[town_id][0..2] : { force_id | empty, share : uchar }
 Develop[town_id] : { commerce : u16, military : u16 }
 ContractFeeMin[town_id] : gold                 # 宫殿开价；公式 [未知]

@@ -56,7 +56,7 @@
 | [03-relations-influence.md](02-factions/03-relations-influence.md) | `relations.yaml` |
 | [04-letters-licenses.md](02-factions/04-letters-licenses.md) | 介绍信 / 推荐信 |
 | [05-war-failure-absorb.md](02-factions/05-war-failure-absorb.md) | 开战 / 灭亡 |
-| [06-seven-culture-circles.md](02-factions/06-seven-culture-circles.md) | **7 文化圈（霸权区）** |
+| [06-seven-culture-circles.md](02-factions/06-seven-culture-circles.md) | **七大海域 + 21 文化圈**（更正） |
 
 ### 03 人物
 
