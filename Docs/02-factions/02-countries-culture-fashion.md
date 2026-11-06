@@ -27,8 +27,8 @@
 
 - `[确认]` `eCountry` 存在，`INVALID_COUNTRY=-1`，`NUM_COUNTRY` 整数未还原。来源：`CountryID.h`、`asserts.txt`。
 - `[确认]` 工程里**没有** `CCountry` / `CCountryElement`。国家不是 World DLL 表。来源：`class_hierarchy.txt`、`DllMain.cpp` 导出只有 Town/Person/Item/Force/Fleet。
-- `[确认]` 港口表 `+0x24` 为首都标记（1/0），`+0x25` 为 `region` 字节，取值 0–20 共 21 档。来源：`Docs/00-overview/04-id-registry.md`、`Docs/_data/towns_world0.json`。
-- `[推断]` `region` 即 `eCountry`。依据：只有这一档 21 值的地理字段；无独立国家表。未在 `CTown` 反编译里看到 `eCountry` 局部名，故不升格。
+- `[确认]` 港口表 `+0x24` 为首都标记（1/0），`+0x25` 为 `region` 字节，取值 0–20 共 21 档。来源：`Docs/_data/towns_world0.json`。
+- 港口 `region` 0–20 **没有** RTC 名 `eCountry`。不要把 21 写成 `NUM_COUNTRY`。大佬：21 是文化圈，与 `CCulture` 槽同计数。`+0x25` 原版类型名未还原。
 
 21 档首都（`is_capital=1` 且 `region=N` 的港口）：
 
@@ -64,8 +64,9 @@
 - `[确认]` `CCulture : CSaveObject`。`CCultureElement` 构造 **21** 个（`0x15`）对象，stride **0xE8**。析构 / 存盘同样循环 `>= 0x15`。来源：`CCultureElement.cpp`。
 - `[确认]` `CCulture` 存盘遍历 `eTradingItem` 0–0x68（105）：每个 word 在 `+0x14 + i*2`。另有 1 字节 `+0x10`、循环 2 次写 `+0x11`。来源：`CCulture.cpp` `vfunc_05/06/07`。
 - `[确认]` 没有 `GetFixCultureProc`。文化块不是 World DLL 表，开局由 `vfunc_05` 从别的对象填。来源：`DllMain.cpp`、`CCulture::vfunc_05`。
-- `[推断]` `NUM_CULTURE = 21`，下标与 `town.region` 对齐。依据：容器长度恰好 21，且港口情报 UI 有 `posCulture`。
-- `[确认]` 人物表从 id 98 起，`family` 字段出现 9 个文化圈文案：**欧洲、非洲、阿拉伯、印度、东南亚、中国、韩国、日本、中南美**。广场店主把欧洲拆成「欧洲男子 / 欧洲女子」，故店主 10 人、圈仍是 9。来源：`Docs/_data/persons.tsv`、`PersonID` 记录。
+- `[确认]` 容器长度 21。大佬称这 21 个为 **文化圈**。21 个中文名未从 exe 抽出（13 词表、19 国名表都对不上 21）。
+- 港口 `region` 0–20 与 21 槽同计数；`CTown` 上无 RTC 名 `eCulture`，字段名不升格。
+- `[确认]` 人物表从 id 98 起，`family` 字段出现 9 个脸部分组文案：**欧洲、非洲、阿拉伯、印度、东南亚、中国、韩国、日本、中南美**。广场店主把欧洲拆成「欧洲男子 / 欧洲女子」，故店主 10 人、组仍是 9。来源：`Docs/_data/persons.tsv`、`PersonID` 记录。这 9 个不是 21 文化圈。
 - `[确认]` 同 9 词还用在酒馆掌柜/客人、交易所掌柜、造船老板、码头、卫兵、国王/藩主/县令/大名/总督、宗教人士、旅馆老板娘、行会总管、属下等职能 NPC 上。来源：同上。
 - `[推断]` 9 圈是设施 NPC 换装 / 对白的粗分组，**不是** `eCulture` 的计数。`NUM_KIND=9`（`num_values.json`）可能相关，未证明。
 
@@ -89,8 +90,8 @@
 | 枚举 | 原版计数 | 空 / 非法 | 备注 |
 | --- | --- | --- | --- |
 | `eCountry` | `[未知]`；港口 region 21 档 | `-1` | 无存档对象 |
-| `eCulture` | `[推断]` 21 | `-1` | `CCultureElement` 循环 `0x15` |
-| NPC 文化圈 | 9（文案） | 无 | 人物 `family` 字符串，不是枚举文件 |
+| `eCulture`（21 文化圈） | 21（容器 `0x15`） | `-1` | 名字未抽出 |
+| NPC 脸 | 9（文案） | 无 | 人物 `family`；不是这 21 槽 |
 | `eTownFashion` | 26 | `-1`；运行时或用 `26` | 目录；每港只用 2 槽 |
 | `eFashionSpeed` | `[未知]` | `-1` | |
 

@@ -24,8 +24,9 @@
 | 枚举 | 原版计数 | 空/非法 | 来源 | 备注 |
 | --- | --- | --- | --- | --- |
 | eForce | 25 | INVALID_FORCE=-1 | GetFixForceProc | 0–23 具名势力，24 私家舰队 |
-| eCountry | `[未知]` | INVALID_COUNTRY | CountryID.h | 港口 `region` 字节 0–20，共 21 档 `[推断]` |
-| eCulture | `[未知]` | INVALID_CULTURE | CultureID.h | NPC 文案出现 9 个文化圈 |
+| eCountry | `[未知]` | INVALID_COUNTRY | CountryID.h | 整数未还原；不要写成 21 |
+| eCulture | 运行时 21 槽（`CCultureElement` `0x15`） | INVALID_CULTURE | CultureID.h；头文件无整数 | 大佬：21 文化圈。21 个名字未抽出 |
+| 七大海域 | 7 | 无第 8 格 | `CForce+0x10`；RTC `eSeaArea>=7`；exe `0x58ab4c` | 北海…新大陆。与 `NUM_SEAAREA=25` 同时存在 |
 | eTownFashion | 26 | | TownFashionID.h | |
 | eForceKind / Aim / Color / Relation / Failure | `[未知]` | 各 INVALID_* | 对应 *ID.h | |
 
