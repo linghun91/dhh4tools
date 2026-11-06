@@ -6,38 +6,38 @@
     "x2": 20136,
     "y2": 4280,
     "is_capital": 1,
-    "region": 0,
-    "b38": 0,
-    "b39": 0,
+    "culture_id": 0,
+    "remains_id": 0,
+    "byte_0x27": 0,
     "special_products": [
       {
         "item_id": 99,
-        "supply_or_price": 4500,
-        "grade": 15,
+        "listing_threshold": 4500,
+        "supply_base": 15,
         "empty": false
       },
       {
         "item_id": 47,
-        "supply_or_price": 2000,
-        "grade": 25,
+        "listing_threshold": 2000,
+        "supply_base": 25,
         "empty": false
       },
       {
         "item_id": 51,
-        "supply_or_price": 2000,
-        "grade": 25,
+        "listing_threshold": 2000,
+        "supply_base": 25,
         "empty": false
       },
       {
         "item_id": 90,
-        "supply_or_price": 4000,
-        "grade": 12,
+        "listing_threshold": 4000,
+        "supply_base": 12,
         "empty": false
       },
       {
         "item_id": 91,
-        "supply_or_price": 3500,
-        "grade": 12,
+        "listing_threshold": 3500,
+        "supply_base": 12,
         "empty": false
       }
     ],
@@ -52,38 +52,38 @@
     "x2": 19624,
     "y2": 4312,
     "is_capital": 0,
-    "region": 0,
-    "b38": 26,
-    "b39": 0,
+    "culture_id": 0,
+    "remains_id": 26,
+    "byte_0x27": 0,
     "special_products": [
       {
         "item_id": 6,
-        "supply_or_price": 1000,
-        "grade": 12,
+        "listing_threshold": 1000,
+        "supply_base": 12,
         "empty": false
       },
       {
         "item_id": 47,
-        "supply_or_price": 2000,
-        "grade": 20,
+        "listing_threshold": 2000,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 51,
-        "supply_or_price": 1500,
-        "grade": 15,
+        "listing_threshold": 1500,
+        "supply_base": 15,
         "empty": false
       },
       {
         "item_id": 92,
-        "supply_or_price": 1000,
-        "grade": 17,
+        "listing_threshold": 1000,
+        "supply_base": 17,
         "empty": false
       },
       {
         "item_id": 96,
-        "supply_or_price": 2000,
-        "grade": 25,
+        "listing_threshold": 2000,
+        "supply_base": 25,
         "empty": false
       }
     ],
@@ -98,38 +98,38 @@
     "x2": 20680,
     "y2": 4120,
     "is_capital": 1,
-    "region": 1,
-    "b38": 26,
-    "b39": 0,
+    "culture_id": 1,
+    "remains_id": 26,
+    "byte_0x27": 0,
     "special_products": [
       {
         "item_id": 8,
-        "supply_or_price": 3000,
-        "grade": 20,
+        "listing_threshold": 3000,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 42,
-        "supply_or_price": 3000,
-        "grade": 17,
+        "listing_threshold": 3000,
+        "supply_base": 17,
         "empty": false
       },
       {
         "item_id": 43,
-        "supply_or_price": 4500,
-        "grade": 12,
+        "listing_threshold": 4500,
+        "supply_base": 12,
         "empty": false
       },
       {
         "item_id": 51,
-        "supply_or_price": 4000,
-        "grade": 15,
+        "listing_threshold": 4000,
+        "supply_base": 15,
         "empty": false
       },
       {
         "item_id": 106,
-        "supply_or_price": 0,
-        "grade": 0,
+        "listing_threshold": 0,
+        "supply_base": 0,
         "empty": true
       }
     ],
@@ -144,38 +144,38 @@
     "x2": 20248,
     "y2": 4312,
     "is_capital": 0,
-    "region": 1,
-    "b38": 26,
-    "b39": 0,
+    "culture_id": 1,
+    "remains_id": 26,
+    "byte_0x27": 0,
     "special_products": [
       {
         "item_id": 99,
-        "supply_or_price": 2500,
-        "grade": 20,
+        "listing_threshold": 2500,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 0,
-        "supply_or_price": 1500,
-        "grade": 25,
+        "listing_threshold": 1500,
+        "supply_base": 25,
         "empty": false
       },
       {
         "item_id": 50,
-        "supply_or_price": 2000,
-        "grade": 25,
+        "listing_threshold": 2000,
+        "supply_base": 25,
         "empty": false
       },
       {
         "item_id": 54,
-        "supply_or_price": 2500,
-        "grade": 20,
+        "listing_threshold": 2500,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 90,
-        "supply_or_price": 4000,
-        "grade": 12,
+        "listing_threshold": 4000,
+        "supply_base": 12,
         "empty": false
       }
     ],
@@ -190,38 +190,38 @@
     "x2": 19864,
     "y2": 4936,
     "is_capital": 0,
-    "region": 1,
-    "b38": 26,
-    "b39": 0,
+    "culture_id": 1,
+    "remains_id": 26,
+    "byte_0x27": 0,
     "special_products": [
       {
         "item_id": 8,
-        "supply_or_price": 1000,
-        "grade": 20,
+        "listing_threshold": 1000,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 13,
-        "supply_or_price": 1000,
-        "grade": 25,
+        "listing_threshold": 1000,
+        "supply_base": 25,
         "empty": false
       },
       {
         "item_id": 19,
-        "supply_or_price": 2000,
-        "grade": 20,
+        "listing_threshold": 2000,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 35,
-        "supply_or_price": 1000,
-        "grade": 25,
+        "listing_threshold": 1000,
+        "supply_base": 25,
         "empty": false
       },
       {
         "item_id": 106,
-        "supply_or_price": 0,
-        "grade": 0,
+        "listing_threshold": 0,
+        "supply_base": 0,
         "empty": true
       }
     ],
@@ -236,38 +236,38 @@
     "x2": 21016,
     "y2": 4056,
     "is_capital": 1,
-    "region": 2,
-    "b38": 2,
-    "b39": 0,
+    "culture_id": 2,
+    "remains_id": 2,
+    "byte_0x27": 0,
     "special_products": [
       {
         "item_id": 5,
-        "supply_or_price": 2000,
-        "grade": 20,
+        "listing_threshold": 2000,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 6,
-        "supply_or_price": 3000,
-        "grade": 12,
+        "listing_threshold": 3000,
+        "supply_base": 12,
         "empty": false
       },
       {
         "item_id": 7,
-        "supply_or_price": 3200,
-        "grade": 20,
+        "listing_threshold": 3200,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 36,
-        "supply_or_price": 3000,
-        "grade": 23,
+        "listing_threshold": 3000,
+        "supply_base": 23,
         "empty": false
       },
       {
         "item_id": 94,
-        "supply_or_price": 3000,
-        "grade": 17,
+        "listing_threshold": 3000,
+        "supply_base": 17,
         "empty": false
       }
     ],
@@ -282,38 +282,38 @@
     "x2": 21240,
     "y2": 3992,
     "is_capital": 0,
-    "region": 2,
-    "b38": 26,
-    "b39": 0,
+    "culture_id": 2,
+    "remains_id": 26,
+    "byte_0x27": 0,
     "special_products": [
       {
         "item_id": 0,
-        "supply_or_price": 3000,
-        "grade": 20,
+        "listing_threshold": 3000,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 6,
-        "supply_or_price": 3000,
-        "grade": 12,
+        "listing_threshold": 3000,
+        "supply_base": 12,
         "empty": false
       },
       {
         "item_id": 36,
-        "supply_or_price": 3000,
-        "grade": 23,
+        "listing_threshold": 3000,
+        "supply_base": 23,
         "empty": false
       },
       {
         "item_id": 94,
-        "supply_or_price": 3000,
-        "grade": 25,
+        "listing_threshold": 3000,
+        "supply_base": 25,
         "empty": false
       },
       {
         "item_id": 40,
-        "supply_or_price": 4000,
-        "grade": 5,
+        "listing_threshold": 4000,
+        "supply_base": 5,
         "empty": false
       }
     ],
@@ -328,38 +328,38 @@
     "x2": 22072,
     "y2": 3432,
     "is_capital": 1,
-    "region": 3,
-    "b38": 3,
-    "b39": 0,
+    "culture_id": 3,
+    "remains_id": 3,
+    "byte_0x27": 0,
     "special_products": [
       {
         "item_id": 5,
-        "supply_or_price": 2500,
-        "grade": 25,
+        "listing_threshold": 2500,
+        "supply_base": 25,
         "empty": false
       },
       {
         "item_id": 100,
-        "supply_or_price": 2500,
-        "grade": 15,
+        "listing_threshold": 2500,
+        "supply_base": 15,
         "empty": false
       },
       {
         "item_id": 92,
-        "supply_or_price": 1500,
-        "grade": 17,
+        "listing_threshold": 1500,
+        "supply_base": 17,
         "empty": false
       },
       {
         "item_id": 95,
-        "supply_or_price": 2000,
-        "grade": 20,
+        "listing_threshold": 2000,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 106,
-        "supply_or_price": 0,
-        "grade": 0,
+        "listing_threshold": 0,
+        "supply_base": 0,
         "empty": true
       }
     ],
@@ -374,38 +374,38 @@
     "x2": 21176,
     "y2": 3416,
     "is_capital": 0,
-    "region": 3,
-    "b38": 26,
-    "b39": 0,
+    "culture_id": 3,
+    "remains_id": 26,
+    "byte_0x27": 0,
     "special_products": [
       {
         "item_id": 5,
-        "supply_or_price": 2500,
-        "grade": 20,
+        "listing_threshold": 2500,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 93,
-        "supply_or_price": 2000,
-        "grade": 22,
+        "listing_threshold": 2000,
+        "supply_base": 22,
         "empty": false
       },
       {
         "item_id": 100,
-        "supply_or_price": 1500,
-        "grade": 25,
+        "listing_threshold": 1500,
+        "supply_base": 25,
         "empty": false
       },
       {
         "item_id": 106,
-        "supply_or_price": 0,
-        "grade": 0,
+        "listing_threshold": 0,
+        "supply_base": 0,
         "empty": true
       },
       {
         "item_id": 106,
-        "supply_or_price": 0,
-        "grade": 0,
+        "listing_threshold": 0,
+        "supply_base": 0,
         "empty": true
       }
     ],
@@ -420,38 +420,38 @@
     "x2": 21400,
     "y2": 3880,
     "is_capital": 0,
-    "region": 3,
-    "b38": 26,
-    "b39": 0,
+    "culture_id": 3,
+    "remains_id": 26,
+    "byte_0x27": 0,
     "special_products": [
       {
         "item_id": 6,
-        "supply_or_price": 3000,
-        "grade": 12,
+        "listing_threshold": 3000,
+        "supply_base": 12,
         "empty": false
       },
       {
         "item_id": 42,
-        "supply_or_price": 3000,
-        "grade": 17,
+        "listing_threshold": 3000,
+        "supply_base": 17,
         "empty": false
       },
       {
         "item_id": 91,
-        "supply_or_price": 3000,
-        "grade": 17,
+        "listing_threshold": 3000,
+        "supply_base": 17,
         "empty": false
       },
       {
         "item_id": 106,
-        "supply_or_price": 0,
-        "grade": 0,
+        "listing_threshold": 0,
+        "supply_base": 0,
         "empty": true
       },
       {
         "item_id": 106,
-        "supply_or_price": 0,
-        "grade": 0,
+        "listing_threshold": 0,
+        "supply_base": 0,
         "empty": true
       }
     ],
@@ -466,38 +466,38 @@
     "x2": 22648,
     "y2": 3656,
     "is_capital": 0,
-    "region": 3,
-    "b38": 26,
-    "b39": 0,
+    "culture_id": 3,
+    "remains_id": 26,
+    "byte_0x27": 0,
     "special_products": [
       {
         "item_id": 0,
-        "supply_or_price": 2000,
-        "grade": 20,
+        "listing_threshold": 2000,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 3,
-        "supply_or_price": 3500,
-        "grade": 20,
+        "listing_threshold": 3500,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 59,
-        "supply_or_price": 2000,
-        "grade": 23,
+        "listing_threshold": 2000,
+        "supply_base": 23,
         "empty": false
       },
       {
         "item_id": 70,
-        "supply_or_price": 2700,
-        "grade": 15,
+        "listing_threshold": 2700,
+        "supply_base": 15,
         "empty": false
       },
       {
         "item_id": 102,
-        "supply_or_price": 2500,
-        "grade": 25,
+        "listing_threshold": 2500,
+        "supply_base": 25,
         "empty": false
       }
     ],
@@ -512,38 +512,38 @@
     "x2": 19016,
     "y2": 5752,
     "is_capital": 1,
-    "region": 4,
-    "b38": 26,
-    "b39": 0,
+    "culture_id": 4,
+    "remains_id": 26,
+    "byte_0x27": 0,
     "special_products": [
       {
         "item_id": 13,
-        "supply_or_price": 4000,
-        "grade": 12,
+        "listing_threshold": 4000,
+        "supply_base": 12,
         "empty": false
       },
       {
         "item_id": 14,
-        "supply_or_price": 4000,
-        "grade": 12,
+        "listing_threshold": 4000,
+        "supply_base": 12,
         "empty": false
       },
       {
         "item_id": 28,
-        "supply_or_price": 5500,
-        "grade": 20,
+        "listing_threshold": 5500,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 82,
-        "supply_or_price": 6000,
-        "grade": 17,
+        "listing_threshold": 6000,
+        "supply_base": 17,
         "empty": false
       },
       {
         "item_id": 90,
-        "supply_or_price": 4000,
-        "grade": 12,
+        "listing_threshold": 4000,
+        "supply_base": 12,
         "empty": false
       }
     ],
@@ -558,38 +558,38 @@
     "x2": 19384,
     "y2": 6040,
     "is_capital": 0,
-    "region": 4,
-    "b38": 26,
-    "b39": 0,
+    "culture_id": 4,
+    "remains_id": 26,
+    "byte_0x27": 0,
     "special_products": [
       {
         "item_id": 15,
-        "supply_or_price": 600,
-        "grade": 20,
+        "listing_threshold": 600,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 64,
-        "supply_or_price": 2000,
-        "grade": 12,
+        "listing_threshold": 2000,
+        "supply_base": 12,
         "empty": false
       },
       {
         "item_id": 67,
-        "supply_or_price": 2500,
-        "grade": 8,
+        "listing_threshold": 2500,
+        "supply_base": 8,
         "empty": false
       },
       {
         "item_id": 101,
-        "supply_or_price": 700,
-        "grade": 25,
+        "listing_threshold": 700,
+        "supply_base": 25,
         "empty": false
       },
       {
         "item_id": 106,
-        "supply_or_price": 0,
-        "grade": 0,
+        "listing_threshold": 0,
+        "supply_base": 0,
         "empty": true
       }
     ],
@@ -604,38 +604,38 @@
     "x2": 19304,
     "y2": 5976,
     "is_capital": 1,
-    "region": 5,
-    "b38": 5,
-    "b39": 0,
+    "culture_id": 5,
+    "remains_id": 5,
+    "byte_0x27": 0,
     "special_products": [
       {
         "item_id": 12,
-        "supply_or_price": 4500,
-        "grade": 12,
+        "listing_threshold": 4500,
+        "supply_base": 12,
         "empty": false
       },
       {
         "item_id": 57,
-        "supply_or_price": 5000,
-        "grade": 12,
+        "listing_threshold": 5000,
+        "supply_base": 12,
         "empty": false
       },
       {
         "item_id": 52,
-        "supply_or_price": 4000,
-        "grade": 25,
+        "listing_threshold": 4000,
+        "supply_base": 25,
         "empty": false
       },
       {
         "item_id": 90,
-        "supply_or_price": 4000,
-        "grade": 12,
+        "listing_threshold": 4000,
+        "supply_base": 12,
         "empty": false
       },
       {
         "item_id": 93,
-        "supply_or_price": 4000,
-        "grade": 15,
+        "listing_threshold": 4000,
+        "supply_base": 15,
         "empty": false
       }
     ],
@@ -650,38 +650,38 @@
     "x2": 19992,
     "y2": 5672,
     "is_capital": 0,
-    "region": 5,
-    "b38": 26,
-    "b39": 0,
+    "culture_id": 5,
+    "remains_id": 26,
+    "byte_0x27": 0,
     "special_products": [
       {
         "item_id": 13,
-        "supply_or_price": 1500,
-        "grade": 12,
+        "listing_threshold": 1500,
+        "supply_base": 12,
         "empty": false
       },
       {
         "item_id": 43,
-        "supply_or_price": 3000,
-        "grade": 15,
+        "listing_threshold": 3000,
+        "supply_base": 15,
         "empty": false
       },
       {
         "item_id": 47,
-        "supply_or_price": 2000,
-        "grade": 20,
+        "listing_threshold": 2000,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 51,
-        "supply_or_price": 1600,
-        "grade": 15,
+        "listing_threshold": 1600,
+        "supply_base": 15,
         "empty": false
       },
       {
         "item_id": 82,
-        "supply_or_price": 2200,
-        "grade": 17,
+        "listing_threshold": 2200,
+        "supply_base": 17,
         "empty": false
       }
     ],
@@ -696,38 +696,38 @@
     "x2": 21016,
     "y2": 5096,
     "is_capital": 1,
-    "region": 6,
-    "b38": 6,
-    "b39": 0,
+    "culture_id": 6,
+    "remains_id": 6,
+    "byte_0x27": 0,
     "special_products": [
       {
         "item_id": 8,
-        "supply_or_price": 1500,
-        "grade": 20,
+        "listing_threshold": 1500,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 49,
-        "supply_or_price": 3800,
-        "grade": 12,
+        "listing_threshold": 3800,
+        "supply_base": 12,
         "empty": false
       },
       {
         "item_id": 51,
-        "supply_or_price": 2000,
-        "grade": 15,
+        "listing_threshold": 2000,
+        "supply_base": 15,
         "empty": false
       },
       {
         "item_id": 53,
-        "supply_or_price": 4000,
-        "grade": 7,
+        "listing_threshold": 4000,
+        "supply_base": 7,
         "empty": false
       },
       {
         "item_id": 93,
-        "supply_or_price": 4000,
-        "grade": 15,
+        "listing_threshold": 4000,
+        "supply_base": 15,
         "empty": false
       }
     ],
@@ -742,38 +742,38 @@
     "x2": 20536,
     "y2": 5192,
     "is_capital": 0,
-    "region": 6,
-    "b38": 26,
-    "b39": 0,
+    "culture_id": 6,
+    "remains_id": 26,
+    "byte_0x27": 0,
     "special_products": [
       {
         "item_id": 8,
-        "supply_or_price": 1500,
-        "grade": 20,
+        "listing_threshold": 1500,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 12,
-        "supply_or_price": 2500,
-        "grade": 12,
+        "listing_threshold": 2500,
+        "supply_base": 12,
         "empty": false
       },
       {
         "item_id": 13,
-        "supply_or_price": 1500,
-        "grade": 12,
+        "listing_threshold": 1500,
+        "supply_base": 12,
         "empty": false
       },
       {
         "item_id": 28,
-        "supply_or_price": 3000,
-        "grade": 20,
+        "listing_threshold": 3000,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 45,
-        "supply_or_price": 2000,
-        "grade": 25,
+        "listing_threshold": 2000,
+        "supply_base": 25,
         "empty": false
       }
     ],
@@ -788,38 +788,38 @@
     "x2": 21704,
     "y2": 5880,
     "is_capital": 0,
-    "region": 6,
-    "b38": 26,
-    "b39": 0,
+    "culture_id": 6,
+    "remains_id": 26,
+    "byte_0x27": 0,
     "special_products": [
       {
         "item_id": 0,
-        "supply_or_price": 2000,
-        "grade": 20,
+        "listing_threshold": 2000,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 35,
-        "supply_or_price": 1000,
-        "grade": 23,
+        "listing_threshold": 1000,
+        "supply_base": 23,
         "empty": false
       },
       {
         "item_id": 14,
-        "supply_or_price": 1500,
-        "grade": 25,
+        "listing_threshold": 1500,
+        "supply_base": 25,
         "empty": false
       },
       {
         "item_id": 19,
-        "supply_or_price": 2500,
-        "grade": 20,
+        "listing_threshold": 2500,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 106,
-        "supply_or_price": 0,
-        "grade": 0,
+        "listing_threshold": 0,
+        "supply_base": 0,
         "empty": true
       }
     ],
@@ -834,38 +834,38 @@
     "x2": 21400,
     "y2": 4952,
     "is_capital": 0,
-    "region": 6,
-    "b38": 26,
-    "b39": 0,
+    "culture_id": 6,
+    "remains_id": 26,
+    "byte_0x27": 0,
     "special_products": [
       {
         "item_id": 35,
-        "supply_or_price": 2000,
-        "grade": 25,
+        "listing_threshold": 2000,
+        "supply_base": 25,
         "empty": false
       },
       {
         "item_id": 57,
-        "supply_or_price": 3300,
-        "grade": 20,
+        "listing_threshold": 3300,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 61,
-        "supply_or_price": 2000,
-        "grade": 8,
+        "listing_threshold": 2000,
+        "supply_base": 8,
         "empty": false
       },
       {
         "item_id": 42,
-        "supply_or_price": 2000,
-        "grade": 25,
+        "listing_threshold": 2000,
+        "supply_base": 25,
         "empty": false
       },
       {
         "item_id": 71,
-        "supply_or_price": 4000,
-        "grade": 15,
+        "listing_threshold": 4000,
+        "supply_base": 15,
         "empty": false
       }
     ],
@@ -880,38 +880,38 @@
     "x2": 22600,
     "y2": 5800,
     "is_capital": 1,
-    "region": 7,
-    "b38": 7,
-    "b39": 0,
+    "culture_id": 7,
+    "remains_id": 7,
+    "byte_0x27": 0,
     "special_products": [
       {
         "item_id": 9,
-        "supply_or_price": 2000,
-        "grade": 20,
+        "listing_threshold": 2000,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 14,
-        "supply_or_price": 1000,
-        "grade": 12,
+        "listing_threshold": 1000,
+        "supply_base": 12,
         "empty": false
       },
       {
         "item_id": 19,
-        "supply_or_price": 1500,
-        "grade": 25,
+        "listing_threshold": 1500,
+        "supply_base": 25,
         "empty": false
       },
       {
         "item_id": 60,
-        "supply_or_price": 2200,
-        "grade": 8,
+        "listing_threshold": 2200,
+        "supply_base": 8,
         "empty": false
       },
       {
         "item_id": 61,
-        "supply_or_price": 2200,
-        "grade": 8,
+        "listing_threshold": 2200,
+        "supply_base": 8,
         "empty": false
       }
     ],
@@ -926,38 +926,38 @@
     "x2": 22808,
     "y2": 6056,
     "is_capital": 0,
-    "region": 7,
-    "b38": 26,
-    "b39": 0,
+    "culture_id": 7,
+    "remains_id": 26,
+    "byte_0x27": 0,
     "special_products": [
       {
         "item_id": 35,
-        "supply_or_price": 1000,
-        "grade": 23,
+        "listing_threshold": 1000,
+        "supply_base": 23,
         "empty": false
       },
       {
         "item_id": 9,
-        "supply_or_price": 1600,
-        "grade": 20,
+        "listing_threshold": 1600,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 14,
-        "supply_or_price": 1500,
-        "grade": 12,
+        "listing_threshold": 1500,
+        "supply_base": 12,
         "empty": false
       },
       {
         "item_id": 34,
-        "supply_or_price": 1600,
-        "grade": 17,
+        "listing_threshold": 1600,
+        "supply_base": 17,
         "empty": false
       },
       {
         "item_id": 106,
-        "supply_or_price": 0,
-        "grade": 0,
+        "listing_threshold": 0,
+        "supply_base": 0,
         "empty": true
       }
     ],
@@ -972,38 +972,38 @@
     "x2": 23720,
     "y2": 6056,
     "is_capital": 0,
-    "region": 7,
-    "b38": 26,
-    "b39": 0,
+    "culture_id": 7,
+    "remains_id": 26,
+    "byte_0x27": 0,
     "special_products": [
       {
         "item_id": 0,
-        "supply_or_price": 1000,
-        "grade": 20,
+        "listing_threshold": 1000,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 14,
-        "supply_or_price": 1000,
-        "grade": 12,
+        "listing_threshold": 1000,
+        "supply_base": 12,
         "empty": false
       },
       {
         "item_id": 34,
-        "supply_or_price": 1200,
-        "grade": 17,
+        "listing_threshold": 1200,
+        "supply_base": 17,
         "empty": false
       },
       {
         "item_id": 82,
-        "supply_or_price": 1500,
-        "grade": 25,
+        "listing_threshold": 1500,
+        "supply_base": 25,
         "empty": false
       },
       {
         "item_id": 106,
-        "supply_or_price": 0,
-        "grade": 0,
+        "listing_threshold": 0,
+        "supply_base": 0,
         "empty": true
       }
     ],
@@ -1018,38 +1018,38 @@
     "x2": 23192,
     "y2": 5464,
     "is_capital": 1,
-    "region": 8,
-    "b38": 8,
-    "b39": 0,
+    "culture_id": 8,
+    "remains_id": 8,
+    "byte_0x27": 0,
     "special_products": [
       {
         "item_id": 20,
-        "supply_or_price": 4500,
-        "grade": 22,
+        "listing_threshold": 4500,
+        "supply_base": 22,
         "empty": false
       },
       {
         "item_id": 23,
-        "supply_or_price": 5000,
-        "grade": 20,
+        "listing_threshold": 5000,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 98,
-        "supply_or_price": 4500,
-        "grade": 20,
+        "listing_threshold": 4500,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 55,
-        "supply_or_price": 1900,
-        "grade": 10,
+        "listing_threshold": 1900,
+        "supply_base": 10,
         "empty": false
       },
       {
         "item_id": 58,
-        "supply_or_price": 4300,
-        "grade": 17,
+        "listing_threshold": 4300,
+        "supply_base": 17,
         "empty": false
       }
     ],
@@ -1064,38 +1064,38 @@
     "x2": 21880,
     "y2": 5224,
     "is_capital": 0,
-    "region": 8,
-    "b38": 26,
-    "b39": 0,
+    "culture_id": 8,
+    "remains_id": 26,
+    "byte_0x27": 0,
     "special_products": [
       {
         "item_id": 4,
-        "supply_or_price": 1500,
-        "grade": 20,
+        "listing_threshold": 1500,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 9,
-        "supply_or_price": 1500,
-        "grade": 20,
+        "listing_threshold": 1500,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 14,
-        "supply_or_price": 1500,
-        "grade": 12,
+        "listing_threshold": 1500,
+        "supply_base": 12,
         "empty": false
       },
       {
         "item_id": 34,
-        "supply_or_price": 1500,
-        "grade": 17,
+        "listing_threshold": 1500,
+        "supply_base": 17,
         "empty": false
       },
       {
         "item_id": 88,
-        "supply_or_price": 1000,
-        "grade": 23,
+        "listing_threshold": 1000,
+        "supply_base": 23,
         "empty": false
       }
     ],
@@ -1110,38 +1110,38 @@
     "x2": 23976,
     "y2": 6120,
     "is_capital": 0,
-    "region": 8,
-    "b38": 4,
-    "b39": 0,
+    "culture_id": 8,
+    "remains_id": 4,
+    "byte_0x27": 0,
     "special_products": [
       {
         "item_id": 25,
-        "supply_or_price": 1900,
-        "grade": 20,
+        "listing_threshold": 1900,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 34,
-        "supply_or_price": 1900,
-        "grade": 17,
+        "listing_threshold": 1900,
+        "supply_base": 17,
         "empty": false
       },
       {
         "item_id": 42,
-        "supply_or_price": 2000,
-        "grade": 17,
+        "listing_threshold": 2000,
+        "supply_base": 17,
         "empty": false
       },
       {
         "item_id": 100,
-        "supply_or_price": 2000,
-        "grade": 15,
+        "listing_threshold": 2000,
+        "supply_base": 15,
         "empty": false
       },
       {
         "item_id": 55,
-        "supply_or_price": 1900,
-        "grade": 15,
+        "listing_threshold": 1900,
+        "supply_base": 15,
         "empty": false
       }
     ],
@@ -1156,38 +1156,38 @@
     "x2": 23448,
     "y2": 6472,
     "is_capital": 1,
-    "region": 9,
-    "b38": 9,
-    "b39": 0,
+    "culture_id": 9,
+    "remains_id": 9,
+    "byte_0x27": 0,
     "special_products": [
       {
         "item_id": 15,
-        "supply_or_price": 2000,
-        "grade": 12,
+        "listing_threshold": 2000,
+        "supply_base": 12,
         "empty": false
       },
       {
         "item_id": 22,
-        "supply_or_price": 4000,
-        "grade": 20,
+        "listing_threshold": 4000,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 48,
-        "supply_or_price": 3000,
-        "grade": 20,
+        "listing_threshold": 3000,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 50,
-        "supply_or_price": 3000,
-        "grade": 25,
+        "listing_threshold": 3000,
+        "supply_base": 25,
         "empty": false
       },
       {
         "item_id": 58,
-        "supply_or_price": 3000,
-        "grade": 5,
+        "listing_threshold": 3000,
+        "supply_base": 5,
         "empty": false
       }
     ],
@@ -1202,38 +1202,38 @@
     "x2": 21496,
     "y2": 6328,
     "is_capital": 0,
-    "region": 9,
-    "b38": 26,
-    "b39": 0,
+    "culture_id": 9,
+    "remains_id": 26,
+    "byte_0x27": 0,
     "special_products": [
       {
         "item_id": 48,
-        "supply_or_price": 1500,
-        "grade": 20,
+        "listing_threshold": 1500,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 50,
-        "supply_or_price": 1500,
-        "grade": 25,
+        "listing_threshold": 1500,
+        "supply_base": 25,
         "empty": false
       },
       {
         "item_id": 52,
-        "supply_or_price": 1600,
-        "grade": 15,
+        "listing_threshold": 1600,
+        "supply_base": 15,
         "empty": false
       },
       {
         "item_id": 39,
-        "supply_or_price": 2500,
-        "grade": 5,
+        "listing_threshold": 2500,
+        "supply_base": 5,
         "empty": false
       },
       {
         "item_id": 46,
-        "supply_or_price": 2000,
-        "grade": 12,
+        "listing_threshold": 2000,
+        "supply_base": 12,
         "empty": false
       }
     ],
@@ -1248,38 +1248,38 @@
     "x2": 20328,
     "y2": 5896,
     "is_capital": 0,
-    "region": 9,
-    "b38": 26,
-    "b39": 0,
+    "culture_id": 9,
+    "remains_id": 26,
+    "byte_0x27": 0,
     "special_products": [
       {
         "item_id": 14,
-        "supply_or_price": 2000,
-        "grade": 12,
+        "listing_threshold": 2000,
+        "supply_base": 12,
         "empty": false
       },
       {
         "item_id": 37,
-        "supply_or_price": 1500,
-        "grade": 23,
+        "listing_threshold": 1500,
+        "supply_base": 23,
         "empty": false
       },
       {
         "item_id": 82,
-        "supply_or_price": 2000,
-        "grade": 17,
+        "listing_threshold": 2000,
+        "supply_base": 17,
         "empty": false
       },
       {
         "item_id": 67,
-        "supply_or_price": 3200,
-        "grade": 6,
+        "listing_threshold": 3200,
+        "supply_base": 6,
         "empty": false
       },
       {
         "item_id": 46,
-        "supply_or_price": 2700,
-        "grade": 8,
+        "listing_threshold": 2700,
+        "supply_base": 8,
         "empty": false
       }
     ],
@@ -1294,38 +1294,38 @@
     "x2": 21144,
     "y2": 5880,
     "is_capital": 0,
-    "region": 9,
-    "b38": 26,
-    "b39": 0,
+    "culture_id": 9,
+    "remains_id": 26,
+    "byte_0x27": 0,
     "special_products": [
       {
         "item_id": 94,
-        "supply_or_price": 3000,
-        "grade": 17,
+        "listing_threshold": 3000,
+        "supply_base": 17,
         "empty": false
       },
       {
         "item_id": 50,
-        "supply_or_price": 2000,
-        "grade": 25,
+        "listing_threshold": 2000,
+        "supply_base": 25,
         "empty": false
       },
       {
         "item_id": 54,
-        "supply_or_price": 2000,
-        "grade": 20,
+        "listing_threshold": 2000,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 79,
-        "supply_or_price": 3000,
-        "grade": 17,
+        "listing_threshold": 3000,
+        "supply_base": 17,
         "empty": false
       },
       {
         "item_id": 106,
-        "supply_or_price": 0,
-        "grade": 0,
+        "listing_threshold": 0,
+        "supply_base": 0,
         "empty": true
       }
     ],
@@ -1340,38 +1340,38 @@
     "x2": 20440,
     "y2": 9304,
     "is_capital": 1,
-    "region": 10,
-    "b38": 10,
-    "b39": 0,
+    "culture_id": 10,
+    "remains_id": 10,
+    "byte_0x27": 0,
     "special_products": [
       {
         "item_id": 31,
-        "supply_or_price": 1900,
-        "grade": 12,
+        "listing_threshold": 1900,
+        "supply_base": 12,
         "empty": false
       },
       {
         "item_id": 33,
-        "supply_or_price": 1900,
-        "grade": 20,
+        "listing_threshold": 1900,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 39,
-        "supply_or_price": 900,
-        "grade": 8,
+        "listing_threshold": 900,
+        "supply_base": 8,
         "empty": false
       },
       {
         "item_id": 48,
-        "supply_or_price": 1800,
-        "grade": 20,
+        "listing_threshold": 1800,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 67,
-        "supply_or_price": 2600,
-        "grade": 8,
+        "listing_threshold": 2600,
+        "supply_base": 8,
         "empty": false
       }
     ],
@@ -1386,38 +1386,38 @@
     "x2": 18152,
     "y2": 6376,
     "is_capital": 0,
-    "region": 4,
-    "b38": 26,
-    "b39": 0,
+    "culture_id": 4,
+    "remains_id": 26,
+    "byte_0x27": 0,
     "special_products": [
       {
         "item_id": 11,
-        "supply_or_price": 500,
-        "grade": 20,
+        "listing_threshold": 500,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 15,
-        "supply_or_price": 600,
-        "grade": 20,
+        "listing_threshold": 600,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 19,
-        "supply_or_price": 700,
-        "grade": 20,
+        "listing_threshold": 700,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 35,
-        "supply_or_price": 900,
-        "grade": 17,
+        "listing_threshold": 900,
+        "supply_base": 17,
         "empty": false
       },
       {
         "item_id": 106,
-        "supply_or_price": 0,
-        "grade": 0,
+        "listing_threshold": 0,
+        "supply_base": 0,
         "empty": true
       }
     ],
@@ -1432,38 +1432,38 @@
     "x2": 18152,
     "y2": 6824,
     "is_capital": 0,
-    "region": 5,
-    "b38": 26,
-    "b39": 0,
+    "culture_id": 5,
+    "remains_id": 26,
+    "byte_0x27": 0,
     "special_products": [
       {
         "item_id": 5,
-        "supply_or_price": 600,
-        "grade": 20,
+        "listing_threshold": 600,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 9,
-        "supply_or_price": 500,
-        "grade": 20,
+        "listing_threshold": 500,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 15,
-        "supply_or_price": 500,
-        "grade": 20,
+        "listing_threshold": 500,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 106,
-        "supply_or_price": 0,
-        "grade": 0,
+        "listing_threshold": 0,
+        "supply_base": 0,
         "empty": true
       },
       {
         "item_id": 106,
-        "supply_or_price": 0,
-        "grade": 0,
+        "listing_threshold": 0,
+        "supply_base": 0,
         "empty": true
       }
     ],
@@ -1478,38 +1478,38 @@
     "x2": 18056,
     "y2": 8376,
     "is_capital": 0,
-    "region": 10,
-    "b38": 26,
-    "b39": 0,
+    "culture_id": 10,
+    "remains_id": 26,
+    "byte_0x27": 0,
     "special_products": [
       {
         "item_id": 10,
-        "supply_or_price": 250,
-        "grade": 20,
+        "listing_threshold": 250,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 13,
-        "supply_or_price": 500,
-        "grade": 12,
+        "listing_threshold": 500,
+        "supply_base": 12,
         "empty": false
       },
       {
         "item_id": 27,
-        "supply_or_price": 1000,
-        "grade": 25,
+        "listing_threshold": 1000,
+        "supply_base": 25,
         "empty": false
       },
       {
         "item_id": 48,
-        "supply_or_price": 250,
-        "grade": 17,
+        "listing_threshold": 250,
+        "supply_base": 17,
         "empty": false
       },
       {
         "item_id": 95,
-        "supply_or_price": 250,
-        "grade": 20,
+        "listing_threshold": 250,
+        "supply_base": 20,
         "empty": false
       }
     ],
@@ -1524,38 +1524,38 @@
     "x2": 21448,
     "y2": 11064,
     "is_capital": 0,
-    "region": 10,
-    "b38": 26,
-    "b39": 0,
+    "culture_id": 10,
+    "remains_id": 26,
+    "byte_0x27": 0,
     "special_products": [
       {
         "item_id": 31,
-        "supply_or_price": 300,
-        "grade": 12,
+        "listing_threshold": 300,
+        "supply_base": 12,
         "empty": false
       },
       {
         "item_id": 41,
-        "supply_or_price": 200,
-        "grade": 20,
+        "listing_threshold": 200,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 68,
-        "supply_or_price": 500,
-        "grade": 20,
+        "listing_threshold": 500,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 70,
-        "supply_or_price": 800,
-        "grade": 17,
+        "listing_threshold": 800,
+        "supply_base": 17,
         "empty": false
       },
       {
         "item_id": 74,
-        "supply_or_price": 1200,
-        "grade": 5,
+        "listing_threshold": 1200,
+        "supply_base": 5,
         "empty": false
       }
     ],
@@ -1570,38 +1570,38 @@
     "x2": 23896,
     "y2": 12744,
     "is_capital": 1,
-    "region": 11,
-    "b38": 11,
-    "b39": 0,
+    "culture_id": 11,
+    "remains_id": 11,
+    "byte_0x27": 0,
     "special_products": [
       {
         "item_id": 63,
-        "supply_or_price": 2400,
-        "grade": 20,
+        "listing_threshold": 2400,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 31,
-        "supply_or_price": 2100,
-        "grade": 20,
+        "listing_threshold": 2100,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 34,
-        "supply_or_price": 2100,
-        "grade": 17,
+        "listing_threshold": 2100,
+        "supply_base": 17,
         "empty": false
       },
       {
         "item_id": 41,
-        "supply_or_price": 2100,
-        "grade": 17,
+        "listing_threshold": 2100,
+        "supply_base": 17,
         "empty": false
       },
       {
         "item_id": 67,
-        "supply_or_price": 1900,
-        "grade": 25,
+        "listing_threshold": 1900,
+        "supply_base": 25,
         "empty": false
       }
     ],
@@ -1616,38 +1616,38 @@
     "x2": 22088,
     "y2": 13832,
     "is_capital": 0,
-    "region": 11,
-    "b38": 26,
-    "b39": 0,
+    "culture_id": 11,
+    "remains_id": 26,
+    "byte_0x27": 0,
     "special_products": [
       {
         "item_id": 10,
-        "supply_or_price": 150,
-        "grade": 20,
+        "listing_threshold": 150,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 39,
-        "supply_or_price": 900,
-        "grade": 5,
+        "listing_threshold": 900,
+        "supply_base": 5,
         "empty": false
       },
       {
         "item_id": 74,
-        "supply_or_price": 1200,
-        "grade": 5,
+        "listing_threshold": 1200,
+        "supply_base": 5,
         "empty": false
       },
       {
         "item_id": 94,
-        "supply_or_price": 500,
-        "grade": 20,
+        "listing_threshold": 500,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 101,
-        "supply_or_price": 150,
-        "grade": 25,
+        "listing_threshold": 150,
+        "supply_base": 25,
         "empty": false
       }
     ],
@@ -1662,38 +1662,38 @@
     "x2": 24552,
     "y2": 11640,
     "is_capital": 0,
-    "region": 11,
-    "b38": 26,
-    "b39": 0,
+    "culture_id": 11,
+    "remains_id": 26,
+    "byte_0x27": 0,
     "special_products": [
       {
         "item_id": 31,
-        "supply_or_price": 1200,
-        "grade": 25,
+        "listing_threshold": 1200,
+        "supply_base": 25,
         "empty": false
       },
       {
         "item_id": 42,
-        "supply_or_price": 1200,
-        "grade": 17,
+        "listing_threshold": 1200,
+        "supply_base": 17,
         "empty": false
       },
       {
         "item_id": 67,
-        "supply_or_price": 1200,
-        "grade": 8,
+        "listing_threshold": 1200,
+        "supply_base": 8,
         "empty": false
       },
       {
         "item_id": 68,
-        "supply_or_price": 1000,
-        "grade": 25,
+        "listing_threshold": 1000,
+        "supply_base": 25,
         "empty": false
       },
       {
         "item_id": 76,
-        "supply_or_price": 1500,
-        "grade": 7,
+        "listing_threshold": 1500,
+        "supply_base": 7,
         "empty": false
       }
     ],
@@ -1708,38 +1708,38 @@
     "x2": 25016,
     "y2": 9800,
     "is_capital": 0,
-    "region": 11,
-    "b38": 26,
-    "b39": 0,
+    "culture_id": 11,
+    "remains_id": 26,
+    "byte_0x27": 0,
     "special_products": [
       {
         "item_id": 32,
-        "supply_or_price": 1000,
-        "grade": 20,
+        "listing_threshold": 1000,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 39,
-        "supply_or_price": 900,
-        "grade": 8,
+        "listing_threshold": 900,
+        "supply_base": 8,
         "empty": false
       },
       {
         "item_id": 63,
-        "supply_or_price": 1000,
-        "grade": 12,
+        "listing_threshold": 1000,
+        "supply_base": 12,
         "empty": false
       },
       {
         "item_id": 77,
-        "supply_or_price": 2000,
-        "grade": 10,
+        "listing_threshold": 2000,
+        "supply_base": 10,
         "empty": false
       },
       {
         "item_id": 95,
-        "supply_or_price": 900,
-        "grade": 25,
+        "listing_threshold": 900,
+        "supply_base": 25,
         "empty": false
       }
     ],
@@ -1754,38 +1754,38 @@
     "x2": 25368,
     "y2": 6712,
     "is_capital": 1,
-    "region": 12,
-    "b38": 12,
-    "b39": 0,
+    "culture_id": 12,
+    "remains_id": 12,
+    "byte_0x27": 0,
     "special_products": [
       {
         "item_id": 6,
-        "supply_or_price": 5000,
-        "grade": 20,
+        "listing_threshold": 5000,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 8,
-        "supply_or_price": 3000,
-        "grade": 20,
+        "listing_threshold": 3000,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 15,
-        "supply_or_price": 2500,
-        "grade": 20,
+        "listing_threshold": 2500,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 97,
-        "supply_or_price": 2800,
-        "grade": 23,
+        "listing_threshold": 2800,
+        "supply_base": 23,
         "empty": false
       },
       {
         "item_id": 55,
-        "supply_or_price": 1900,
-        "grade": 23,
+        "listing_threshold": 1900,
+        "supply_base": 23,
         "empty": false
       }
     ],
@@ -1800,38 +1800,38 @@
     "x2": 25128,
     "y2": 8520,
     "is_capital": 0,
-    "region": 12,
-    "b38": 26,
-    "b39": 0,
+    "culture_id": 12,
+    "remains_id": 26,
+    "byte_0x27": 0,
     "special_products": [
       {
         "item_id": 0,
-        "supply_or_price": 2500,
-        "grade": 20,
+        "listing_threshold": 2500,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 15,
-        "supply_or_price": 2000,
-        "grade": 20,
+        "listing_threshold": 2000,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 31,
-        "supply_or_price": 2800,
-        "grade": 20,
+        "listing_threshold": 2800,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 70,
-        "supply_or_price": 2000,
-        "grade": 15,
+        "listing_threshold": 2000,
+        "supply_base": 15,
         "empty": false
       },
       {
         "item_id": 58,
-        "supply_or_price": 3000,
-        "grade": 5,
+        "listing_threshold": 3000,
+        "supply_base": 5,
         "empty": false
       }
     ],
@@ -1846,38 +1846,38 @@
     "x2": 26520,
     "y2": 7368,
     "is_capital": 0,
-    "region": 12,
-    "b38": 26,
-    "b39": 0,
+    "culture_id": 12,
+    "remains_id": 26,
+    "byte_0x27": 0,
     "special_products": [
       {
         "item_id": 5,
-        "supply_or_price": 2000,
-        "grade": 20,
+        "listing_threshold": 2000,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 15,
-        "supply_or_price": 2000,
-        "grade": 20,
+        "listing_threshold": 2000,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 54,
-        "supply_or_price": 2300,
-        "grade": 8,
+        "listing_threshold": 2300,
+        "supply_base": 8,
         "empty": false
       },
       {
         "item_id": 12,
-        "supply_or_price": 2500,
-        "grade": 15,
+        "listing_threshold": 2500,
+        "supply_base": 15,
         "empty": false
       },
       {
         "item_id": 106,
-        "supply_or_price": 0,
-        "grade": 0,
+        "listing_threshold": 0,
+        "supply_base": 0,
         "empty": true
       }
     ],
@@ -1892,38 +1892,38 @@
     "x2": 26264,
     "y2": 7000,
     "is_capital": 0,
-    "region": 12,
-    "b38": 26,
-    "b39": 0,
+    "culture_id": 12,
+    "remains_id": 26,
+    "byte_0x27": 0,
     "special_products": [
       {
         "item_id": 15,
-        "supply_or_price": 1800,
-        "grade": 20,
+        "listing_threshold": 1800,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 48,
-        "supply_or_price": 1500,
-        "grade": 17,
+        "listing_threshold": 1500,
+        "supply_base": 17,
         "empty": false
       },
       {
         "item_id": 98,
-        "supply_or_price": 2000,
-        "grade": 23,
+        "listing_threshold": 2000,
+        "supply_base": 23,
         "empty": false
       },
       {
         "item_id": 62,
-        "supply_or_price": 2400,
-        "grade": 15,
+        "listing_threshold": 2400,
+        "supply_base": 15,
         "empty": false
       },
       {
         "item_id": 55,
-        "supply_or_price": 1900,
-        "grade": 15,
+        "listing_threshold": 1900,
+        "supply_base": 15,
         "empty": false
       }
     ],
@@ -1938,38 +1938,38 @@
     "x2": 28440,
     "y2": 8856,
     "is_capital": 1,
-    "region": 13,
-    "b38": 13,
-    "b39": 0,
+    "culture_id": 13,
+    "remains_id": 13,
+    "byte_0x27": 0,
     "special_products": [
       {
         "item_id": 24,
-        "supply_or_price": 3000,
-        "grade": 20,
+        "listing_threshold": 3000,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 48,
-        "supply_or_price": 3800,
-        "grade": 17,
+        "listing_threshold": 3800,
+        "supply_base": 17,
         "empty": false
       },
       {
         "item_id": 56,
-        "supply_or_price": 3000,
-        "grade": 25,
+        "listing_threshold": 3000,
+        "supply_base": 25,
         "empty": false
       },
       {
         "item_id": 72,
-        "supply_or_price": 2500,
-        "grade": 23,
+        "listing_threshold": 2500,
+        "supply_base": 23,
         "empty": false
       },
       {
         "item_id": 106,
-        "supply_or_price": 0,
-        "grade": 0,
+        "listing_threshold": 0,
+        "supply_base": 0,
         "empty": true
       }
     ],
@@ -1984,38 +1984,38 @@
     "x2": 28248,
     "y2": 8424,
     "is_capital": 0,
-    "region": 13,
-    "b38": 26,
-    "b39": 0,
+    "culture_id": 13,
+    "remains_id": 26,
+    "byte_0x27": 0,
     "special_products": [
       {
         "item_id": 22,
-        "supply_or_price": 1500,
-        "grade": 20,
+        "listing_threshold": 1500,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 48,
-        "supply_or_price": 2000,
-        "grade": 17,
+        "listing_threshold": 2000,
+        "supply_base": 17,
         "empty": false
       },
       {
         "item_id": 52,
-        "supply_or_price": 2500,
-        "grade": 23,
+        "listing_threshold": 2500,
+        "supply_base": 23,
         "empty": false
       },
       {
         "item_id": 56,
-        "supply_or_price": 3000,
-        "grade": 20,
+        "listing_threshold": 3000,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 78,
-        "supply_or_price": 2600,
-        "grade": 15,
+        "listing_threshold": 2600,
+        "supply_base": 15,
         "empty": false
       }
     ],
@@ -2030,38 +2030,38 @@
     "x2": 28856,
     "y2": 9256,
     "is_capital": 0,
-    "region": 13,
-    "b38": 26,
-    "b39": 0,
+    "culture_id": 13,
+    "remains_id": 26,
+    "byte_0x27": 0,
     "special_products": [
       {
         "item_id": 25,
-        "supply_or_price": 1500,
-        "grade": 25,
+        "listing_threshold": 1500,
+        "supply_base": 25,
         "empty": false
       },
       {
         "item_id": 29,
-        "supply_or_price": 2300,
-        "grade": 25,
+        "listing_threshold": 2300,
+        "supply_base": 25,
         "empty": false
       },
       {
         "item_id": 32,
-        "supply_or_price": 1300,
-        "grade": 23,
+        "listing_threshold": 1300,
+        "supply_base": 23,
         "empty": false
       },
       {
         "item_id": 75,
-        "supply_or_price": 2000,
-        "grade": 8,
+        "listing_threshold": 2000,
+        "supply_base": 8,
         "empty": false
       },
       {
         "item_id": 77,
-        "supply_or_price": 2000,
-        "grade": 8,
+        "listing_threshold": 2000,
+        "supply_base": 8,
         "empty": false
       }
     ],
@@ -2076,38 +2076,38 @@
     "x2": 29768,
     "y2": 7592,
     "is_capital": 0,
-    "region": 13,
-    "b38": 23,
-    "b39": 0,
+    "culture_id": 13,
+    "remains_id": 23,
+    "byte_0x27": 0,
     "special_products": [
       {
         "item_id": 1,
-        "supply_or_price": 800,
-        "grade": 25,
+        "listing_threshold": 800,
+        "supply_base": 25,
         "empty": false
       },
       {
         "item_id": 56,
-        "supply_or_price": 1000,
-        "grade": 20,
+        "listing_threshold": 1000,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 72,
-        "supply_or_price": 1300,
-        "grade": 20,
+        "listing_threshold": 1300,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 32,
-        "supply_or_price": 2000,
-        "grade": 25,
+        "listing_threshold": 2000,
+        "supply_base": 25,
         "empty": false
       },
       {
         "item_id": 94,
-        "supply_or_price": 1300,
-        "grade": 17,
+        "listing_threshold": 1300,
+        "supply_base": 17,
         "empty": false
       }
     ],
@@ -2122,38 +2122,38 @@
     "x2": 30712,
     "y2": 8184,
     "is_capital": 0,
-    "region": 13,
-    "b38": 26,
-    "b39": 0,
+    "culture_id": 13,
+    "remains_id": 26,
+    "byte_0x27": 0,
     "special_products": [
       {
         "item_id": 17,
-        "supply_or_price": 2000,
-        "grade": 22,
+        "listing_threshold": 2000,
+        "supply_base": 22,
         "empty": false
       },
       {
         "item_id": 69,
-        "supply_or_price": 2000,
-        "grade": 12,
+        "listing_threshold": 2000,
+        "supply_base": 12,
         "empty": false
       },
       {
         "item_id": 71,
-        "supply_or_price": 1000,
-        "grade": 15,
+        "listing_threshold": 1000,
+        "supply_base": 15,
         "empty": false
       },
       {
         "item_id": 66,
-        "supply_or_price": 2000,
-        "grade": 10,
+        "listing_threshold": 2000,
+        "supply_base": 10,
         "empty": false
       },
       {
         "item_id": 100,
-        "supply_or_price": 800,
-        "grade": 25,
+        "listing_threshold": 800,
+        "supply_base": 25,
         "empty": false
       }
     ],
@@ -2168,38 +2168,38 @@
     "x2": 31320,
     "y2": 9736,
     "is_capital": 1,
-    "region": 14,
-    "b38": 14,
-    "b39": 0,
+    "culture_id": 14,
+    "remains_id": 14,
+    "byte_0x27": 0,
     "special_products": [
       {
         "item_id": 25,
-        "supply_or_price": 1500,
-        "grade": 20,
+        "listing_threshold": 1500,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 16,
-        "supply_or_price": 2000,
-        "grade": 20,
+        "listing_threshold": 2000,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 89,
-        "supply_or_price": 3000,
-        "grade": 20,
+        "listing_threshold": 3000,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 87,
-        "supply_or_price": 1000,
-        "grade": 15,
+        "listing_threshold": 1000,
+        "supply_base": 15,
         "empty": false
       },
       {
         "item_id": 103,
-        "supply_or_price": 2000,
-        "grade": 20,
+        "listing_threshold": 2000,
+        "supply_base": 20,
         "empty": false
       }
     ],
@@ -2214,38 +2214,38 @@
     "x2": 32440,
     "y2": 9656,
     "is_capital": 0,
-    "region": 14,
-    "b38": 26,
-    "b39": 0,
+    "culture_id": 14,
+    "remains_id": 26,
+    "byte_0x27": 0,
     "special_products": [
       {
         "item_id": 22,
-        "supply_or_price": 500,
-        "grade": 20,
+        "listing_threshold": 500,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 23,
-        "supply_or_price": 500,
-        "grade": 20,
+        "listing_threshold": 500,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 24,
-        "supply_or_price": 500,
-        "grade": 20,
+        "listing_threshold": 500,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 89,
-        "supply_or_price": 500,
-        "grade": 20,
+        "listing_threshold": 500,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 103,
-        "supply_or_price": 800,
-        "grade": 25,
+        "listing_threshold": 800,
+        "supply_base": 25,
         "empty": false
       }
     ],
@@ -2260,38 +2260,38 @@
     "x2": 33416,
     "y2": 8392,
     "is_capital": 0,
-    "region": 14,
-    "b38": 26,
-    "b39": 0,
+    "culture_id": 14,
+    "remains_id": 26,
+    "byte_0x27": 0,
     "special_products": [
       {
         "item_id": 1,
-        "supply_or_price": 200,
-        "grade": 20,
+        "listing_threshold": 200,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 22,
-        "supply_or_price": 200,
-        "grade": 20,
+        "listing_threshold": 200,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 23,
-        "supply_or_price": 200,
-        "grade": 20,
+        "listing_threshold": 200,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 24,
-        "supply_or_price": 200,
-        "grade": 20,
+        "listing_threshold": 200,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 39,
-        "supply_or_price": 900,
-        "grade": 5,
+        "listing_threshold": 900,
+        "supply_base": 5,
         "empty": false
       }
     ],
@@ -2306,38 +2306,38 @@
     "x2": 31960,
     "y2": 10680,
     "is_capital": 1,
-    "region": 15,
-    "b38": 15,
-    "b39": 0,
+    "culture_id": 15,
+    "remains_id": 15,
+    "byte_0x27": 0,
     "special_products": [
       {
         "item_id": 1,
-        "supply_or_price": 2500,
-        "grade": 20,
+        "listing_threshold": 2500,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 3,
-        "supply_or_price": 3400,
-        "grade": 20,
+        "listing_threshold": 3400,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 81,
-        "supply_or_price": 2500,
-        "grade": 25,
+        "listing_threshold": 2500,
+        "supply_base": 25,
         "empty": false
       },
       {
         "item_id": 85,
-        "supply_or_price": 2400,
-        "grade": 10,
+        "listing_threshold": 2400,
+        "supply_base": 10,
         "empty": false
       },
       {
         "item_id": 84,
-        "supply_or_price": 2000,
-        "grade": 15,
+        "listing_threshold": 2000,
+        "supply_base": 15,
         "empty": false
       }
     ],
@@ -2352,38 +2352,38 @@
     "x2": 31608,
     "y2": 10152,
     "is_capital": 0,
-    "region": 15,
-    "b38": 26,
-    "b39": 0,
+    "culture_id": 15,
+    "remains_id": 26,
+    "byte_0x27": 0,
     "special_products": [
       {
         "item_id": 31,
-        "supply_or_price": 2200,
-        "grade": 20,
+        "listing_threshold": 2200,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 87,
-        "supply_or_price": 2000,
-        "grade": 15,
+        "listing_threshold": 2000,
+        "supply_base": 15,
         "empty": false
       },
       {
         "item_id": 65,
-        "supply_or_price": 2400,
-        "grade": 17,
+        "listing_threshold": 2400,
+        "supply_base": 17,
         "empty": false
       },
       {
         "item_id": 100,
-        "supply_or_price": 1800,
-        "grade": 25,
+        "listing_threshold": 1800,
+        "supply_base": 25,
         "empty": false
       },
       {
         "item_id": 103,
-        "supply_or_price": 2000,
-        "grade": 20,
+        "listing_threshold": 2000,
+        "supply_base": 20,
         "empty": false
       }
     ],
@@ -2398,38 +2398,38 @@
     "x2": 34152,
     "y2": 9848,
     "is_capital": 0,
-    "region": 15,
-    "b38": 26,
-    "b39": 0,
+    "culture_id": 15,
+    "remains_id": 26,
+    "byte_0x27": 0,
     "special_products": [
       {
         "item_id": 10,
-        "supply_or_price": 2500,
-        "grade": 25,
+        "listing_threshold": 2500,
+        "supply_base": 25,
         "empty": false
       },
       {
         "item_id": 22,
-        "supply_or_price": 1900,
-        "grade": 25,
+        "listing_threshold": 1900,
+        "supply_base": 25,
         "empty": false
       },
       {
         "item_id": 23,
-        "supply_or_price": 2600,
-        "grade": 20,
+        "listing_threshold": 2600,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 24,
-        "supply_or_price": 2500,
-        "grade": 20,
+        "listing_threshold": 2500,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 106,
-        "supply_or_price": 0,
-        "grade": 0,
+        "listing_threshold": 0,
+        "supply_base": 0,
         "empty": true
       }
     ],
@@ -2444,38 +2444,38 @@
     "x2": 34200,
     "y2": 10424,
     "is_capital": 0,
-    "region": 15,
-    "b38": 26,
-    "b39": 0,
+    "culture_id": 15,
+    "remains_id": 26,
+    "byte_0x27": 0,
     "special_products": [
       {
         "item_id": 22,
-        "supply_or_price": 2400,
-        "grade": 20,
+        "listing_threshold": 2400,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 23,
-        "supply_or_price": 2000,
-        "grade": 25,
+        "listing_threshold": 2000,
+        "supply_base": 25,
         "empty": false
       },
       {
         "item_id": 24,
-        "supply_or_price": 2500,
-        "grade": 20,
+        "listing_threshold": 2500,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 25,
-        "supply_or_price": 2000,
-        "grade": 20,
+        "listing_threshold": 2000,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 84,
-        "supply_or_price": 2000,
-        "grade": 10,
+        "listing_threshold": 2000,
+        "supply_base": 10,
         "empty": false
       }
     ],
@@ -2490,38 +2490,38 @@
     "x2": 33480,
     "y2": 6632,
     "is_capital": 1,
-    "region": 16,
-    "b38": 16,
-    "b39": 0,
+    "culture_id": 16,
+    "remains_id": 16,
+    "byte_0x27": 0,
     "special_products": [
       {
         "item_id": 43,
-        "supply_or_price": 1000,
-        "grade": 25,
+        "listing_threshold": 1000,
+        "supply_base": 25,
         "empty": false
       },
       {
         "item_id": 53,
-        "supply_or_price": 2000,
-        "grade": 25,
+        "listing_threshold": 2000,
+        "supply_base": 25,
         "empty": false
       },
       {
         "item_id": 62,
-        "supply_or_price": 4000,
-        "grade": 12,
+        "listing_threshold": 4000,
+        "supply_base": 12,
         "empty": false
       },
       {
         "item_id": 66,
-        "supply_or_price": 3500,
-        "grade": 12,
+        "listing_threshold": 3500,
+        "supply_base": 12,
         "empty": false
       },
       {
         "item_id": 83,
-        "supply_or_price": 3600,
-        "grade": 8,
+        "listing_threshold": 3600,
+        "supply_base": 8,
         "empty": false
       }
     ],
@@ -2536,38 +2536,38 @@
     "x2": 33320,
     "y2": 7176,
     "is_capital": 0,
-    "region": 16,
-    "b38": 26,
-    "b39": 0,
+    "culture_id": 16,
+    "remains_id": 26,
+    "byte_0x27": 0,
     "special_products": [
       {
         "item_id": 21,
-        "supply_or_price": 2000,
-        "grade": 22,
+        "listing_threshold": 2000,
+        "supply_base": 22,
         "empty": false
       },
       {
         "item_id": 32,
-        "supply_or_price": 2000,
-        "grade": 25,
+        "listing_threshold": 2000,
+        "supply_base": 25,
         "empty": false
       },
       {
         "item_id": 49,
-        "supply_or_price": 1500,
-        "grade": 25,
+        "listing_threshold": 1500,
+        "supply_base": 25,
         "empty": false
       },
       {
         "item_id": 73,
-        "supply_or_price": 2800,
-        "grade": 12,
+        "listing_threshold": 2800,
+        "supply_base": 12,
         "empty": false
       },
       {
         "item_id": 88,
-        "supply_or_price": 2500,
-        "grade": 25,
+        "listing_threshold": 2500,
+        "supply_base": 25,
         "empty": false
       }
     ],
@@ -2582,38 +2582,38 @@
     "x2": 32680,
     "y2": 7544,
     "is_capital": 0,
-    "region": 16,
-    "b38": 26,
-    "b39": 0,
+    "culture_id": 16,
+    "remains_id": 26,
+    "byte_0x27": 0,
     "special_products": [
       {
         "item_id": 7,
-        "supply_or_price": 3000,
-        "grade": 20,
+        "listing_threshold": 3000,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 17,
-        "supply_or_price": 3000,
-        "grade": 23,
+        "listing_threshold": 3000,
+        "supply_base": 23,
         "empty": false
       },
       {
         "item_id": 32,
-        "supply_or_price": 2800,
-        "grade": 17,
+        "listing_threshold": 2800,
+        "supply_base": 17,
         "empty": false
       },
       {
         "item_id": 43,
-        "supply_or_price": 3200,
-        "grade": 15,
+        "listing_threshold": 3200,
+        "supply_base": 15,
         "empty": false
       },
       {
         "item_id": 49,
-        "supply_or_price": 2400,
-        "grade": 8,
+        "listing_threshold": 2400,
+        "supply_base": 8,
         "empty": false
       }
     ],
@@ -2628,38 +2628,38 @@
     "x2": 34056,
     "y2": 6008,
     "is_capital": 1,
-    "region": 17,
-    "b38": 17,
-    "b39": 0,
+    "culture_id": 17,
+    "remains_id": 17,
+    "byte_0x27": 0,
     "special_products": [
       {
         "item_id": 18,
-        "supply_or_price": 1500,
-        "grade": 25,
+        "listing_threshold": 1500,
+        "supply_base": 25,
         "empty": false
       },
       {
         "item_id": 43,
-        "supply_or_price": 2400,
-        "grade": 15,
+        "listing_threshold": 2400,
+        "supply_base": 15,
         "empty": false
       },
       {
         "item_id": 49,
-        "supply_or_price": 2000,
-        "grade": 8,
+        "listing_threshold": 2000,
+        "supply_base": 8,
         "empty": false
       },
       {
         "item_id": 53,
-        "supply_or_price": 2000,
-        "grade": 7,
+        "listing_threshold": 2000,
+        "supply_base": 7,
         "empty": false
       },
       {
         "item_id": 80,
-        "supply_or_price": 2400,
-        "grade": 20,
+        "listing_threshold": 2400,
+        "supply_base": 20,
         "empty": false
       }
     ],
@@ -2674,38 +2674,38 @@
     "x2": 34376,
     "y2": 6280,
     "is_capital": 0,
-    "region": 18,
-    "b38": 26,
-    "b39": 0,
+    "culture_id": 18,
+    "remains_id": 26,
+    "byte_0x27": 0,
     "special_products": [
       {
         "item_id": 40,
-        "supply_or_price": 2000,
-        "grade": 15,
+        "listing_threshold": 2000,
+        "supply_base": 15,
         "empty": false
       },
       {
         "item_id": 42,
-        "supply_or_price": 3000,
-        "grade": 17,
+        "listing_threshold": 3000,
+        "supply_base": 17,
         "empty": false
       },
       {
         "item_id": 52,
-        "supply_or_price": 2000,
-        "grade": 15,
+        "listing_threshold": 2000,
+        "supply_base": 15,
         "empty": false
       },
       {
         "item_id": 60,
-        "supply_or_price": 3000,
-        "grade": 8,
+        "listing_threshold": 3000,
+        "supply_base": 8,
         "empty": false
       },
       {
         "item_id": 69,
-        "supply_or_price": 2000,
-        "grade": 20,
+        "listing_threshold": 2000,
+        "supply_base": 20,
         "empty": false
       }
     ],
@@ -2720,38 +2720,38 @@
     "x2": 35032,
     "y2": 6168,
     "is_capital": 1,
-    "region": 18,
-    "b38": 18,
-    "b39": 0,
+    "culture_id": 18,
+    "remains_id": 18,
+    "byte_0x27": 0,
     "special_products": [
       {
         "item_id": 38,
-        "supply_or_price": 2000,
-        "grade": 25,
+        "listing_threshold": 2000,
+        "supply_base": 25,
         "empty": false
       },
       {
         "item_id": 44,
-        "supply_or_price": 1800,
-        "grade": 25,
+        "listing_threshold": 1800,
+        "supply_base": 25,
         "empty": false
       },
       {
         "item_id": 45,
-        "supply_or_price": 3000,
-        "grade": 25,
+        "listing_threshold": 3000,
+        "supply_base": 25,
         "empty": false
       },
       {
         "item_id": 49,
-        "supply_or_price": 2500,
-        "grade": 25,
+        "listing_threshold": 2500,
+        "supply_base": 25,
         "empty": false
       },
       {
         "item_id": 73,
-        "supply_or_price": 3000,
-        "grade": 12,
+        "listing_threshold": 3000,
+        "supply_base": 12,
         "empty": false
       }
     ],
@@ -2766,38 +2766,38 @@
     "x2": 34200,
     "y2": 7048,
     "is_capital": 0,
-    "region": 18,
-    "b38": 26,
-    "b39": 0,
+    "culture_id": 18,
+    "remains_id": 26,
+    "byte_0x27": 0,
     "special_products": [
       {
         "item_id": 1,
-        "supply_or_price": 1250,
-        "grade": 20,
+        "listing_threshold": 1250,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 11,
-        "supply_or_price": 1250,
-        "grade": 20,
+        "listing_threshold": 1250,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 10,
-        "supply_or_price": 1250,
-        "grade": 20,
+        "listing_threshold": 1250,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 106,
-        "supply_or_price": 0,
-        "grade": 0,
+        "listing_threshold": 0,
+        "supply_base": 0,
         "empty": true
       },
       {
         "item_id": 106,
-        "supply_or_price": 0,
-        "grade": 0,
+        "listing_threshold": 0,
+        "supply_base": 0,
         "empty": true
       }
     ],
@@ -2812,38 +2812,38 @@
     "x2": 10856,
     "y2": 7416,
     "is_capital": 1,
-    "region": 19,
-    "b38": 19,
-    "b39": 0,
+    "culture_id": 19,
+    "remains_id": 19,
+    "byte_0x27": 0,
     "special_products": [
       {
         "item_id": 11,
-        "supply_or_price": 500,
-        "grade": 20,
+        "listing_threshold": 500,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 31,
-        "supply_or_price": 800,
-        "grade": 20,
+        "listing_threshold": 800,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 34,
-        "supply_or_price": 800,
-        "grade": 25,
+        "listing_threshold": 800,
+        "supply_base": 25,
         "empty": false
       },
       {
         "item_id": 37,
-        "supply_or_price": 500,
-        "grade": 17,
+        "listing_threshold": 500,
+        "supply_base": 17,
         "empty": false
       },
       {
         "item_id": 95,
-        "supply_or_price": 900,
-        "grade": 20,
+        "listing_threshold": 900,
+        "supply_base": 20,
         "empty": false
       }
     ],
@@ -2858,38 +2858,38 @@
     "x2": 12296,
     "y2": 7976,
     "is_capital": 0,
-    "region": 19,
-    "b38": 26,
-    "b39": 0,
+    "culture_id": 19,
+    "remains_id": 26,
+    "byte_0x27": 0,
     "special_products": [
       {
         "item_id": 9,
-        "supply_or_price": 600,
-        "grade": 25,
+        "listing_threshold": 600,
+        "supply_base": 25,
         "empty": false
       },
       {
         "item_id": 10,
-        "supply_or_price": 2500,
-        "grade": 20,
+        "listing_threshold": 2500,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 11,
-        "supply_or_price": 500,
-        "grade": 20,
+        "listing_threshold": 500,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 33,
-        "supply_or_price": 800,
-        "grade": 20,
+        "listing_threshold": 800,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 34,
-        "supply_or_price": 500,
-        "grade": 25,
+        "listing_threshold": 500,
+        "supply_base": 25,
         "empty": false
       }
     ],
@@ -2904,38 +2904,38 @@
     "x2": 12664,
     "y2": 7928,
     "is_capital": 0,
-    "region": 19,
-    "b38": 26,
-    "b39": 0,
+    "culture_id": 19,
+    "remains_id": 26,
+    "byte_0x27": 0,
     "special_products": [
       {
         "item_id": 10,
-        "supply_or_price": 600,
-        "grade": 21,
+        "listing_threshold": 600,
+        "supply_base": 21,
         "empty": false
       },
       {
         "item_id": 11,
-        "supply_or_price": 500,
-        "grade": 20,
+        "listing_threshold": 500,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 31,
-        "supply_or_price": 500,
-        "grade": 25,
+        "listing_threshold": 500,
+        "supply_base": 25,
         "empty": false
       },
       {
         "item_id": 37,
-        "supply_or_price": 500,
-        "grade": 17,
+        "listing_threshold": 500,
+        "supply_base": 17,
         "empty": false
       },
       {
         "item_id": 68,
-        "supply_or_price": 1000,
-        "grade": 8,
+        "listing_threshold": 1000,
+        "supply_base": 8,
         "empty": false
       }
     ],
@@ -2950,38 +2950,38 @@
     "x2": 11480,
     "y2": 8024,
     "is_capital": 0,
-    "region": 19,
-    "b38": 26,
-    "b39": 0,
+    "culture_id": 19,
+    "remains_id": 26,
+    "byte_0x27": 0,
     "special_products": [
       {
         "item_id": 5,
-        "supply_or_price": 600,
-        "grade": 20,
+        "listing_threshold": 600,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 11,
-        "supply_or_price": 500,
-        "grade": 20,
+        "listing_threshold": 500,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 31,
-        "supply_or_price": 500,
-        "grade": 20,
+        "listing_threshold": 500,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 33,
-        "supply_or_price": 600,
-        "grade": 20,
+        "listing_threshold": 600,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 37,
-        "supply_or_price": 1000,
-        "grade": 23,
+        "listing_threshold": 1000,
+        "supply_base": 23,
         "empty": false
       }
     ],
@@ -2996,38 +2996,38 @@
     "x2": 9304,
     "y2": 7832,
     "is_capital": 1,
-    "region": 20,
-    "b38": 20,
-    "b39": 0,
+    "culture_id": 20,
+    "remains_id": 20,
+    "byte_0x27": 0,
     "special_products": [
       {
         "item_id": 2,
-        "supply_or_price": 1000,
-        "grade": 25,
+        "listing_threshold": 1000,
+        "supply_base": 25,
         "empty": false
       },
       {
         "item_id": 26,
-        "supply_or_price": 1800,
-        "grade": 25,
+        "listing_threshold": 1800,
+        "supply_base": 25,
         "empty": false
       },
       {
         "item_id": 29,
-        "supply_or_price": 1300,
-        "grade": 20,
+        "listing_threshold": 1300,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 39,
-        "supply_or_price": 900,
-        "grade": 8,
+        "listing_threshold": 900,
+        "supply_base": 8,
         "empty": false
       },
       {
         "item_id": 40,
-        "supply_or_price": 2000,
-        "grade": 17,
+        "listing_threshold": 2000,
+        "supply_base": 17,
         "empty": false
       }
     ],
@@ -3042,38 +3042,38 @@
     "x2": 10072,
     "y2": 7608,
     "is_capital": 0,
-    "region": 20,
-    "b38": 22,
-    "b39": 0,
+    "culture_id": 20,
+    "remains_id": 22,
+    "byte_0x27": 0,
     "special_products": [
       {
         "item_id": 7,
-        "supply_or_price": 1000,
-        "grade": 17,
+        "listing_threshold": 1000,
+        "supply_base": 17,
         "empty": false
       },
       {
         "item_id": 9,
-        "supply_or_price": 800,
-        "grade": 25,
+        "listing_threshold": 800,
+        "supply_base": 25,
         "empty": false
       },
       {
         "item_id": 30,
-        "supply_or_price": 500,
-        "grade": 25,
+        "listing_threshold": 500,
+        "supply_base": 25,
         "empty": false
       },
       {
         "item_id": 66,
-        "supply_or_price": 800,
-        "grade": 10,
+        "listing_threshold": 800,
+        "supply_base": 10,
         "empty": false
       },
       {
         "item_id": 103,
-        "supply_or_price": 1000,
-        "grade": 20,
+        "listing_threshold": 1000,
+        "supply_base": 20,
         "empty": false
       }
     ],
@@ -3088,38 +3088,38 @@
     "x2": 11112,
     "y2": 8952,
     "is_capital": 0,
-    "region": 20,
-    "b38": 21,
-    "b39": 0,
+    "culture_id": 20,
+    "remains_id": 21,
+    "byte_0x27": 0,
     "special_products": [
       {
         "item_id": 2,
-        "supply_or_price": 500,
-        "grade": 25,
+        "listing_threshold": 500,
+        "supply_base": 25,
         "empty": false
       },
       {
         "item_id": 10,
-        "supply_or_price": 100,
-        "grade": 20,
+        "listing_threshold": 100,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 3,
-        "supply_or_price": 900,
-        "grade": 20,
+        "listing_threshold": 900,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 33,
-        "supply_or_price": 100,
-        "grade": 20,
+        "listing_threshold": 100,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 104,
-        "supply_or_price": 500,
-        "grade": 25,
+        "listing_threshold": 500,
+        "supply_base": 25,
         "empty": false
       }
     ],
@@ -3134,38 +3134,38 @@
     "x2": 12072,
     "y2": 8760,
     "is_capital": 0,
-    "region": 20,
-    "b38": 26,
-    "b39": 0,
+    "culture_id": 20,
+    "remains_id": 26,
+    "byte_0x27": 0,
     "special_products": [
       {
         "item_id": 7,
-        "supply_or_price": 500,
-        "grade": 20,
+        "listing_threshold": 500,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 31,
-        "supply_or_price": 500,
-        "grade": 20,
+        "listing_threshold": 500,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 73,
-        "supply_or_price": 800,
-        "grade": 12,
+        "listing_threshold": 800,
+        "supply_base": 12,
         "empty": false
       },
       {
         "item_id": 76,
-        "supply_or_price": 1500,
-        "grade": 10,
+        "listing_threshold": 1500,
+        "supply_base": 10,
         "empty": false
       },
       {
         "item_id": 6,
-        "supply_or_price": 2500,
-        "grade": 23,
+        "listing_threshold": 2500,
+        "supply_base": 23,
         "empty": false
       }
     ],
@@ -3180,38 +3180,38 @@
     "x2": 16152,
     "y2": 10872,
     "is_capital": 0,
-    "region": 20,
-    "b38": 26,
-    "b39": 0,
+    "culture_id": 20,
+    "remains_id": 26,
+    "byte_0x27": 0,
     "special_products": [
       {
         "item_id": 2,
-        "supply_or_price": 700,
-        "grade": 25,
+        "listing_threshold": 700,
+        "supply_base": 25,
         "empty": false
       },
       {
         "item_id": 31,
-        "supply_or_price": 150,
-        "grade": 25,
+        "listing_threshold": 150,
+        "supply_base": 25,
         "empty": false
       },
       {
         "item_id": 39,
-        "supply_or_price": 900,
-        "grade": 8,
+        "listing_threshold": 900,
+        "supply_base": 8,
         "empty": false
       },
       {
         "item_id": 100,
-        "supply_or_price": 700,
-        "grade": 25,
+        "listing_threshold": 700,
+        "supply_base": 25,
         "empty": false
       },
       {
         "item_id": 101,
-        "supply_or_price": 150,
-        "grade": 25,
+        "listing_threshold": 150,
+        "supply_base": 25,
         "empty": false
       }
     ],
@@ -3226,38 +3226,38 @@
     "x2": 10472,
     "y2": 8216,
     "is_capital": 0,
-    "region": 20,
-    "b38": 26,
-    "b39": 0,
+    "culture_id": 20,
+    "remains_id": 26,
+    "byte_0x27": 0,
     "special_products": [
       {
         "item_id": 2,
-        "supply_or_price": 400,
-        "grade": 25,
+        "listing_threshold": 400,
+        "supply_base": 25,
         "empty": false
       },
       {
         "item_id": 26,
-        "supply_or_price": 550,
-        "grade": 25,
+        "listing_threshold": 550,
+        "supply_base": 25,
         "empty": false
       },
       {
         "item_id": 34,
-        "supply_or_price": 600,
-        "grade": 25,
+        "listing_threshold": 600,
+        "supply_base": 25,
         "empty": false
       },
       {
         "item_id": 68,
-        "supply_or_price": 650,
-        "grade": 10,
+        "listing_threshold": 650,
+        "supply_base": 10,
         "empty": false
       },
       {
         "item_id": 86,
-        "supply_or_price": 800,
-        "grade": 23,
+        "listing_threshold": 800,
+        "supply_base": 23,
         "empty": false
       }
     ],
@@ -3272,38 +3272,38 @@
     "x2": 14104,
     "y2": 9384,
     "is_capital": 0,
-    "region": 20,
-    "b38": 26,
-    "b39": 0,
+    "culture_id": 20,
+    "remains_id": 26,
+    "byte_0x27": 0,
     "special_products": [
       {
         "item_id": 9,
-        "supply_or_price": 300,
-        "grade": 25,
+        "listing_threshold": 300,
+        "supply_base": 25,
         "empty": false
       },
       {
         "item_id": 30,
-        "supply_or_price": 1500,
-        "grade": 25,
+        "listing_threshold": 1500,
+        "supply_base": 25,
         "empty": false
       },
       {
         "item_id": 33,
-        "supply_or_price": 550,
-        "grade": 20,
+        "listing_threshold": 550,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 29,
-        "supply_or_price": 700,
-        "grade": 15,
+        "listing_threshold": 700,
+        "supply_base": 15,
         "empty": false
       },
       {
         "item_id": 40,
-        "supply_or_price": 1200,
-        "grade": 15,
+        "listing_threshold": 1200,
+        "supply_base": 15,
         "empty": false
       }
     ],
@@ -3318,38 +3318,38 @@
     "x2": 18488,
     "y2": 8968,
     "is_capital": 0,
-    "region": 10,
-    "b38": 26,
-    "b39": 0,
+    "culture_id": 10,
+    "remains_id": 26,
+    "byte_0x27": 0,
     "special_products": [
       {
         "item_id": 13,
-        "supply_or_price": 450,
-        "grade": 12,
+        "listing_threshold": 450,
+        "supply_base": 12,
         "empty": false
       },
       {
         "item_id": 39,
-        "supply_or_price": 1000,
-        "grade": 5,
+        "listing_threshold": 1000,
+        "supply_base": 5,
         "empty": false
       },
       {
         "item_id": 101,
-        "supply_or_price": 1200,
-        "grade": 15,
+        "listing_threshold": 1200,
+        "supply_base": 15,
         "empty": false
       },
       {
         "item_id": 106,
-        "supply_or_price": 0,
-        "grade": 0,
+        "listing_threshold": 0,
+        "supply_base": 0,
         "empty": true
       },
       {
         "item_id": 106,
-        "supply_or_price": 0,
-        "grade": 0,
+        "listing_threshold": 0,
+        "supply_base": 0,
         "empty": true
       }
     ],
@@ -3364,38 +3364,38 @@
     "x2": 20744,
     "y2": 9976,
     "is_capital": 0,
-    "region": 10,
-    "b38": 26,
-    "b39": 0,
+    "culture_id": 10,
+    "remains_id": 26,
+    "byte_0x27": 0,
     "special_products": [
       {
         "item_id": 11,
-        "supply_or_price": 300,
-        "grade": 10,
+        "listing_threshold": 300,
+        "supply_base": 10,
         "empty": false
       },
       {
         "item_id": 67,
-        "supply_or_price": 900,
-        "grade": 10,
+        "listing_threshold": 900,
+        "supply_base": 10,
         "empty": false
       },
       {
         "item_id": 59,
-        "supply_or_price": 1000,
-        "grade": 20,
+        "listing_threshold": 1000,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 106,
-        "supply_or_price": 0,
-        "grade": 0,
+        "listing_threshold": 0,
+        "supply_base": 0,
         "empty": true
       },
       {
         "item_id": 106,
-        "supply_or_price": 0,
-        "grade": 0,
+        "listing_threshold": 0,
+        "supply_base": 0,
         "empty": true
       }
     ],
@@ -3410,38 +3410,38 @@
     "x2": 25048,
     "y2": 11752,
     "is_capital": 0,
-    "region": 11,
-    "b38": 26,
-    "b39": 0,
+    "culture_id": 11,
+    "remains_id": 26,
+    "byte_0x27": 0,
     "special_products": [
       {
         "item_id": 59,
-        "supply_or_price": 300,
-        "grade": 10,
+        "listing_threshold": 300,
+        "supply_base": 10,
         "empty": false
       },
       {
         "item_id": 100,
-        "supply_or_price": 500,
-        "grade": 25,
+        "listing_threshold": 500,
+        "supply_base": 25,
         "empty": false
       },
       {
         "item_id": 27,
-        "supply_or_price": 800,
-        "grade": 20,
+        "listing_threshold": 800,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 106,
-        "supply_or_price": 0,
-        "grade": 0,
+        "listing_threshold": 0,
+        "supply_base": 0,
         "empty": true
       },
       {
         "item_id": 106,
-        "supply_or_price": 0,
-        "grade": 0,
+        "listing_threshold": 0,
+        "supply_base": 0,
         "empty": true
       }
     ],
@@ -3456,38 +3456,38 @@
     "x2": 24424,
     "y2": 10456,
     "is_capital": 0,
-    "region": 11,
-    "b38": 26,
-    "b39": 0,
+    "culture_id": 11,
+    "remains_id": 26,
+    "byte_0x27": 0,
     "special_products": [
       {
         "item_id": 79,
-        "supply_or_price": 700,
-        "grade": 10,
+        "listing_threshold": 700,
+        "supply_base": 10,
         "empty": false
       },
       {
         "item_id": 63,
-        "supply_or_price": 800,
-        "grade": 15,
+        "listing_threshold": 800,
+        "supply_base": 15,
         "empty": false
       },
       {
         "item_id": 68,
-        "supply_or_price": 700,
-        "grade": 10,
+        "listing_threshold": 700,
+        "supply_base": 10,
         "empty": false
       },
       {
         "item_id": 26,
-        "supply_or_price": 700,
-        "grade": 10,
+        "listing_threshold": 700,
+        "supply_base": 10,
         "empty": false
       },
       {
         "item_id": 106,
-        "supply_or_price": 0,
-        "grade": 0,
+        "listing_threshold": 0,
+        "supply_base": 0,
         "empty": true
       }
     ],
@@ -3502,38 +3502,38 @@
     "x2": 26024,
     "y2": 8584,
     "is_capital": 0,
-    "region": 12,
-    "b38": 26,
-    "b39": 0,
+    "culture_id": 12,
+    "remains_id": 26,
+    "byte_0x27": 0,
     "special_products": [
       {
         "item_id": 15,
-        "supply_or_price": 500,
-        "grade": 10,
+        "listing_threshold": 500,
+        "supply_base": 10,
         "empty": false
       },
       {
         "item_id": 5,
-        "supply_or_price": 500,
-        "grade": 15,
+        "listing_threshold": 500,
+        "supply_base": 15,
         "empty": false
       },
       {
         "item_id": 64,
-        "supply_or_price": 1500,
-        "grade": 5,
+        "listing_threshold": 1500,
+        "supply_base": 5,
         "empty": false
       },
       {
         "item_id": 106,
-        "supply_or_price": 0,
-        "grade": 0,
+        "listing_threshold": 0,
+        "supply_base": 0,
         "empty": true
       },
       {
         "item_id": 106,
-        "supply_or_price": 0,
-        "grade": 0,
+        "listing_threshold": 0,
+        "supply_base": 0,
         "empty": true
       }
     ],
@@ -3548,38 +3548,38 @@
     "x2": 27880,
     "y2": 7704,
     "is_capital": 0,
-    "region": 13,
-    "b38": 26,
-    "b39": 0,
+    "culture_id": 13,
+    "remains_id": 26,
+    "byte_0x27": 0,
     "special_products": [
       {
         "item_id": 1,
-        "supply_or_price": 1000,
-        "grade": 25,
+        "listing_threshold": 1000,
+        "supply_base": 25,
         "empty": false
       },
       {
         "item_id": 5,
-        "supply_or_price": 900,
-        "grade": 25,
+        "listing_threshold": 900,
+        "supply_base": 25,
         "empty": false
       },
       {
         "item_id": 11,
-        "supply_or_price": 1200,
-        "grade": 25,
+        "listing_threshold": 1200,
+        "supply_base": 25,
         "empty": false
       },
       {
         "item_id": 64,
-        "supply_or_price": 1500,
-        "grade": 8,
+        "listing_threshold": 1500,
+        "supply_base": 8,
         "empty": false
       },
       {
         "item_id": 53,
-        "supply_or_price": 1600,
-        "grade": 10,
+        "listing_threshold": 1600,
+        "supply_base": 10,
         "empty": false
       }
     ],
@@ -3594,38 +3594,38 @@
     "x2": 28936,
     "y2": 8504,
     "is_capital": 0,
-    "region": 13,
-    "b38": 26,
-    "b39": 0,
+    "culture_id": 13,
+    "remains_id": 26,
+    "byte_0x27": 0,
     "special_products": [
       {
         "item_id": 48,
-        "supply_or_price": 1100,
-        "grade": 25,
+        "listing_threshold": 1100,
+        "supply_base": 25,
         "empty": false
       },
       {
         "item_id": 74,
-        "supply_or_price": 2000,
-        "grade": 5,
+        "listing_threshold": 2000,
+        "supply_base": 5,
         "empty": false
       },
       {
         "item_id": 75,
-        "supply_or_price": 2000,
-        "grade": 8,
+        "listing_threshold": 2000,
+        "supply_base": 8,
         "empty": false
       },
       {
         "item_id": 85,
-        "supply_or_price": 1500,
-        "grade": 10,
+        "listing_threshold": 1500,
+        "supply_base": 10,
         "empty": false
       },
       {
         "item_id": 25,
-        "supply_or_price": 1400,
-        "grade": 10,
+        "listing_threshold": 1400,
+        "supply_base": 10,
         "empty": false
       }
     ],
@@ -3640,38 +3640,38 @@
     "x2": 29160,
     "y2": 8136,
     "is_capital": 0,
-    "region": 13,
-    "b38": 26,
-    "b39": 0,
+    "culture_id": 13,
+    "remains_id": 26,
+    "byte_0x27": 0,
     "special_products": [
       {
         "item_id": 56,
-        "supply_or_price": 900,
-        "grade": 20,
+        "listing_threshold": 900,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 78,
-        "supply_or_price": 1200,
-        "grade": 8,
+        "listing_threshold": 1200,
+        "supply_base": 8,
         "empty": false
       },
       {
         "item_id": 87,
-        "supply_or_price": 1000,
-        "grade": 20,
+        "listing_threshold": 1000,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 97,
-        "supply_or_price": 1200,
-        "grade": 20,
+        "listing_threshold": 1200,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 106,
-        "supply_or_price": 0,
-        "grade": 0,
+        "listing_threshold": 0,
+        "supply_base": 0,
         "empty": true
       }
     ],
@@ -3686,38 +3686,38 @@
     "x2": 30792,
     "y2": 9400,
     "is_capital": 0,
-    "region": 15,
-    "b38": 26,
-    "b39": 0,
+    "culture_id": 15,
+    "remains_id": 26,
+    "byte_0x27": 0,
     "special_products": [
       {
         "item_id": 31,
-        "supply_or_price": 1000,
-        "grade": 15,
+        "listing_threshold": 1000,
+        "supply_base": 15,
         "empty": false
       },
       {
         "item_id": 24,
-        "supply_or_price": 1000,
-        "grade": 10,
+        "listing_threshold": 1000,
+        "supply_base": 10,
         "empty": false
       },
       {
         "item_id": 27,
-        "supply_or_price": 1500,
-        "grade": 15,
+        "listing_threshold": 1500,
+        "supply_base": 15,
         "empty": false
       },
       {
         "item_id": 106,
-        "supply_or_price": 0,
-        "grade": 0,
+        "listing_threshold": 0,
+        "supply_base": 0,
         "empty": true
       },
       {
         "item_id": 106,
-        "supply_or_price": 0,
-        "grade": 0,
+        "listing_threshold": 0,
+        "supply_base": 0,
         "empty": true
       }
     ],
@@ -3732,38 +3732,38 @@
     "x2": 31944,
     "y2": 8840,
     "is_capital": 0,
-    "region": 14,
-    "b38": 24,
-    "b39": 0,
+    "culture_id": 14,
+    "remains_id": 24,
+    "byte_0x27": 0,
     "special_products": [
       {
         "item_id": 1,
-        "supply_or_price": 400,
-        "grade": 20,
+        "listing_threshold": 400,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 68,
-        "supply_or_price": 500,
-        "grade": 10,
+        "listing_threshold": 500,
+        "supply_base": 10,
         "empty": false
       },
       {
         "item_id": 73,
-        "supply_or_price": 800,
-        "grade": 8,
+        "listing_threshold": 800,
+        "supply_base": 8,
         "empty": false
       },
       {
         "item_id": 96,
-        "supply_or_price": 850,
-        "grade": 15,
+        "listing_threshold": 850,
+        "supply_base": 15,
         "empty": false
       },
       {
         "item_id": 7,
-        "supply_or_price": 1500,
-        "grade": 15,
+        "listing_threshold": 1500,
+        "supply_base": 15,
         "empty": false
       }
     ],
@@ -3778,38 +3778,38 @@
     "x2": 32696,
     "y2": 10392,
     "is_capital": 0,
-    "region": 15,
-    "b38": 26,
-    "b39": 0,
+    "culture_id": 15,
+    "remains_id": 26,
+    "byte_0x27": 0,
     "special_products": [
       {
         "item_id": 96,
-        "supply_or_price": 400,
-        "grade": 10,
+        "listing_threshold": 400,
+        "supply_base": 10,
         "empty": false
       },
       {
         "item_id": 89,
-        "supply_or_price": 500,
-        "grade": 20,
+        "listing_threshold": 500,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 10,
-        "supply_or_price": 500,
-        "grade": 25,
+        "listing_threshold": 500,
+        "supply_base": 25,
         "empty": false
       },
       {
         "item_id": 106,
-        "supply_or_price": 0,
-        "grade": 0,
+        "listing_threshold": 0,
+        "supply_base": 0,
         "empty": true
       },
       {
         "item_id": 106,
-        "supply_or_price": 0,
-        "grade": 0,
+        "listing_threshold": 0,
+        "supply_base": 0,
         "empty": true
       }
     ],
@@ -3824,38 +3824,38 @@
     "x2": 33256,
     "y2": 10552,
     "is_capital": 0,
-    "region": 15,
-    "b38": 26,
-    "b39": 0,
+    "culture_id": 15,
+    "remains_id": 26,
+    "byte_0x27": 0,
     "special_products": [
       {
         "item_id": 10,
-        "supply_or_price": 300,
-        "grade": 25,
+        "listing_threshold": 300,
+        "supply_base": 25,
         "empty": false
       },
       {
         "item_id": 68,
-        "supply_or_price": 600,
-        "grade": 8,
+        "listing_threshold": 600,
+        "supply_base": 8,
         "empty": false
       },
       {
         "item_id": 84,
-        "supply_or_price": 500,
-        "grade": 20,
+        "listing_threshold": 500,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 106,
-        "supply_or_price": 0,
-        "grade": 0,
+        "listing_threshold": 0,
+        "supply_base": 0,
         "empty": true
       },
       {
         "item_id": 106,
-        "supply_or_price": 0,
-        "grade": 0,
+        "listing_threshold": 0,
+        "supply_base": 0,
         "empty": true
       }
     ],
@@ -3870,38 +3870,38 @@
     "x2": 32552,
     "y2": 10840,
     "is_capital": 0,
-    "region": 15,
-    "b38": 26,
-    "b39": 0,
+    "culture_id": 15,
+    "remains_id": 26,
+    "byte_0x27": 0,
     "special_products": [
       {
         "item_id": 21,
-        "supply_or_price": 500,
-        "grade": 20,
+        "listing_threshold": 500,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 88,
-        "supply_or_price": 500,
-        "grade": 10,
+        "listing_threshold": 500,
+        "supply_base": 10,
         "empty": false
       },
       {
         "item_id": 5,
-        "supply_or_price": 400,
-        "grade": 20,
+        "listing_threshold": 400,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 106,
-        "supply_or_price": 0,
-        "grade": 0,
+        "listing_threshold": 0,
+        "supply_base": 0,
         "empty": true
       },
       {
         "item_id": 106,
-        "supply_or_price": 0,
-        "grade": 0,
+        "listing_threshold": 0,
+        "supply_base": 0,
         "empty": true
       }
     ],
@@ -3916,38 +3916,38 @@
     "x2": 33304,
     "y2": 6152,
     "is_capital": 0,
-    "region": 16,
-    "b38": 26,
-    "b39": 0,
+    "culture_id": 16,
+    "remains_id": 26,
+    "byte_0x27": 0,
     "special_products": [
       {
         "item_id": 4,
-        "supply_or_price": 1000,
-        "grade": 25,
+        "listing_threshold": 1000,
+        "supply_base": 25,
         "empty": false
       },
       {
         "item_id": 94,
-        "supply_or_price": 1500,
-        "grade": 20,
+        "listing_threshold": 1500,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 49,
-        "supply_or_price": 1600,
-        "grade": 20,
+        "listing_threshold": 1600,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 13,
-        "supply_or_price": 2000,
-        "grade": 20,
+        "listing_threshold": 2000,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 106,
-        "supply_or_price": 0,
-        "grade": 0,
+        "listing_threshold": 0,
+        "supply_base": 0,
         "empty": true
       }
     ],
@@ -3962,38 +3962,38 @@
     "x2": 10312,
     "y2": 6648,
     "is_capital": 0,
-    "region": 19,
-    "b38": 26,
-    "b39": 0,
+    "culture_id": 19,
+    "remains_id": 26,
+    "byte_0x27": 0,
     "special_products": [
       {
         "item_id": 2,
-        "supply_or_price": 500,
-        "grade": 5,
+        "listing_threshold": 500,
+        "supply_base": 5,
         "empty": false
       },
       {
         "item_id": 4,
-        "supply_or_price": 1000,
-        "grade": 15,
+        "listing_threshold": 1000,
+        "supply_base": 15,
         "empty": false
       },
       {
         "item_id": 0,
-        "supply_or_price": 2000,
-        "grade": 20,
+        "listing_threshold": 2000,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 48,
-        "supply_or_price": 3000,
-        "grade": 20,
+        "listing_threshold": 3000,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 34,
-        "supply_or_price": 3500,
-        "grade": 15,
+        "listing_threshold": 3500,
+        "supply_base": 15,
         "empty": false
       }
     ],
@@ -4008,38 +4008,38 @@
     "x2": 24280,
     "y2": 5384,
     "is_capital": 0,
-    "region": 8,
-    "b38": 26,
-    "b39": 0,
+    "culture_id": 8,
+    "remains_id": 26,
+    "byte_0x27": 0,
     "special_products": [
       {
         "item_id": 0,
-        "supply_or_price": 500,
-        "grade": 25,
+        "listing_threshold": 500,
+        "supply_base": 25,
         "empty": false
       },
       {
         "item_id": 34,
-        "supply_or_price": 2500,
-        "grade": 10,
+        "listing_threshold": 2500,
+        "supply_base": 10,
         "empty": false
       },
       {
         "item_id": 11,
-        "supply_or_price": 2000,
-        "grade": 15,
+        "listing_threshold": 2000,
+        "supply_base": 15,
         "empty": false
       },
       {
         "item_id": 32,
-        "supply_or_price": 1500,
-        "grade": 10,
+        "listing_threshold": 1500,
+        "supply_base": 10,
         "empty": false
       },
       {
         "item_id": 102,
-        "supply_or_price": 3500,
-        "grade": 20,
+        "listing_threshold": 3500,
+        "supply_base": 20,
         "empty": false
       }
     ],
@@ -4054,38 +4054,38 @@
     "x2": 20712,
     "y2": 4120,
     "is_capital": 0,
-    "region": 1,
-    "b38": 26,
-    "b39": 0,
+    "culture_id": 1,
+    "remains_id": 26,
+    "byte_0x27": 0,
     "special_products": [
       {
         "item_id": 54,
-        "supply_or_price": 500,
-        "grade": 20,
+        "listing_threshold": 500,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 51,
-        "supply_or_price": 1500,
-        "grade": 15,
+        "listing_threshold": 1500,
+        "supply_base": 15,
         "empty": false
       },
       {
         "item_id": 52,
-        "supply_or_price": 2500,
-        "grade": 25,
+        "listing_threshold": 2500,
+        "supply_base": 25,
         "empty": false
       },
       {
         "item_id": 53,
-        "supply_or_price": 4000,
-        "grade": 10,
+        "listing_threshold": 4000,
+        "supply_base": 10,
         "empty": false
       },
       {
         "item_id": 7,
-        "supply_or_price": 3000,
-        "grade": 15,
+        "listing_threshold": 3000,
+        "supply_base": 15,
         "empty": false
       }
     ],
@@ -4100,38 +4100,38 @@
     "x2": 33416,
     "y2": 7224,
     "is_capital": 0,
-    "region": 16,
-    "b38": 26,
-    "b39": 0,
+    "culture_id": 16,
+    "remains_id": 26,
+    "byte_0x27": 0,
     "special_products": [
       {
         "item_id": 10,
-        "supply_or_price": 500,
-        "grade": 15,
+        "listing_threshold": 500,
+        "supply_base": 15,
         "empty": false
       },
       {
         "item_id": 32,
-        "supply_or_price": 1500,
-        "grade": 20,
+        "listing_threshold": 1500,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 52,
-        "supply_or_price": 2500,
-        "grade": 15,
+        "listing_threshold": 2500,
+        "supply_base": 15,
         "empty": false
       },
       {
         "item_id": 49,
-        "supply_or_price": 3000,
-        "grade": 15,
+        "listing_threshold": 3000,
+        "supply_base": 15,
         "empty": false
       },
       {
         "item_id": 1,
-        "supply_or_price": 2000,
-        "grade": 15,
+        "listing_threshold": 2000,
+        "supply_base": 15,
         "empty": false
       }
     ],
@@ -4146,38 +4146,38 @@
     "x2": 19720,
     "y2": 4574,
     "is_capital": 0,
-    "region": 1,
-    "b38": 26,
-    "b39": 0,
+    "culture_id": 1,
+    "remains_id": 26,
+    "byte_0x27": 0,
     "special_products": [
       {
         "item_id": 35,
-        "supply_or_price": 1000,
-        "grade": 10,
+        "listing_threshold": 1000,
+        "supply_base": 10,
         "empty": false
       },
       {
         "item_id": 0,
-        "supply_or_price": 500,
-        "grade": 20,
+        "listing_threshold": 500,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 94,
-        "supply_or_price": 800,
-        "grade": 12,
+        "listing_threshold": 800,
+        "supply_base": 12,
         "empty": false
       },
       {
         "item_id": 106,
-        "supply_or_price": 0,
-        "grade": 0,
+        "listing_threshold": 0,
+        "supply_base": 0,
         "empty": true
       },
       {
         "item_id": 106,
-        "supply_or_price": 0,
-        "grade": 0,
+        "listing_threshold": 0,
+        "supply_base": 0,
         "empty": true
       }
     ],
@@ -4192,38 +4192,38 @@
     "x2": 21624,
     "y2": 5496,
     "is_capital": 0,
-    "region": 6,
-    "b38": 26,
-    "b39": 0,
+    "culture_id": 6,
+    "remains_id": 26,
+    "byte_0x27": 0,
     "special_products": [
       {
         "item_id": 42,
-        "supply_or_price": 2500,
-        "grade": 10,
+        "listing_threshold": 2500,
+        "supply_base": 10,
         "empty": false
       },
       {
         "item_id": 58,
-        "supply_or_price": 3000,
-        "grade": 5,
+        "listing_threshold": 3000,
+        "supply_base": 5,
         "empty": false
       },
       {
         "item_id": 14,
-        "supply_or_price": 1500,
-        "grade": 20,
+        "listing_threshold": 1500,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 35,
-        "supply_or_price": 2000,
-        "grade": 18,
+        "listing_threshold": 2000,
+        "supply_base": 18,
         "empty": false
       },
       {
         "item_id": 0,
-        "supply_or_price": 1800,
-        "grade": 15,
+        "listing_threshold": 1800,
+        "supply_base": 15,
         "empty": false
       }
     ],
@@ -4238,38 +4238,38 @@
     "x2": 22408,
     "y2": 6320,
     "is_capital": 0,
-    "region": 9,
-    "b38": 26,
-    "b39": 0,
+    "culture_id": 9,
+    "remains_id": 26,
+    "byte_0x27": 0,
     "special_products": [
       {
         "item_id": 12,
-        "supply_or_price": 2000,
-        "grade": 20,
+        "listing_threshold": 2000,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 47,
-        "supply_or_price": 1000,
-        "grade": 15,
+        "listing_threshold": 1000,
+        "supply_base": 15,
         "empty": false
       },
       {
         "item_id": 15,
-        "supply_or_price": 500,
-        "grade": 20,
+        "listing_threshold": 500,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 106,
-        "supply_or_price": 0,
-        "grade": 0,
+        "listing_threshold": 0,
+        "supply_base": 0,
         "empty": true
       },
       {
         "item_id": 106,
-        "supply_or_price": 0,
-        "grade": 0,
+        "listing_threshold": 0,
+        "supply_base": 0,
         "empty": true
       }
     ],
@@ -4284,38 +4284,38 @@
     "x2": 33888,
     "y2": 9808,
     "is_capital": 0,
-    "region": 15,
-    "b38": 26,
-    "b39": 0,
+    "culture_id": 15,
+    "remains_id": 26,
+    "byte_0x27": 0,
     "special_products": [
       {
         "item_id": 89,
-        "supply_or_price": 1500,
-        "grade": 15,
+        "listing_threshold": 1500,
+        "supply_base": 15,
         "empty": false
       },
       {
         "item_id": 21,
-        "supply_or_price": 1000,
-        "grade": 10,
+        "listing_threshold": 1000,
+        "supply_base": 10,
         "empty": false
       },
       {
         "item_id": 5,
-        "supply_or_price": 300,
-        "grade": 20,
+        "listing_threshold": 300,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 1,
-        "supply_or_price": 600,
-        "grade": 10,
+        "listing_threshold": 600,
+        "supply_base": 10,
         "empty": false
       },
       {
         "item_id": 15,
-        "supply_or_price": 500,
-        "grade": 20,
+        "listing_threshold": 500,
+        "supply_base": 20,
         "empty": false
       }
     ],
@@ -4330,38 +4330,38 @@
     "x2": 34272,
     "y2": 6160,
     "is_capital": 0,
-    "region": 17,
-    "b38": 26,
-    "b39": 0,
+    "culture_id": 17,
+    "remains_id": 26,
+    "byte_0x27": 0,
     "special_products": [
       {
         "item_id": 80,
-        "supply_or_price": 1000,
-        "grade": 5,
+        "listing_threshold": 1000,
+        "supply_base": 5,
         "empty": false
       },
       {
         "item_id": 58,
-        "supply_or_price": 2000,
-        "grade": 5,
+        "listing_threshold": 2000,
+        "supply_base": 5,
         "empty": false
       },
       {
         "item_id": 5,
-        "supply_or_price": 500,
-        "grade": 20,
+        "listing_threshold": 500,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 1,
-        "supply_or_price": 800,
-        "grade": 15,
+        "listing_threshold": 800,
+        "supply_base": 15,
         "empty": false
       },
       {
         "item_id": 106,
-        "supply_or_price": 0,
-        "grade": 0,
+        "listing_threshold": 0,
+        "supply_base": 0,
         "empty": true
       }
     ],
@@ -4376,38 +4376,38 @@
     "x2": 35536,
     "y2": 6096,
     "is_capital": 0,
-    "region": 18,
-    "b38": 26,
-    "b39": 0,
+    "culture_id": 18,
+    "remains_id": 26,
+    "byte_0x27": 0,
     "special_products": [
       {
         "item_id": 92,
-        "supply_or_price": 1000,
-        "grade": 10,
+        "listing_threshold": 1000,
+        "supply_base": 10,
         "empty": false
       },
       {
         "item_id": 93,
-        "supply_or_price": 2000,
-        "grade": 10,
+        "listing_threshold": 2000,
+        "supply_base": 10,
         "empty": false
       },
       {
         "item_id": 44,
-        "supply_or_price": 1500,
-        "grade": 15,
+        "listing_threshold": 1500,
+        "supply_base": 15,
         "empty": false
       },
       {
         "item_id": 1,
-        "supply_or_price": 800,
-        "grade": 20,
+        "listing_threshold": 800,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 106,
-        "supply_or_price": 0,
-        "grade": 0,
+        "listing_threshold": 0,
+        "supply_base": 0,
         "empty": true
       }
     ],
@@ -4422,38 +4422,38 @@
     "x2": 12636,
     "y2": 8808,
     "is_capital": 0,
-    "region": 20,
-    "b38": 26,
-    "b39": 0,
+    "culture_id": 20,
+    "remains_id": 26,
+    "byte_0x27": 0,
     "special_products": [
       {
         "item_id": 40,
-        "supply_or_price": 1800,
-        "grade": 10,
+        "listing_threshold": 1800,
+        "supply_base": 10,
         "empty": false
       },
       {
         "item_id": 86,
-        "supply_or_price": 1000,
-        "grade": 10,
+        "listing_threshold": 1000,
+        "supply_base": 10,
         "empty": false
       },
       {
         "item_id": 3,
-        "supply_or_price": 500,
-        "grade": 20,
+        "listing_threshold": 500,
+        "supply_base": 20,
         "empty": false
       },
       {
         "item_id": 1,
-        "supply_or_price": 2200,
-        "grade": 10,
+        "listing_threshold": 2200,
+        "supply_base": 10,
         "empty": false
       },
       {
         "item_id": 94,
-        "supply_or_price": 1500,
-        "grade": 10,
+        "listing_threshold": 1500,
+        "supply_base": 10,
         "empty": false
       }
     ],

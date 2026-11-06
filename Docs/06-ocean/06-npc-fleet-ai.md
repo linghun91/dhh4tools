@@ -21,7 +21,7 @@
 - 黄金航路（`03-gold-road.md`）
 - 地方舰队编制、账本、自动买货（`05-ships-fleet/02-fleet-proxy.md`、`04-economy/03-trade-loop.md`）
 - 海战 AI、选目标、happening 2–6（`07-combat/03-battle-ai.md`）
-- 月结地方舰队互打、上缴、买船（`CFleetElement::vfunc_04` / `CForceElement::vfunc_04` 属 fleets / factions / combat）
+- 舰队日结、地方舰队互打、势力买船（`CFleetElement::vfunc_04` / `CForceElement::vfunc_04` 属 fleets / factions / combat）
 - 广场情报文案「%s的舰队正驶向%s」（town-life 投影；本系统只保证有 `docked_town_id` / `dest_town_id` 可查）
 - `CDrawShipManager` / `CSeaAreaFleetView` 贴图
 
@@ -110,18 +110,18 @@
 
 `fn_140008530`（`0x14013f970`，RTC `delta`）：
 
-1. `fn_14000b5ff` 得 `dx, dy`（原版坐标单位）
+1. `fn_14000b5ff` 得 `dx, dy`（原版坐标单位）：`abs` 差；`dx > 0x4E20`（20000）时取 `40000 − dx`，即东西向回绕 `[确认]`
 2. 可选写下 `isqrt(dx²+dy²)`
-3. 四段比较，反编译丢掉了 `return` 立即数。调用方只用 0、1、2、3：
+3. 四段比较。反编译丢了 `return` 立即数，原始指令 `0x14013f9f3` `xor eax,eax` / `0x14013fa0d` `mov eax,1` / `0x14013fa2a` `mov eax,2` / `0x14013fa33` `mov eax,3` 已钉死 `[确认]`：
 
-| 条件 | 调用方当作 |
+| 条件 | 返回 |
 | --- | --- |
 | `\|dx\| < 0x60` 且 `\|dy\| < 0x60`（96） | 0 最近 |
 | 否则 `\|dx\| < 0xC0` 且 `\|dy\| < 0x80`（192 / 128） | 1 |
 | 否则 `\|dx\| < 0xC0` 且 `\|dy\| < 0xC0`（192） | 2 |
 | 否则 | 3 最远 |
 
-哪一段精确对应 1 还是 2：第二段的 y 阈值是 `0x80` 不是 `0xC0`，带是扁的。返回值编号标 `[推断]`，阈值标 `[确认]`。
+第二段的 y 阈值是 `0x80` 不是 `0xC0`，带是扁的。阈值与返回值都 `[确认]`。比较是有符号 `jge`，即严格小于。
 
 ### 2.6 何时出现在大地图 `[确认]`
 
@@ -185,7 +185,7 @@
 
 `fn_14000c44b` 的 RTC 含 `cWindAngle`、`iWindVelocity`、`cCurrentAngle`、`iCurrentVelocity`。战斗中 NPC 转向走与玩家类似的风一流合成，参数仍在 `formulas/ocean.yaml`，本系统不复制一份航速公式。
 
-非战斗的 `fn_14000d855` **不**调用 aim switch。世界舰队的目的地推进如果存在，不在这条大地图 tick 里被还原——月结 `CFleetElement::vfunc_04` 扫的是互打和账本，不是轨迹。广场文案「正驶向%s / 停泊在%s」证明运行时有目的地与驻港两态，推进公式 `[未知]`。
+非战斗的 `fn_14000d855` **不**调用 aim switch。世界舰队的目的地推进如果存在，不在这条大地图 tick 里被还原——`CFleetElement::vfunc_04`（舰队日结）扫的是互打、日步和账本，不是轨迹。广场文案「正驶向%s / 停泊在%s」证明运行时有目的地与驻港两态，推进公式 `[未知]`。
 
 ### 2.9 追玩家与接触 `[确认]`
 
@@ -217,17 +217,17 @@
 
 警戒 / 放哨是 ocean 遭遇模式，成功后 `Combat.start`。本系统不实现视野圆。
 
-### 2.11 月结不是大地图 AI `[确认]`
+### 2.11 舰队日结 / 势力月结不是大地图 AI `[确认]`
 
 `CFleetElement::vfunc_04`（`0x1400ff2c0`，约 0x19F1 字节）RTC 含 `eTargetFleet`、`asCompanion`、`sCalendar`：
 
-- 扫 69 支，跳过 `eFleet == 0x3E`（62）
-- 两两 `fn_1400ec540` 关系，`== 3` 跳过；否则 `fn_14000d7ab` 无画面近战（公式在 combat）
+- 世界 tick 每拍都调它（`01-world/07` 调度表第 2 行）。其中逐舰队段受日首门 `fn_14000906b` 控制（`0x1400ff991`）：扫 69 支，跳过 `eFleet == 0x3E`（62），逐支 `fn_14000641f`（`0x1400ffa2a`）；玩家舰队再进日步 `fn_140005a15`（补给、疲劳、人物、happening，见 `01-sailing.md` §4.4）
+- 两两 `fn_1400ec540` 关系，`== 3` 跳过；否则 `fn_14000d7ab` 无画面近战（公式在 combat）；这段的日历门 `[未知]`
 - 其后同伴、补给、金币、地方舰队 100000、换旗舰
 
 `CForceElement::vfunc_04` 扫 25 势力战果槽，再扫 69 支给势力买船（`aeShip` / `aeShipType`），跳过势力哨兵 26 与状态 6。
 
-这两处都 **不写** `+0x3c8` 轨迹，也不占 4 槽。禁止把月结买货 / 互打塞进 `npc_ai.yaml`。
+这两处都 **不写** `+0x3c8` 轨迹，也不占 4 槽。禁止把日结 / 月结买货 / 互打塞进 `npc_ai.yaml`；它们按 `tick.yaml` 的 `day_start` / `month_start` 阶段订阅（D4）。
 
 ### 2.12 情报文案（只作状态旁证）
 
@@ -254,7 +254,7 @@
 | 分带 | 0–3 | | `dist_band` | 本系统 |
 | 轨迹点 | 65 / 槽 | | `locus_index` | 本系统 |
 
-运行时以表长为准。原版包：槽 4、船 20、世界舰队 69、空槽 70、空港 98。
+运行时以表长为准。原版包：槽 4、船 20、世界舰队 69；空槽 70、空港 98 是原版哨兵，只在 `legacy_codec`（D1）。
 
 禁止把 `mobile_fleet_slot` 当成持久 `fleet_id` 存档主键。存档存 69 支世界舰队 + 4 条 4 字节槽 + 20 艘 `CMobileShip`。
 
@@ -336,7 +336,7 @@ else if aim.reverse_when_close:
 
 ```
 occupy(slot, fleet_id, kind):
-  if Fleets.town(fleet_id) != empty_town and kind != leftover_kind:
+  if Fleets.location(fleet_id).town_id is not null and kind != leftover_kind:
       Fleets.leave_town(fleet_id)                # 清 +0x80，拷 +0x70
   if slot occupied by other: release(slot)
   slot.fleet_id = fleet_id
@@ -359,7 +359,7 @@ release(slot):
 visible_on_sea_area(fleet, player, sea_area_id):
   if not active: false
   if fleet.byte10 == sea_area_skip_person_byte: false   # 0xC5
-  in_same_town = player.town != empty_town and fleet.town == player.town
+  in_same_town = player.town is not null and fleet.town == player.town   # Fleets.location(..).town_id
   at_sea_flag  = has_dest(fleet) or extra_query(fleet)
   if fleet.state == skip_spawn_state and not in_same_town and not at_sea_flag:
       false
@@ -376,13 +376,13 @@ visible_on_sea_area(fleet, player, sea_area_id):
 - 4 槽写在 `CFleetElement` 里，20 船写在 `CMobileShipElement` 里，100 炮弹同对象
 - 空槽 70、空港 98、状态 6、势力哨兵 26、舰队 62 特殊字节 `0xC5` 全是立即数
 - 海域图 new `CSeaAreaFleetView`，大地图用 `CDrawShipManager` 20 槽
-- 月结互打与大地图 AI 共享 `eFleet`，但函数完全分开
+- 日结互打与大地图 AI 共享 `eFleet`，但函数完全分开
 
 重构切断：
 
 - Ocean 只持有 `mobile_fleet_slot -> fleet_id` 映射和轨迹
 - 世界舰队坐标 / 驻港 / 目的地由 Fleets 提供快照，Ocean 不写 `CFleet*`
-- 关系 `Factions.relation(force_a, force_b)`，Ocean 不读友好度表
+- 关系 `Relation.get(force_a, force_b)`，Ocean 不读友好度表
 - 开战只 `FleetSpotted` / `NpcBattleIntended`；Combat 订阅
 - 自动贸易只读 `Hold` / 账本，永不读 4 槽
 - 战斗 AI 只在 `BattleTick` 里 `AI.plan`，不改 heading256
@@ -399,14 +399,13 @@ schema: dk4.ocean.npc_ai
 version: 1
 player_mobile_slot: 0          # [推断]
 npc_mobile_slots: [1, 2, 3]
-empty_mobile_fleet_id: 70      # 0x46
-empty_town_id: 98              # 0x62，与 sailing.empty_town_sentinel 同一数字
-skip_spawn_state: 6            # CFleet+0x72
+# 空槽 0x46=70、空港 0x62=98、空势力 26 只在 ids/legacy_codec.yaml（D1）；运行时 null
+skip_spawn_state: 6            # CFleet+0x72；建议改成 fleet_state key
 leftover_kind: 5               # 释放槽时写入
 spawn_kind: 5                  # fn_1400100b9 路径
-skip_world_fleet_ids: [62]     # 0x3E；月结互打也跳过
+skip_world_fleets: [vanilla:fleet_62]   # 原版 eFleet 0x3E；日结互打也跳过
 sea_area_skip_person_byte: 0xC5
-pirate_force_id: 26            # 空势力哨兵当海盗枝 [推断]
+pirate_branch: { force: null }  # 原版空势力 26 当海盗枝 [推断]
 locus_points: 65
 locus_shift: 64
 mobile_ships: 20
@@ -462,18 +461,19 @@ write_town_on_despawn: false   # 原版是否写回驻港 [未知]
 
 ```yaml
 npc_ai:
-  band_0: 96                   # 0x60
-  band_1_y: 128                # 0x80
-  band_far_x: 192              # 0xC0
-  band_far_y: 192
-  spawn_bands: [0, 1, 2]       # 与 fn_1400100b9 第二参的精确组合 [推断]
-  despawn_band: 3
-  contact_band: 3              # 追击里「够着了」；与 despawn 同函数不同语义
-  lead_angle_90: 64
-  reverse_angle: 128
-  town_hit_small: 32           # 0x20，玩家入港枝；NPC 未证实复用
-  town_hit_large: 48           # 0x30
-  aim_range_scale: null        # [未知]
+  params:
+    band_0: 96                   # 0x60
+    band_1_y: 128                # 0x80
+    band_far_x: 192              # 0xC0
+    band_far_y: 192
+    spawn_bands: [0, 1, 2]       # 与 fn_1400100b9 第二参的精确组合 [推断]
+    despawn_band: 3
+    contact_band: 3              # 追击里「够着了」；与 despawn 同函数不同语义
+    lead_angle_90: 64
+    reverse_angle: 128
+    town_hit_small: 32           # 0x20，玩家入港枝；NPC 未证实复用
+    town_hit_large: 48           # 0x30
+    aim_range_scale: null        # [未知]
 ```
 
 分带阈值只出现在这里。`01-sailing.md` 的航速段不引用它们。
@@ -483,8 +483,7 @@ npc_ai:
 ```yaml
 mobile_fleets: 4
 mobile_ships: 20
-world_fleets: 69
-empty_mobile_fleet: 70
+# world_fleets 按 fleets 表长；空槽 70 不是上限，不进 caps
 ```
 
 World0 / World1 共用同一套 npc_ai。内容包只换 `fleets/templates.yaml`。
@@ -513,13 +512,12 @@ Ocean.mobile_slots() -> [{ slot, fleet_id, kind_id, aim_id, x, y, heading256 }]
 Ocean.mobile_ships(slot) -> [mobile_ship_id]      # LIVE；槽已空则 []
 Ocean.band(fleet_id_a, fleet_id_b) -> 0..3
 Ocean.sea_area_list(sea_area_id, player_fleet_id) -> [fleet_id]
-Fleets.location(fleet_id) -> { town_id | x, y, state_id, dest_town_id }
-Fleets.town(fleet_id) -> town_id                  # 98 = 不在港
-Factions.relation(force_a, force_b) -> int        # 原版 0/1/2/3
-Factions.force_of(fleet_id) -> force_id           # 26 = 海盗枝
+Fleets.location(fleet_id) -> { town_id | x, y, state_id, dest_town_id }   # town_id null = 不在港（原版 98）
+Relation.get(force_a, force_b) -> int             # 原版 0/1/2/3
+Factions.force_of(fleet_id) -> force_id | null    # null = 海盗枝（原版 26）
 ```
 
-坐标只传整数，不传 `CLocator*` / `World*`。槽不存在或 `fleet_id==70`：查询返回空，命令 no-op。
+坐标只传整数，不传 `CLocator*` / `World*`。槽不存在或槽内 `fleet_id` 为 `null`（原版 70）：查询返回空，命令 no-op。
 
 命令：
 
@@ -528,7 +526,7 @@ Ocean.occupy { slot?, fleet_id, kind_id }         # slot 省略则按 1..3 分�
 Ocean.release { slot }
 Ocean.set_aim { slot, aim_id }
 Ocean.set_kind { slot, kind_id }
-Ocean.npc_tick { in_battle: bool }                # 由场景时钟调用
+Ocean.npc_tick {}                                 # 每次航海迭代；海战态读 Session.mode()
 ```
 
 Fleets 命令（Ocean 不直接改世界表，由总线转）：
@@ -545,11 +543,11 @@ NpcFleetSpawned    { fleet_id, slot, kind_id, x, y }
 NpcFleetDespawned  { fleet_id, slot, reason: far|replace|battle_bind }
 NpcLeftTown        { fleet_id, town_id }
 NpcChaseIntended   { fleet_id, target_fleet_id, band }
-FleetSpotted       { fleet_id, other_fleet_id, sea_area_id, aggressive }
-  # 与 02 同一事件；本系统是生产者之一
+FleetSpotted       { fleet_id, other_fleet_id, major_sea_id, sea_area_id?, aggressive }
+  # 与 02 同一事件；本系统是生产者之一。major_sea_id 必填；sea_area_id 可选、默认 null（§13-2）
 ```
 
-`FleetSpotted.aggressive` 对应「进入战斗状态」vs「向我们进攻了」。Combat 订阅后 `Combat.start`。Ocean 在战斗中仍可 `npc_tick(in_battle=true)` 只转向，不发第二份 `FleetSpotted`。
+`FleetSpotted.aggressive` 对应「进入战斗状态」vs「向我们进攻了」。Combat 订阅后 `Combat.start`。Ocean 在战斗中（`Session.mode() == battle`）仍可 `npc_tick` 只转向，不发第二份 `FleetSpotted`。
 
 UI 投影：
 

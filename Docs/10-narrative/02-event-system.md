@@ -44,21 +44,21 @@
 
 解释器主体：
 
-- `fn_1400050fb`（RTC：`sScriptTable`, `sExecute`）：循环取下一条。`sExecute==1` 走脚本表，`==2` 走内联脚本，`id==0x3fff` 为特殊退出。
-- `fn_1400020fe`（RTC：`sScriptResult`, `lNextOffset`, `sScript`）：按结果 0/1/2 决定停、跳、继续。`lNextOffset` 是字节码程序计数器。
+- `fn_1400050fb`（RTC：`sScriptTable`, `sExecute`）：取 execute 字。type 1 走段 4 脚本表，type 2 走 `CEventScriptBuffer` 加载的 Sc 记录。`id==0x3fff` 不跑脚本，置 `CDk4Game`（`DAT_144296500`）流程态 3、参 1 = 寿终 Game Over（先放寿终四句消息 `0x170`–`0x173`，见 `03-event-commands.md`「流程态」、`11-progression/03-gameover-succession.md`）。
+- `fn_1400020fe`（RTC：`sScriptResult`, `lNextOffset`, `sScript`）：结果 0 停；1 改写本触发下一段 execute id 后停；2 改谓词后继续；其它继续。`lNextOffset` 是**字节**偏移（初值 2）。
 
 来源：`srcdata/source/game/unassigned/fn_1400c2290.cpp`。
 
 [确认] 脚本会跨系统读 / 改状态。仓库里已挂上的入口：
 
-- `CountFleetItem`：舰队某商品件数（注释写「委托/剧情」）
-- `AddLoad`：舰队增减货物（`n<0` 扣）
+- `CountFleetItem`：舰队某商品件数（注释写「委托/剧情」；原版符号名，重构查询 `Ships.count_item`）
+- 原版符号 `AddLoad`：舰队增减货物（`n<0` 扣；重构命令 `Ships.add_load`）
 
 来源：`srcdata/INDEX.md`、`srcdata/docs/trade_stack.md`。`dhh4tools/README.md` 也按「事件检查和扣除货物」描述同一对函数。
 
-[确认] 另有一段脚本辅助（`fn_14001098d`，body `0x1400c8390`）把操作数与 `0x61`（`NUM_TOWN=97`）和 `0x19`（25，与 `NUM_FORCE` / `NUM_SEAAREA` 同数）比较后再去取对象。这是「脚本持有 `town_id` / 势力或海域 id」的证据，不是完整 opcode 表。
+[确认] 另有一段脚本辅助（`fn_14001098d`，body `0x1400c8390`，引用类型 11）把操作数与 `0x61`（`NUM_TOWN=97`）和 `0x19` 比较后再去取对象。这是「脚本持有 `town_id` / 势力 id」的证据。
 
-opcode 级译码**未完成**。解耦配置按「不透明脚本 blob + 触发器表」落地，见第 6 节。
+[确认] opcode 已按 handler 级译出：7 个 class、37 个 class.subclass 槽，class 0（流程）、3（音频）、6（世界命令）逐槽有语义；class 2 多数槽与引用 / 更新记录的单条布局仍未闭合。详表见 `03-event-commands.md`。解耦配置的规范形式是「数据触发器 + 结构化命令树」，字节码只作导入格式，见 `03` 第 6.1 节。
 
 ### EV 文件格式（已还原的头）
 
@@ -69,18 +69,28 @@ opcode 级译码**未完成**。解耦配置按「不透明脚本 blob + 触发�
 | 偏移 | 类型 | 含义 |
 | --- | --- | --- |
 | +0x00 | uint16 | 魔数 `0x4557` `'WE'` |
-| +0x02 | uint16 | 版本。七个文件分别为 `0x0106, 0x0104, 0x0106, 0x0103, 0x0104, 0x0105, 0x0104` |
+| +0x02 | uint16 | 版本。SC 七个文件分别为 `0x0106, 0x0104, 0x0106, 0x0103, 0x0104, 0x0105, 0x0104`；存档锁用（见下） |
 | +0x04 | uint32 | 载荷字节数。`文件大小 = 0x60 + 该值` |
 | +0x08 | uint16 | 触发条目总数 |
 | +0x0A | uint16[9] | 每种 `eTriggerKind` 的条数。`fn_140010465` 读 `word[kind]` |
-| +0x1C | uint16 | EV0 为 0 |
-| +0x1E | uint16 | 再次出现总数（与 +0x08 相同） |
-| +0x20 | uint32 | 额外段偏移/计数。EV0 = `0xE6`。[未知] 精确语义 |
+| +0x1C | uint16 | 七包均为 0 |
+| +0x1E | uint16 | 七包均等于 +0x08 |
+| +0x20 | uint16 | 七包均为 0 |
+| +0x22 | uint16 | 段 2（引用表）的 uint32 个数。EV0 = `0xE6`=230 = `(0x20DC−0x1D44)/4`。旧稿把 +0x20 读成 uint32 `0xE6`，错：按 uint32 读是 `0x00E60000` |
 | +0x24 | uint32 | 0 |
 | +0x28 | uint32[9] | 每种触发器在**载荷**里的起始偏移（相对 `file+0x60`）。`fn_140011c57` 读 `dword[kind]` |
-| +0x4C 起 | uint32… | 后续段起点（脚本 / 消息 / 静画？）。EV0：`0x1A8C, 0x1D44, 0x1D44, 0x20DC, 0x20DC`。[未知] 段名 |
+| +0x4C | uint32[5] | 段表：0 execute 表、1 消息表、2 引用表、3 更新表、4 脚本表（`fn_140001ef1` 五个调用点钉死，见 `03`）。EV0：`0x1A8C, 0x1D44, 0x1D44, 0x20DC, 0x20DC`，段 1/3/4 为空 |
 
 [确认] 九个计数之和等于 +0x08。EV0：`(5,16,16,4,2,85,10,203,5)` 和 = 346。
+
+[确认] **EV 版本锁存档**。槽文件头 `+0x24` 存当时剧本 EV 的 `+0x02` 版本；严格读档要求它等于 `<lang>/EV<+0x20>.dk4` 的版本，不等则拒绝（`fn_140121700` → `fn_1400c26a0` 查表 `0x140682858`，表由 `fn_14000af9c` 读七个 EV 头填入）。见 `12-ui-save/02-save-session.md` 槽文件头。四语言 EV 版本（`Game/<lang>/EV*.dk4` 偏移 2，本轮实读）：
+
+| 语言 | EV0 | EV1 | EV2 | EV3 | EV4 | EV5 | EV6 |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| SC | 0x106 | 0x104 | 0x106 | 0x103 | 0x104 | 0x105 | 0x104 |
+| TC / JP / KR | 0x101 | 0x101 | 0x101 | 0x102 | 0x104 | 0x105 | 0x104 |
+
+所以剧本 0–3 的简中存档放到繁中 / 日 / 韩目录也会被拒；4–6 版本相同。版本号随脚本修订变，与存档里的触发运行时位是否兼容无关——原版用「版本相等」硬锁代替迁移。
 
 [确认] 单条触发记录变长：用 `SMemorySeeker` 按流解析，不能用固定 stride 切。`fn_1400095c5(event, out, kind)` 把指针放到 `buffer + offset[kind] + 0x60`。
 
@@ -88,7 +98,7 @@ opcode 级译码**未完成**。解耦配置按「不透明脚本 blob + 触发�
 
 [确认] `NUM_TRIGGERKIND = 9`。求值函数 `fn_140001b09`（body `0x1400bf5e0`）对 `CEvent+0x88` 做 `switch (kind)`，`ja` 上限 8，即 kind 0–8。跳表 VA `0x1400c05bc`。
 
-[确认] 扫描入口 `fn_140013c32`：取当前日历 `SCalendar`，按 `CEvent+0x88` 的 kind 取该类全部触发器，逐条 `fn_140001b09(event, trigger, calendar)`；命中则 `fn_1400050fb` 执行脚本。
+[确认] 开火入口 `fn_14001337c`（body `0x1400c0d30`）：把调用方的 24 字节请求 `sEventTrigger` 拷进 `CEvent+0x88…+0x9F`（kind、`ctx0` 与四个上下文 dword），再调扫描 `fn_140013c32`：取当前日历 `SCalendar`，按 kind 取该类全部触发器，逐条 `fn_140001b09(event, trigger, calendar)`；按命中 / 锁存位选 true / false 的 execute id，非 0 则 `fn_1400050fb` 执行。`CEvent` 全局实例在 `0x144295490`。
 
 跳表分组（反汇编）：
 
@@ -115,7 +125,21 @@ opcode 级译码**未完成**。解耦配置按「不透明脚本 blob + 触发�
 
 [确认] 求值函数 RTC 局部名（同一函数栈上）还出现：`sTriggerDate`、`sTriggerTime`、`sTriggerMultipleTown`、`sTriggerCloseBattle`、`sTriggerEventFlag` / `sResultEventFlag`、`sTriggerReference`、`sTriggerEventOutcome`、`idTown`（1 字节，港口 0–96 放得下）。
 
-[未知] kind 0–8 与上表类名的 1:1。没有 `TriggerKindID.h`。禁止把「入港 / 日期 / 持有道具」写成已确认的枚举值。用户侧的玩法语言（入港、日期、旗、持有物）对应这些 RTTI / RTC 名，但槽位号未钉死。
+[确认] 七个 RTTI 类是**可选条件块**，不是 kind。kind 的语义由 `fn_14001337c` 的 8 个调用点（请求构造器 + 场景切换钩子）钉死：
+
+| kind | 含义 | `ctx0` |
+| --- | --- | --- |
+| 0 | 海上探索发现道具 | `item_id` |
+| 1 | 海战开始 | 对手 `person_id` |
+| 2 | 海战结束（无条件挂 `CloseBattle` 块） | 对手 `person_id` |
+| 3 | 与移动舰队接触 | 对手 `person_id` |
+| 4 | 入港（海图 → 港口） | `town_id` |
+| 5 | 港内街区（事件源 `TownTick`） | `town_id` |
+| 6 | 航海中（海图 tick；事件源 `SeaTick`） | 舰队所在港字节 |
+| 7 | 进入港内设施 | `town_id` + 设施号 |
+| 8 | 登陆村落 | `village_id` |
+
+证据与调用点见 `03-event-commands.md` 第 2 节。日期、旗、持有物不是 kind，而是所有 kind 共用的条件块。没有 `TriggerKindID.h`，枚举符号名仍无。
 
 各包每 kind 条数：
 
@@ -129,7 +153,7 @@ opcode 级译码**未完成**。解耦配置按「不透明脚本 blob + 触发�
 | EV5 | 0 | 5 | 21 | 6 | 4 | 106 | 4 | 152 | 1 | 299 |
 | EV6 | 0 | 5 | 17 | 4 | 3 | 80 | 4 | 137 | 3 | 253 |
 
-k7 条数最多（约一半），k0 在 EV5/EV6 为 0。
+k7（进入设施）条数最多（约一半）；k0（探索发现道具）在 EV5/EV6 为 0。
 
 ### 事件旗（存档）
 
@@ -168,7 +192,7 @@ k7 条数最多（约一半），k0 在 EV5/EV6 为 0。
 
 [确认] `SC/EVA.DK4` 由 `fn_140008fb7` 加载（字符串 `'SC/EVA.DK4'`）。文件本身**不是** `WE` 头：开头 `uint32 count=0x11`（17），随后 size/offset 对，总长 33360。加载函数里比较 `0x01004145`（`'EA'` + 版本？）是解析后的结构，不是文件头。来源：`fn_1400c8390.cpp`、文件转储。
 
-[确认] `Sc0.dk4`…`Sc6.dk4` 与 EV 一对一。`ScN` 第一个 `uint32` 等于 `EVN` 触发总数（Sc0=0x15A=346）。这是「每条触发/事件一条场景图目录」的强证据，内部块格式未还原。`formats.md` 只写「场景图」。
+[确认] `Sc0.dk4`…`Sc6.dk4` 与 EV 一对一。`ScN` 第一个 `uint32` 等于 `EVN` 触发总数（Sc0=0x15A=346）。每条记录魔数 `'DS'`、版本字与 EV 相同，载荷是**脚本指令流 + 内嵌 GBK 对白**，不是场景图（`formats.md` 的「场景图」说法应改）。格式见 `03-event-commands.md`。
 
 ### 其它相关计数
 
@@ -182,13 +206,14 @@ k7 条数最多（约一半），k0 在 EV5/EV6 为 0。
 
 | 实体 | 原版 | 空值 | 备注 |
 | --- | --- | --- | --- |
-| `event_pack` | EV0–EV6 | 无 | 由剧本表选择 |
-| `trigger_kind` | 9 | 无 `INVALID` 符号 | 运行时按表长；原版 0–8 |
-| `trigger_id` | 每包 250–346 条 | 无 | 重构用 `(pack, index)` 或稳定 key |
+| `event_pack` | EV0–EV6 | 无 | 由剧本表选择；包 id 用 `vanilla-ev0` 形式，带 `version`（第 6 节） |
+| `trigger_kind` | 9 | 无 `INVALID` 符号；请求默认 `0xA` | 运行时按表长；原版 0–8，语义见第 2 节 |
+| `trigger_id` | 每包 250–346 条 | 无 | 稳定 key（`vanilla:ev0.t012`）；原版 `(pack, index)` 只在导入层。存档 `trigger_state` 按 key 存，不按下标 |
 | `flag_id` | 256 bit | 未置位 = 0 | `word = id>>5` |
-| `script_blob` | 不透明 | 空 blob 禁止开火 | opcode 未译码前不拆 |
+| `script_blob` | Sc 记录载荷 | 空 blob 禁止开火 | 导入格式；规范形式是命令树（`03`） |
+| `trigger_state` | 每条触发 4 位 + 两个 14 bit execute id | 文件里全 0 | 运行时状态，进存档；定义只读 |
 | `still_id` | EventBG 常规 + EX 特例 id | `0xFFFFFFFF` 在 Still 构造里出现 | |
-| `town_id` / `item_id` / `person_id` | 外键 | 各系统的 `invalid` | 触发条件与脚本命令都只持 ID |
+| `town_id` / `item_id` / `person_id` | 外键 | 运行时 `null`；原版哨兵（`0xFF` 任意港、`0x62` 无港、`0x46` 无人、`0xE8` 空道具）只在 `ids/legacy_codec.yaml` | 触发条件与脚本命令都只持命名空间 key（DECISIONS D1） |
 
 `SMemorySeeker` 是流式游标（`ptr`），不是玩法实体。重构不要把 seeker 指针存进存档。
 
@@ -200,14 +225,17 @@ k7 条数最多（约一半），k0 在 EV5/EV6 为 0。
 
 ```
 for trigger in pack.triggers_of(kind):
-    if not match_condition(trigger, context):
-        continue
-    if already_consumed(trigger):          # 一次性？未还原，见第 9 节
-        continue
-    run_script(trigger.script)
+    if state[trigger].disabled: continue
+    hit  = match_condition(trigger, context)
+    fire = hit and not state[trigger].latched
+    if not hit: state[trigger].latched = 0
+    run_execute(state[trigger].next_id(fire))    # 0 = 不跑
+    if fire: apply on_fire (one_shot → disabled, relatch → latched)
 ```
 
-`context` 至少包括：`SCalendar`（年/月/日/旬，`SCalendar+0x1c` 出现 0/1/2 三态）、当前港 `town_id`、战斗是否刚结束、事件旗、引用对象。日历构造把日 `== 0x2F`（47）当特殊月末路径——**日期编码未完全还原**，叙事只查询 `Calendar.snapshot()`，不自己算闰月。
+锁存 / 一次性 / 可改写 execute id 的位定义与证据见 `03-event-commands.md` 第 2、4 节。
+
+`context` 至少包括：当前日期、当前港 `town_id`、战斗是否刚结束、事件旗、引用对象。原版直接读 `SCalendar` 字段（日 `== 0x2F` 特殊路径、`+0x1c` 三态）；重构禁止读日历结构偏移（DECISIONS D4），叙事只查询 `Calendar.snapshot()`；日期条件在 kind 事件到来时求值（kind 5 / 6 的事件源是 06 的 `TownTick` / `SeaTick`，词表 §14-6；`schedule: tick` 只是调度门，不是叙事事件源），不自己算月末 / 闰月。
 
 ### 事件旗
 
@@ -230,71 +258,69 @@ test:  (words[word_index] & bit_mask) != 0
 
 ### 脚本
 
-opcode 未译码时：
+运行时（命令树形式；字节码只在导入期解释）：
 
 ```
 run_script(blob, context) =
     interpreter.step(blob, pc=0, context)
     # 遇到 query：Narrative.ask(system, id…)
     # 遇到 command：Narrative.issue(command)
-    # 遇到 0x3fff / result==0：停
+    # 原版 result 0 停；result 1 = 改写本触发下一段后停；execute 0x3FFF = 剧情 Game Over
 ```
 
-原版 `CEventScriptBuffer+0x8 = 0xFFF`（4095）[未知] 是容量还是哨兵，不要当成确认的最大脚本长度。
+[确认] `CEventScriptBuffer+0x8` 是「当前已加载 Sc 记录 id」，构造写 `0xFFF` 表示未加载；`fn_1400016db` 只在请求 id 不等时重载。不是最大脚本长度。
 
 ## 5. 耦合分析
 
 原版焊点：
 
 1. **文件名 = 剧本号** `EV{n}` / `Sc{n}`。重构后由 `scenarios.yaml` 指出包 id。
-2. **触发求值读 `CEvent` 成员**（`+0x88` kind，`+0x8c/+0x90/+0x94/+0x98` 当前上下文）。这是把「世界现在在哪」缓存在事件对象上。重构改为求值时 **LIVE 查询**：`Town.current()`, `Calendar.snapshot()`, `Combat.last_result()`, `Flags.test()`。禁止事件对象持有 `World*` / `Player*`。
-3. **脚本直接调贸易货舱**（`CountFleetItem` / `AddLoad`）。允许，但必须走命令接口 `Economy.count_fleet_item(fleet_id, item_id)` / `Economy.add_load(...)`，脚本字节里只存 ID。
+2. **触发求值读 `CEvent` 成员**（`+0x88` kind，`+0x8c/+0x90/+0x94/+0x98/+0x9c` 当前上下文，由调用方的 `sEventTrigger` 请求拷入）。这是把「世界现在在哪」缓存在事件对象上。重构改为求值时 **LIVE 查询**：`Town.current()`, `Calendar.snapshot()`, `Combat.last_result()`, `Flags.test()`。禁止事件对象持有 `World*` / `Player*`。
+3. **脚本直接调货舱**（原版 `CountFleetItem` / `AddLoad`）。允许，但必须走货舱所有者 ships 的接口 `Ships.count_item(fleet_id, item_id)` / `Ships.add_load(fleet_id, item_id, delta)`，脚本字节里只存 ID。
 4. **`fn_140001b09` 体积约 4KiB 的巨型 switch**——kind 语义与脚本 then 块搅在一起。重构把「条件」放到 `triggers.yaml`，「结果」放到 `events.yaml` 的 `commands:` / `script_blob`。
-5. 其它系统若写 `if scenario==3 && flag==12` 即违规。旗的**含义**属于叙事内容包，贸易只认「收到 `GiveItem` 命令」。
+5. 其它系统若写 `if scenario==3 && flag==12` 即违规。旗的**含义**属于叙事内容包，道具系统只认「收到 `Items.acquire` 命令」。
 
 `CEvent` 是 `CSaveObject`：旗与「已触发」状态进存档，定义（EV 文件）不进存档。
 
 ## 6. 解耦后的配置
 
-opcode 未还原之前，内容管线把每个 EV 拆成「触发器表 + 不透明脚本」两张表，禁止假装已经译码。
+内容管线把每个 EV 拆成「触发器表 + 脚本」两部分。脚本能按 `03` 反编译的进 `commands`，不能的进 `opaque`，禁止假装已经译码。
+
+```yaml
+# packs/vanilla-ev0/pack.yaml  事件包清单（12-ui-save 要求带版本）
+schema: dk4.narrative.event_pack
+version: 1
+id: vanilla-ev0
+content_version: 0x106          # 原版 EV 头 +0x02；只作来源标记
+state_schema_version: 1         # 本包 trigger_state / flags 的存档节版本
+save_compat:                    # 读档时比较存档节里的 state_schema_version
+  accept: ">=1 <=1"
+  migrate: []                   # 迁移链：[{from: 1, to: 2, script: ...}]
+requires: [{ id: vanilla-core, version: ">=1" }, { id: vanilla-world0, version: ">=1" }]
+```
+
+存档记 `event_pack` id + `state_schema_version`，**不**记 `content_version` 作锁：内容修订（改对白、加触发）只要不改已有触发 key 就能读旧档；删掉的触发按 `orphan_policy` 丢弃其状态。原版「EV 版本不等就拒」只作 `legacy` 导入时的提示。
 
 ```yaml
 # config/narrative/triggers.yaml
 schema: dk4.narrative.triggers
 version: 1
-# kind 0–8 的符号名未还原。下面只登记槽位。
-# RTTI 类名全集（不能 1:1 填进 id）：
+# kind 语义已由开火调用点钉死（见 03）。整数只是原版包编码，引擎认 key。
+# RTTI 类名是可选条件块，不是 kind：
 #   SEventTriggerTime, SEventTriggerCloseBattle, SEventTriggerEventFlag,
 #   SEventTriggerMultipleTown, SEventTriggerReference,
 #   SEventTriggerReferenceMultiple, SEventTriggerEventOutcome
 kinds:
-  - id: 0
-    key: kind_0
-    name: null
-  - id: 1
-    key: kind_1
-    name: null
-  - id: 2
-    key: kind_2
-    name: null
-  - id: 3
-    key: kind_3
-    name: null
-  - id: 4
-    key: kind_4
-    name: null
-  - id: 5
-    key: kind_5
-    name: null
-  - id: 6
-    key: kind_6
-    name: null
-  - id: 7
-    key: kind_7
-    name: null
-  - id: 8
-    key: kind_8
-    name: null
+  - { id: 0, key: item_discovered }
+  - { id: 1, key: battle_started }
+  - { id: 2, key: battle_ended }
+  - { id: 3, key: fleet_contact }
+  - { id: 4, key: port_arrived }
+  - { id: 5, key: in_town }
+  - { id: 6, key: at_sea }
+  - { id: 7, key: facility_entered }
+  - { id: 8, key: village_landed }
+# 字段定义（ctx 比较方式、事件源）在 trigger_kinds.yaml，见 03。
 ```
 
 ```yaml
@@ -305,7 +331,7 @@ pack: EV0
 triggers:
   - id: 0
     kind: 0
-    once: true                   # 原版是否一次性未还原，先可配
+    on_fire: { one_shot: true, relatch: true }   # 原版 dword[1] bit31 / bit30，逐条数据
     when:
       opaque: "base64:...."      # 原版变长记录原样
       # 译码完成后升级为：
@@ -316,8 +342,8 @@ triggers:
       # owns_item: 12
       # after_battle: true
     then:
-      script_blob: "base64:...."
-      # 译码完成后升级为 commands: []
+      script_blob: "base64:...."   # 导入格式
+      # 规范形式：commands: [ ... ]（见 03 第 6.1 节）
       outcome_opaque: "base64:...."
 ```
 
@@ -325,15 +351,15 @@ triggers:
 
 ```yaml
 when:
-  kind: multiple_town
-  town_ids: [11, 12]
-  flags_all: [flag.raphael_intro]
+  kind: port_arrived
+  towns_any: [vanilla:lisbon, vanilla:ceuta]   # 原版 MultipleTown 块
+  flags_all: [vanilla:ev0.raphael_intro]
 then:
   commands:
-    - { op: set_flag, flag_id: 12 }
-    - { op: give_item, person_id: 0, item_id: 40 }
-    - { op: add_load, fleet_id: 0, trading_item_id: 3, delta: -1 }
-    - { op: move_fleet, fleet_id: 0, town_id: 11 }
+    - { op: set_flag, flag: vanilla:ev0.f12 }
+    - { op: acquire_item, fleet: player, item: vanilla:item_40 }   # → Items.acquire
+    - { op: add_load, fleet: player, trading_item: vanilla:item_t3, delta: -1 }   # → Ships.add_load
+    - { op: move_fleet, fleet: player, town: vanilla:lisbon }
     - { op: say, string_key: ui.event.ev0.012 }
     - { op: menu, choices: [ui.event.yes, ui.event.no], store_flag: 13 }
     - { op: play_still, still_id: 8 }
@@ -378,11 +404,9 @@ backgrounds:
 | 事件 | 来源 | 动作 |
 | --- | --- | --- |
 | `ScenarioSelected` | 剧本 | 加载 `event_pack` + `EVA` + `scene_pack` |
-| `ArrivedAtTown {fleet_id, town_id}` | Ocean / Town | 扫描港口类触发 |
-| `DayAdvanced {calendar}` | 世界时间 | 扫描日期类触发 |
-| `BattleResolved {result}` | Combat | 扫描 `CloseBattle` |
-| `FlagChanged` | 自己 | 再扫一遍旗触发（防止漏） |
-| `CargoCommitted` | Economy | 若条件含持有货物则扫描 |
+| `DiscoveryFound` / `BattleStarted` / `BattleResolved` / `FleetSpotted` / `ArrivedAtTown` / `TownTick`(港内) / `SeaTick`(海上) / `FacilityEntered` / `VillageLanded` | Ocean / Combat / Town-life | 按 kind 0–8 扫描（映射表见 `03` 第 8 节；名称以 `00-overview/06-system-interfaces.md` 为准） |
+
+原版没有「旗变了 / 货变了再扫」：日期、旗、货物只是条件块，在上面这些事件到来时一起求值。
 
 查询（LIVE，取不到则本条 no-op）：
 
@@ -391,43 +415,43 @@ Calendar.snapshot() -> {year, month, day, era_tag}
 Town.current_for(fleet_id) -> town_id | none
 Combat.last_result(fleet_id) -> result_id | none
 Flags.test(flag_id) -> bool
-Economy.count_fleet_item(fleet_id, trading_item_id) -> int
-Characters.has_item(person_id, item_id) -> bool
-World.town_exists(town_id) -> bool
+Ships.count_item(fleet_id, item_id) -> int        # item_id = 交易品 key
+Items.owned(fleet_id, item_id) -> bool
+Towns.def(town_id) -> TownDef | null             # 存在性 = 非 null
 ```
 
 命令（脚本可发，接收方是各系统，不是本系统内部表）：
 
 ```
 Flags.set(flag_id, bool)
-Economy.add_load(fleet_id, trading_item_id, delta)
-Items.give(person_id, item_id)
-Fleet.move_to(fleet_id, town_id)          # 未还原 opcode，接口先留
+Ships.add_load(fleet_id, item_id, delta)         # item_id = 交易品 key
+Items.acquire(fleet_id, item_id)
+Scenes.goto_town(town_id | current, facility_id?)   # 原版 0xC2
+Minigames.run(minigame_id) -> int                   # 原版 0xC1
+Session.end_scenario(cleared | game_over{ending_id} | to_title, cause) # 原版 0xC5；0x3FFF = game_over{natural_death}；脚本来源 cause = scripted
 UI.play_still(still_id)
 UI.play_anim(clip_id)
 UI.say(string_key)
 UI.menu(choices) -> choice_index
 ```
 
-禁止脚本拿到 `CTown*` / `CPerson*`。存档只存：`event_pack` id + schema 版本、256 旗、已触发集合（若有）、解释器 PC（若中途存盘）。不存 EV 原文。
+禁止脚本拿到 `CTown*` / `CPerson*`。存档只存（`narrative` 节，自带节版本，DECISIONS D7）：`event_pack` id + `state_schema_version`、旗（按 key）、每条触发的 `trigger_state`（按触发 key）。不存 EV 原文，不以 EV 内容版本作锁。原版脚本在一次扫描内跑完，没有中途 PC 要存。
 
 ## 9. 未核实字段
 
 | 项 | 现状 | 禁止 |
 | --- | --- | --- |
-| `eTriggerKind` 0–8 的符号名 | 只有 9 槽、跳表、7 个 RTTI 类、RTC 局部名 | 不要写成「0=入港 1=日期 …」 |
-| `SEventTriggerReference` 引用的是道具、人物还是事件 | 类名 + `SEventReferenceData` | 不要写成确认的「持有道具」 |
+| `eTriggerKind` 0–8 的原版符号名 | 语义已钉（第 2 节），符号名无头文件 | key 用自拟英文名；日期 / 旗不是 kind |
+| `SEventTriggerReference` 15 种引用类型 | 0 千分比随机、6 日期、8 货舱、14 遗迹等已钉，5 / 12 未知（见 `03`） | 不要把 0 写成金币 |
 | `sTriggerDate` vs `SEventTriggerTime` | RTC 两个名字，RTTI 一个 Time 类 | 不要拆成两个确认 kind |
-| EV 头 `+0x20`、`+0x4C` 后各段 | 偏移存在，名字没有 | `unknown_segments[]` |
+| EV 段 2 / 3 单条记录布局 | 段用途已钉，逐位未核 | 单条进 `opaque` |
 | EVA 解析后魔数 `0x01004145`、17 clip 的内容 | 文件是 offset 表 | 不要当 WE 脚本 |
-| Sc* 内部块 | 头一个 uint32 = EV 总数 | 不要当已还原的静画 atlas |
-| 触发是否一次性、是否可重复 | 扫描里有 `fn_14000fea2` 把命中改写为 0 的分支 | 标 [未知]，YAML `once` 可配但默认值未证明 |
-| `CEvent+0x8c/+0x90/+0x94/+0x98` | 求值拿来和触发记录比 | 未命名；重构后取消这些缓存，改为 LIVE 查询 |
-| `CEventScriptBuffer+0x8=0xFFF` | 构造写入 | 不要当 max_script_bytes |
+| Sc* 记录 | `DS` 头 + 指令流 + 内嵌对白（`03`） | 不要当静画 atlas / 场景图 |
+| `CEvent+0x94/+0x98/+0x9c`（kind 1–3 对手属性） | 取值函数已知，字段名未还原 | 重构后由事件载荷直接给 |
 | `SCalendar` 日 `0x2F`、`+0x1c` 的 0/1/2 | 月末？旬？ | 日历文档负责，叙事只读快照 |
-| 256 旗的存档偏移 | `CEvent` 是 SaveObject | 等 `12-ui-save` 标偏移 |
+| 256 旗与触发状态的存档偏移 | `CEvent` 是 SaveObject，`vfunc_06/07` 读写 | 等 `12-ui-save` 标偏移 |
 | `NUM_HAPPENING=5` | 与触发 9 槽不是同一枚举 | 不要并进 `trigger_kind` |
 | `EventBG` 每文件多少张 | 映射函数里出现除数 `0x32=50`、`8` 张包 [推断] | 未当确认 |
-| 脚本 opcode 表 | Execute / Message / Menu 三类 RTTI | 未译码前整段当 blob |
+| class 2 多数 subclass、class 1 菜单操作数 | 跳表在，长度未闭合 | 进 `opaque`，该触发拒绝加载 |
 
-提取器：确认的头字段进 YAML；每种 kind 的原始字节进 `opaque`；直到有 opcode 文档再升 schema version。
+提取器：确认的头字段进 YAML；触发位域进 `when` / `on_fire`；Sc 字节码按 `03` 反编译成命令树，残余进 `opaque`。

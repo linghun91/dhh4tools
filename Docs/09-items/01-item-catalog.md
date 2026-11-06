@@ -18,7 +18,7 @@
 
 - 交易所货格、市价、特产品供给（`eTradingItem`，见 `04-economy`）
 - 人物六维/技能公式（`03-characters` / `11-progression`）
-- 船首像装上之后的航速、补给、炮击修正（`05-ships-fleet` 读本表效果，本系统不算船）
+- 船首像装上之后的航速、补给、搜索、白刃修正（效果表是 `05-ships-fleet` 的 `ships/figureheads.yaml`，行带 `item` 外键指回本表；本系统不写船首像效果）
 - 遗迹/村落是否已发现（`01-world`）
 - 广场/教会文案（`ui/strings.*.yaml`）
 
@@ -33,14 +33,16 @@ ID 0「南瓜种子」是发现/种植道具，**不是**货舱货物。空货�
 | `SItem`：`const char *name` + `rest[0x18]` | [确认] | `srcdata/include/world.h`，`DllMain.cpp` |
 | 名称指针占记录前 8 字节（x64）；南瓜种子随后 `u32 = 2000`，再两个 `s32 = -1` | [确认] | 用户指定解码 + `items_world0.json` hex `d0070000ffffffff` |
 | 名称 0–230 与 `Docs/_data/items.tsv` 一致；World1 中文名与 World0 相同 | [确认] | `ItemID.h` 注释、`items.tsv`、World1 抽出 |
-| 运行时库存按 231 槽扫，不按堆叠 | [确认] | `CItemElement` 循环 `eItem >= 0xe7`（231），构造 `0xe7` 个步长 `0x40` 的对象 |
+| 运行时库存按 231 槽扫，不按堆叠 | [确认] | `CItemElement` 循环 `eItem >= 0xe7`（231），构造 `0xe7` 个步长 `0x40` 的对象；取第 i 个 `fn_140011522` = `base + i*0x40 + 8` |
+| 空槽 232 ≠ `NUM_ITEM`（231）：原版留了一个不用的 231 | [确认] | `0xe8` 比较散在 `fn_140012657` `fn_14000fcef` `fn_14000f4ed` |
 | 装备/选择空槽写 `0xe8 = 232`，不是 `-1`，也不是 `0` | [确认] | `CSelectItemView` 填 `0xe8`；`fn_140012af8` / `fn_140006811` / `fn_140012657` 与 `0xe8` 比较 |
 | `NUM_ITEMKIND` 头文件未写出整数 | [确认] | `ItemKindID.h`：`NUM_ITEMKIND, /* integer not recovered */` |
 | 种类菜单把 `eItemKind` 从 0 扫到 `< 0xd`（13 档），选项 1..13 | [推断] | `CItemKindMenuData`：`if (eItemKind >= 0xd)`；`vfunc_01` 里 `s38 >= 0xe` 后 `s38 -= 1` |
-| 记录 `+0x14` 取值恰好 0–12，覆盖全部 231 条 | [推断] | 对 `items_world0.json` 全表统计；与上条 13 档对齐，当作 `eItemKind` |
-| `+0x08` 的 u32 是基础标价 | [推断] | 南瓜种子 2000；全表 100–420000；卖出路径 `fn_14000f4ed` 用 `fn_140007423` 取出后乘折扣 |
+| 记录 `+0x14` 是种类：运行时拷到 `CItem+0x29`，`fn_14000598e` 读它，`fn_140012657` 按 2/3/4 选槽、`fn_14000fcef` 按 2/3 给剑术 | [确认] | `CItem::vfunc_05` `0x1402ad18d`；取值恰好 0–12 覆盖 231 条（全表统计） |
+| `+0x08` 的 u32 是基础标价 | [确认] | 运行时拷到 `CItem+0x2C`；`fn_140007423`（body `0x140128040`）读 `+0x2c`；道具店买入 `fn_14000f4ed` 用它判余额并乘还价折扣 |
+| `+0x16` 舱室种类（`0x18` = 无舱哨兵，只在 `legacy_codec` 解成 `null`；合法舱室 23 种，词表 §4 / §14-8）、`+0x17` 效果量 | [确认] | 拷到 `+0x39` / `+0x3A`；`fn_14000fcef` 用于技能加成；信息窗 RTC `rcCabinName` `rcEffectAmount`；见 02 |
 | 选择界面有 6 个 tag，不是种类数 | [确认] | `NUM_SELECTITEMTAG = 6`，`CSelectItemView` `eSelectItemTag >= 6` |
-| 卖出/装备筛选里 `eItemTag` 初值 7 | [确认] | `fn_14000f4ed`、`CPersonInformationView::vfunc_13`：`eItemTag = 7` |
+| 道具店买入 / 装备筛选里 `eItemTag` 初值 7 | [确认] | `fn_14000f4ed`、`CPersonInformationView::vfunc_13`：`eItemTag = 7` |
 | `ITEMSTATE_BITS` 存在，宽度未还原 | [确认] | `constants.json` / `asserts.txt`：`0 <= eData && eData < _GetBitTotal_BYTE2DWORD(sizeof(ITEMSTATE_BITS))` |
 | 文案 2055 条里有逐件说明（SC） | [确认] | `mesfile_sc.txt` 约 `0x19783` 起：南瓜种子、武器、船首像、地图 |
 | 把发现物交给城市可变成特产品 | [确认] | mesfile `0x7737`：「如果有那%s，%s会成为这个城市的特产品」 |
@@ -57,12 +59,12 @@ ID 0「南瓜种子」是发现/种植道具，**不是**货舱货物。空货�
 | 实体 | 原版计数 | 空/非法 | 运行时 |
 | --- | --- | --- | --- |
 | `eItem` | 231（0–230） | `INVALID_ITEM = -1` | 读表长 |
-| 装备/库存空槽 | — | `232`（`0xe8`） | `caps.yaml`：`item_empty_slot` |
-| `eItemKind` | 13（0–12）`[推断]` | `INVALID_ITEMKIND = -1` | 读 `kinds.yaml` 表长 |
+| 装备/库存空槽 | — | 原版字节 `232`（`0xe8`） | 运行时 `Option<item_id>`；`ids/legacy_codec.yaml`：`item_empty_byte` |
+| `eItemKind` | 13（0–12）：字段 `[确认]`，计数来自菜单 `< 0xd` 与全表取值 | `INVALID_ITEMKIND = -1` | 读 `kinds.yaml` 表长 |
 | `eSelectItemTag` | 6 | | UI 筛选，不是种类 |
 | `eItemTag` | 循环初值 7 | | 卖出/装备过滤，语义 `[未知]` |
 | `ePersonEquip` | 5 | `INVALID_PERSONEQUIP = -1` | 见装备文档 |
-| `eFigureHead` | 头文件无整数；本表 kind=5 共 12 件 | `INVALID_FIGUREHEAD = -1` | 船侧槽，ID 仍是 `item_id` |
+| `eFigureHead` | 头文件无整数；本表 kind=5 共 12 件 | `INVALID_FIGUREHEAD = -1` | 船侧字段（原版 `CShip+0x53`，`id = item_id − 114` `[推断，强]`）；`figureheads.yaml` 用 `item` key 外键，不另立整数 |
 | `eTradingItem` | 105 | 空格 `106` | **另一张表** |
 
 禁止：
@@ -71,15 +73,17 @@ ID 0「南瓜种子」是发现/种植道具，**不是**货舱货物。空货�
 - 用 `106` 当宝物空槽（那是交易品空货格）
 - 用 `-1` 当已装备槽的占位（原版装备字节是无符号 `0xe8`）
 
-模组追加 `id >= 1000` 或独立命名空间，不覆盖 0–230。
+模组道具用命名空间字符串 key（`mymod:foo`）作主键，整数在加载时分配，存档存 key↔int 映射；不再用「`id >= 1000`」号段。原版 0–230 只是 vanilla 包导入时的分配结果。
 
-### 3.1 种类（`+0x14`，[推断]）
+空槽：原版字节 `0xe8`（232）只在导入/导出原版存档时出现；运行时槽位类型是 `Option<item_id>`，不用 count+1 哨兵。
 
-依据：该字节 0–12 穷尽 231 条 + `CItemKindMenuData` 13 档。中文名只用来给种类起 key，不参与判定。
+### 3.1 种类（`+0x14`，[确认]）
+
+依据：运行时种类字节（见第 2 节）；0–12 穷尽 231 条 + `CItemKindMenuData` 13 档。下表 key 与「引擎用途」里只有 kind 2/3/4 的槽规则、kind 2/3 的剑术加成被指令证实，其余用途是按名称归纳 `[推断]`。
 
 | kind | key | 件数 | 名称特征 | 引擎用途（数据，不写死 ID） |
 | --- | ---: | ---: | --- | --- |
-| 0 | `plant_discovery` | 20 | 种子/苗/树/工艺书，id 0–19 | `plant_in_village` / 特产品发现 |
+| 0 | `plant_discovery` | 20 | 种子/苗/树/工艺书，id 0–19 | `plant`：进交易所时被询问（`03` 2.3） |
 | 1 | `voyage_charm` | 4 | 猫、莱姆、祈祷、华陀中药 | 航海护佑/消耗 |
 | 2 | `weapon` | 31 | 剑刀枪斧；含 PK 后加的佩剑等 | 人物装备槽 0 |
 | 3 | `armor` | 30 | 盾盔甲袍；含祝福之盾、普利德温 | 人物装备槽 1 |
@@ -87,9 +91,9 @@ ID 0「南瓜种子」是发现/种植道具，**不是**货舱货物。空货�
 | 5 | `figurehead` | 12 | `*像`，id 114–123、199–200 | 船首像，不进人物槽 |
 | 6 | `fragment` | 14 | 羊皮纸、石板半片、刀鞘等，标价 100 | 神秘狩猎配方材料 |
 | 7 | `gift` | 21 | 工艺品/赠礼，id 127–147 | 赠礼；不进人物槽 |
-| 8 | `relic` | 14 | 乌勒尔弓箭…水晶头骨，及哈尔舒塔一套 | 遗迹宝物 |
+| 8 | `hegemony_proof`（别名 `relic`） | 14 | 乌勒尔弓箭…水晶头骨，及哈尔舒塔一套 | 霸者之证（exe 种类名），七大海域各一件，见 `04` |
 | 9 | `sage_map` | 7 | 泰勒斯…比塔科史，七张材料地图 | 合成/剧情地图材料 |
-| 10 | `place_map` | 12 | 「去…的地图」 | `unlock_remain` / `unlock_village` |
+| 10 | `place_map` | 12 | 「去…的地图」 | `mark_remains_discovered` / `mark_village_discovered` |
 | 11 | `plot_set` | 3 | 布钱、天文仪、斗篷 | 剧情三件，标价 100 |
 | 12 | `treasure_map` | 1 | 藏宝图 | 藏宝事件 |
 
@@ -97,7 +101,7 @@ ID 0「南瓜种子」是发现/种植道具，**不是**货舱货物。空货�
 
 ### 3.2 全表（231）
 
-`base_price` 来自 `+0x08`，[推断]。`kind` 来自 `+0x14`，[推断]。名称来自 `ItemID.h` / `items.tsv`，[确认]。
+`base_price` 来自 `+0x08`，[确认]。`kind` 来自 `+0x14`，[确认]。名称来自 `ItemID.h` / `items.tsv`，[确认]。
 
 | id | key | name | kind | kind_key | base_price |
 | ---: | --- | --- | ---: | --- | ---: |
@@ -249,13 +253,13 @@ ID 0「南瓜种子」是发现/种植道具，**不是**货舱货物。空货�
 | 145 | goryeo_celadon_censer | 高丽青瓷香炉 | 7 | gift | 12000 |
 | 146 | fine_magnifier | 高级放大镜 | 7 | gift | 10000 |
 | 147 | rainbow_parrot | 七色鹦鹉 | 7 | gift | 13000 |
-| 148 | ullr_bow | 狩猎之神乌勒尔的弓箭 | 8 | relic | 90000 |
-| 149 | cambyses_crown | 肯毕西斯的王冠 | 8 | relic | 110000 |
-| 150 | aksum_gold_seal | 阿克斯姆王的金印 | 8 | relic | 140000 |
-| 151 | vedas | 吠陀本集 | 8 | relic | 80000 |
-| 152 | kediri_amulet | 库德里的永久护符 | 8 | relic | 120000 |
-| 153 | qin_palace_lamp | 秦始皇的长信宫灯 | 8 | relic | 100000 |
-| 154 | crystal_skull | 水晶头骨 | 8 | relic | 95000 |
+| 148 | ullr_bow | 狩猎之神乌勒尔的弓箭 | 8 | hegemony_proof | 90000 |
+| 149 | cambyses_crown | 肯毕西斯的王冠 | 8 | hegemony_proof | 110000 |
+| 150 | aksum_gold_seal | 阿克斯姆王的金印 | 8 | hegemony_proof | 140000 |
+| 151 | vedas | 吠陀本集 | 8 | hegemony_proof | 80000 |
+| 152 | kediri_amulet | 库德里的永久护符 | 8 | hegemony_proof | 120000 |
+| 153 | qin_palace_lamp | 秦始皇的长信宫灯 | 8 | hegemony_proof | 100000 |
+| 154 | crystal_skull | 水晶头骨 | 8 | hegemony_proof | 95000 |
 | 155 | thales_paper_map | 泰勒斯的纸地图 | 9 | sage_map | 1000 |
 | 156 | cleobulus_cloth_map | 库雷欧布罗的布地图 | 9 | sage_map | 1000 |
 | 157 | periander_stone_map | 贝利安德罗的石地图 | 9 | sage_map | 1000 |
@@ -293,13 +297,13 @@ ID 0「南瓜种子」是发现/种植道具，**不是**货舱货物。空货�
 | 189 | muezzin_astrolabe | 莫阿丁的天文观测仪 | 11 | plot_set | 100 |
 | 190 | cumbi_cloak | 昆毕制成的斗篷 | 11 | plot_set | 100 |
 | 191 | treasure_map | 藏宝图 | 12 | treasure_map | 100 |
-| 192 | hallstatt_offering_cart | 哈尔舒塔的供品车 | 8 | relic | 100000 |
-| 193 | agamemnon_mask | 阿葛曼侬的面具 | 8 | relic | 100000 |
-| 194 | ram_headed_sphinx | 羊头狮身像 | 8 | relic | 100000 |
-| 195 | sargon_bust | 萨尔贡的头像 | 8 | relic | 100000 |
-| 196 | trung_tracs_crown | 琼恰克的王冠 | 8 | relic | 100000 |
-| 197 | shang_square_ding | 殷代方形鼎 | 8 | relic | 100000 |
-| 198 | chimu_axe | 契慕的斧头 | 8 | relic | 100000 |
+| 192 | hallstatt_offering_cart | 哈尔舒塔的供品车 | 8 | hegemony_proof | 100000 |
+| 193 | agamemnon_mask | 阿葛曼侬的面具 | 8 | hegemony_proof | 100000 |
+| 194 | ram_headed_sphinx | 羊头狮身像 | 8 | hegemony_proof | 100000 |
+| 195 | sargon_bust | 萨尔贡的头像 | 8 | hegemony_proof | 100000 |
+| 196 | trung_tracs_crown | 琼恰克的王冠 | 8 | hegemony_proof | 100000 |
+| 197 | shang_square_ding | 殷代方形鼎 | 8 | hegemony_proof | 100000 |
+| 198 | chimu_axe | 契慕的斧头 | 8 | hegemony_proof | 100000 |
 | 199 | monster_fish_figurehead | 怪鱼像 | 5 | figurehead | 80000 |
 | 200 | admiral_figurehead | 提督像 | 5 | figurehead | 65000 |
 | 201 | flamingo_feather_shoes | 红鹤羽毛鞋 | 4 | person_gear | 72000 |
@@ -342,7 +346,7 @@ ID 0「南瓜种子」是发现/种植道具，**不是**货舱货物。空货�
 ```
 owned[item_id] ∈ {0, 1}     # vanilla unique_stack = 1
 0 <= item_id < len(items)
-empty_slot_id = caps.item_empty_slot   # vanilla 232
+# 空槽 = None；原版 0xe8 只在导入器出现
 ```
 
 原版 `CItemElement` 为每个 `eItem` 留一个 `CItem` 对象。重构后仍按「持有/未持有」；若模组把 `unique_stack` 调大，引擎按表长与堆叠上限循环，不改代码。
@@ -368,30 +372,34 @@ target = kinds[item.kind].equip_target
 
 ### 4.3 发现物 → 特产品
 
-mesfile 把「拿出某件宝物」和「某城出现特产品」连在一起。原版实现散在事件与城镇逻辑里。重构只允许：
+原版 `[确认]`：进交易所时 `fn_1400085d0` 扫已持有的 kind 0，对本港 5 个特产品槽比「交易品目录 +11 的发现物外键」、槽待种锁、槽值门槛，命中则询问 msg `0x374`；接受后交出道具、置交易品发现位、清槽锁。完整谓词见 [03](03-discovery-planting.md) 2.3。
 
 ```
-on UseItem(item_id) where effects contains plant_in_village:
-    emit PlantSpecialProduct { town_id or village_id, trading_item_id, item_id }
+on AcceptPlant { fleet_id, town_id, slot, item_id }:       # 03 的流程
+    PlantSpecialProduct { fleet_id, town_id, slot, item_id }   # 命令 → economy（词表 §13.3）
+on SpecialPlanted { town_id, slot, trading_item, fleet_id, item_id }:   # economy 唯一发出（§14-25）
+    Items.discard(fleet_id, item_id)                           # 载荷自带 fleet_id，不必自持待决记录
 ```
 
-`town_id` / `trading_item_id` 写在该道具的 effect 列表。引擎不得 `if item_id == 5: 卡利卡特出胡椒`。
+「哪件交易品要哪件发现物」只在 economy 交易品目录的外键 `unlock_item`（旧名 `plant_item`，词表 §14-2；一对多，`Economy.plant_items_of`）。本表的 `plant` op 不写目标港 / 交易品；引擎不得 `if item_id == 5: 卡利卡特出胡椒`。
 
-`+0x18` 在多种植物上等于一个合法 `eTown`（胡椒 42 卡利卡特、可可 65 委拉克鲁斯、蚕 57 汉城、织布机 0 伦敦）。值为 `98`（`NUM_TOWN+1`）时当作「未绑港口」哨兵 `[推断]`。
+`+0x18` 在多种植物上等于一个合法 `eTown`（胡椒 42 卡利卡特、可可 65 委拉克鲁斯、蚕 57 汉城、织布机 0 伦敦），**不参与**种植判定。原版 `98`（`NUM_TOWN+1`）= 未绑港口 `[推断]`，只在 `ids/legacy_codec.yaml` 解码成 `null`；运行时是 `anchor_town: Option<town key>`。
 
 ### 4.4 地点地图 → 遗迹/村落
 
 ```
-on UseItem(item_id) where effects contains unlock_remain | unlock_village:
-    emit UnlockRemain { remain_id } / UnlockVillage { village_id }
-    ocean/world 订阅后改探索状态
+on UseItem(fleet_id, item_id) where effects contains mark_remains_discovered | mark_village_discovered:
+    World.mark_remains_discovered(remains_id, via: item, item_id)   # 命令（词表 §14-23）
+    World.mark_village_discovered(village_id, via: item, item_id)
+    # world 置位后发 RemainsDiscovered / VillageDiscovered { …, via, item_id }；items 不发发现事件
+    # 旧事件 UnlockRemain / UnlockVillage 作废
 ```
 
-文案已写明环状石柱、岩窟村等。`+0x18` 对 kind 10 也是 0–96 内的 `eTown`（例如去北京的地图 → 57 汉城），更像航线锚点而不是遗迹下标 `[推断]`。遗迹 ID 尚未从 `CRemains` 钉死，YAML 先留 `remain_key` / `unknown_bytes`。
+文案已写明环状石柱、岩窟村等。`+0x18` 对 kind 10 也是 0–96 内的 `eTown`（例如去北京的地图 → 57 汉城），更像航线锚点而不是遗迹下标 `[推断]`。遗迹 ID 尚未从 `CRemains` 钉死，YAML 先留 `remains: null` / `unknown_bytes`。
 
 ### 4.5 神秘狩猎
 
-`CItemMysteryHunting` 是港口 UI。配方进 `config/items/recipes.yaml`：
+`CItemMysteryHunting` 是港口 UI。配方进 `config/items/hunting.yaml`（[03](03-discovery-planting.md)）：
 
 ```
 inputs: [item_id...]
@@ -401,7 +409,7 @@ consume_inputs: true
 
 原版成对名称（石板上下、竹艺+图解、小刀+刀鞘）只作原版包的实例，不是引擎规则。
 
-卖出折扣见装备文档的 `item_price` 公式。目录表只存 `base_price`。
+道具店还价见装备文档 4.1 `item_bargain`。目录表只存 `base_price`。
 
 ## 5. 耦合分析
 
@@ -409,12 +417,12 @@ consume_inputs: true
 
 - `GetFixItemProc` 断言 `NUM_ITEM=231`，加道具必须改 DLL
 - 人物装备用 `+0x14` 的 2/3/4 分流到 5 个槽（`fn_140012657`）
-- 卖出 `fn_14000f4ed` 直接 `fn_14000e1ce(person, 4)` 取人物数值乘价
+- 道具店买入 `fn_14000f4ed` 直接 `fn_14000e1ce(person, 4)` 取会计术乘价，并就地给还价人加经验
 - 船首像与人物宝物共享 `eItem` 空间，造船厂和人物装备各自筛 kind
 - 地图/种植效果写在事件脚本与设施里，按道具名分支
 - UI 字符串、图标（`Item32.dk4` / `Item56.dk4` / `EvItem.dk4`）和逻辑表绑在一起
 
-重构切断点：本系统只产出 `item_id` + 效果列表。人物、船、世界、经济只读 ID 与 `ModifierSet` / 事件。
+重构切断点：本系统只产出 `item` key + 效果列表，并作为修正器提供方注册 `skill.*` 贡献（D2，见 02 4.2）。人物、船、世界、经济只读 key 与查询 / 事件。
 
 ## 6. 解耦后的配置
 
@@ -422,33 +430,39 @@ consume_inputs: true
 # config/items/kinds.yaml
 schema: dk4.items.kinds
 version: 1
-kinds:
-  - id: 0
-    key: plant_discovery
-    name: 特产品发现物
+kinds:                       # 主键 key；vanilla_index = 原版 +0x14，仅导入用
+  - key: vanilla:plant_discovery
+    vanilla_index: 0
+    name_key: itemkind.plant_discovery   # exe「原产物」
     equip_target: none
-  - id: 2
-    key: weapon
-    name: 武器
+  - key: vanilla:weapon
+    vanilla_index: 2
+    name_key: itemkind.weapon
     equip_target: person_slot_group
-    slot_group: weapon
-  - id: 3
-    key: armor
-    name: 防具
+    slot_group: vanilla:weapon
+  - key: vanilla:armor
+    vanilla_index: 3
+    name_key: itemkind.armor
     equip_target: person_slot_group
-    slot_group: armor
-  - id: 4
-    key: person_gear
-    name: 人物用具
+    slot_group: vanilla:armor
+  - key: vanilla:person_gear
+    vanilla_index: 4
+    name_key: itemkind.person_gear
     equip_target: person_slot_group
-    slot_group: accessory
-  - id: 5
-    key: figurehead
-    name: 船首像
+    slot_group: vanilla:accessory
+  - key: vanilla:figurehead
+    vanilla_index: 5
+    name_key: itemkind.figurehead
     equip_target: ship_figurehead
-  - id: 10
-    key: place_map
-    name: 地点地图
+  - key: vanilla:hegemony_proof
+    vanilla_index: 8
+    aliases: [vanilla:relic]
+    name_key: itemkind.hegemony_proof    # exe「霸者之证」
+    equip_target: none
+    search_presentation: proof           # 原版搜索 kind==8 分支；见 04
+  - key: vanilla:place_map
+    vanilla_index: 10
+    name_key: itemkind.place_map
     equip_target: none
 ```
 
@@ -456,73 +470,56 @@ kinds:
 # config/items/items.yaml
 schema: dk4.items.items
 version: 1
-items:
-  - id: 0
-    key: pumpkin_seed
-    name: 南瓜种子
-    name_i18n: item.pumpkin_seed.name
-    desc_i18n: item.pumpkin_seed.desc
-    kind: 0
+items:                       # 外键一律写目标 key
+  - key: vanilla:pumpkin_seed
+    vanilla_index: 0
+    name_key: item.pumpkin_seed.name
+    desc_key: item.pumpkin_seed.desc
+    kind: vanilla:plant_discovery
     base_price: 2000
     icon: item56/0
+    anchor_town: null        # 原版 +0x18=98；legacy_codec 解成 null
     effects:
-      - op: plant_in_village
-        # 原版 +0x18=98 → 未绑具体港；由事件指定目标
-        trading_item_key: pumpkin   # 外键进 economy，禁止引擎猜
+      - op: plant            # 南瓜（交易品）由 economy 目录 unlock_item: vanilla:pumpkin_seed 指回
     unknown_bytes: [0x00, 0x08, 0x18, 0x00, 0x62, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
 
-  - id: 5
-    key: peppercorn
-    name: 胡椒粒
-    kind: 0
+  - key: vanilla:peppercorn
+    vanilla_index: 5
+    kind: vanilla:plant_discovery
     base_price: 8500
+    anchor_town: vanilla:calicut     # +0x18=42 [推断]；不参与种植判定
     effects:
-      - op: plant_in_village
-        town_id: 42          # 卡利卡特；+0x18=42 [推断]
-        trading_item_key: pepper
+      - op: plant
 
-  - id: 24
-    key: black_twinblade
-    name: 漆黑双刃长剑
-    kind: 2
+  - key: vanilla:black_twinblade
+    vanilla_index: 24
+    kind: vanilla:weapon
     base_price: 18000
     effects:
-      - op: stat_mod          # 效果表，见 02
-        amount: 24            # +0x17 [推断]
+      - op: skill_bonus       # 效果表，见 02；向 skill.fencing 贡献 add 段
+        skill: vanilla:fencing
+        amount: 24            # +0x17 [确认]
+        active_when: always
     unknown_u32_0c: 0x4eb8
     unknown_u32_10: 0x1618
 
-  - id: 114
-    key: eagle_figurehead
-    name: 大鹫像
-    kind: 5
+  - key: vanilla:eagle_figurehead
+    vanilla_index: 114
+    kind: vanilla:figurehead
     base_price: 58000
-    effects:
-      - op: ship_mod
-        modifier: sail_speed_factor
-        # 具体系数未从 hex 还原，禁止编造
+    # 效果不在这里：ships/figureheads.yaml 的行 { item: eagle_figurehead, effects: [fleet.speed ×11/10] }
 
-  - id: 162
-    key: map_stonehenge
-    name: 去环状石柱遗址的地图
-    kind: 10
+  - key: vanilla:map_stonehenge
+    vanilla_index: 162
+    kind: vanilla:place_map
     base_price: 500
+    anchor_town: vanilla:amsterdam   # +0x18=2 [推断]
     effects:
-      - op: unlock_remain
-        remain_key: stonehenge   # 遗迹 ID [未知]，先用 key
-        anchor_town_id: 2        # +0x18=阿姆斯特丹 [推断]
+      - op: mark_remains_discovered   # 旧名 unlock_remain
+        remains: null        # 遗迹外键 [未知]，禁止猜
 ```
 
-```yaml
-# config/items/recipes.yaml
-schema: dk4.items.recipes
-version: 1
-recipes:
-  - key: mystery_slate
-    inputs: [mystery_slate_top, mystery_slate_bottom]
-    output: null            # 产出原版未钉死，禁止猜
-    site: town_mystery_hunting
-```
+碎片配方见 [03](03-discovery-planting.md) 的 `hunting.yaml`，本篇不再单列 `recipes.yaml`。
 
 未命名字节进 `unknown_bytes` / `unknown_u32_*`。提取器只输出确认字段；推断字段必须带注释，schema 升 version 后再改名。
 
@@ -535,12 +532,12 @@ World0 / World1 是两份内容包，同一 schema。126 条 `rest` 不同的记
 | 旋钮 | 文件 | 原版包 |
 | --- | --- | --- |
 | 道具表长 | `items.yaml` | 231 |
-| 种类表长 | `kinds.yaml` | 13 `[推断]` |
-| `item_empty_slot` | `caps.yaml` | 232 |
+| 种类表长 | `kinds.yaml` | 13 |
+| `item_empty_byte`（导入用） | `ids/legacy_codec.yaml` | 232 |
 | `unique_stack` | `caps.yaml` | 1 |
 | `base_price` | 每条道具 | 100–420000 |
 | 图标、中文名 | `ui/strings` + `icon` | mesfile / Item*.dk4 |
-| 配方 | `recipes.yaml` | 未完全还原 |
+| 配方 | `hunting.yaml`（03） | 未完全还原 |
 | World0 vs World1 字段差 | 内容包 | 126 条 rest |
 
 `ITEMEFFECT_AMOUNT_*`、装备槽、卖价公式在 02 与 `formulas/`。
@@ -560,17 +557,19 @@ World0 / World1 是两份内容包，同一 schema。126 条 `rest` 不同的记
 
 命令：
 
-- `AcquireItem { fleet_id, item_id }` 已有则按 `unique_stack` 拒绝或叠加
-- `DiscardItem { fleet_id, item_id }`
-- `UseItem { fleet_id, item_id, target }` 解释 effect 列表，发事件
-- `CombineItems { fleet_id, item_ids }` 查 `recipes.yaml`
+- `Items.acquire(fleet_id, item_id)` 已有则按 `unique_stack` 拒绝或叠加
+- `Items.discard(fleet_id, item_id)`
+- `Items.use(fleet_id, item_id, target)` 解释 effect 列表，发事件或命令（发现类 op → `World.mark_*_discovered`）
+- `CombineItems { fleet_id, item_ids }` 查 `hunting.yaml`
 
 事件（本系统发出，别人订阅）：
 
 - `ItemAcquired { fleet_id, item_id }`
-- `PlantSpecialProduct { town_id?, village_id?, trading_item_id, item_id }`
-- `UnlockRemain { remain_id }` / `UnlockVillage { village_id }`
-- `FigureheadChanged { ship_id, item_id }`（由船系统执行，本系统只确认持有）
+- `ItemFound { item_id, presentation }`（搜索发现，见 04；progression 订阅给全员经验）
+
+道具触发的遗迹 / 村落发现不是本系统事件：items 发命令 `World.mark_remains_discovered / mark_village_discovered(id, via: item, item_id)`，world 发 `RemainsDiscovered` / `VillageDiscovered`（词表 §14-23；旧 `UnlockRemain` / `UnlockVillage` 作废）。
+
+发往 economy 的命令：`PlantSpecialProduct { fleet_id, town_id, slot, item_id }`（03 的种植流程发出；economy 执行后发 `SpecialPlanted { town_id, slot, trading_item, fleet_id, item_id }`，见 `00-overview/10-key-glossary.md` §13.3、§14-25）。`FigureheadChanged` 由 ships 发（`Yard.*`），本系统只确认持有。
 
 不暴露 `SItem*`、`CItemElement`、World DLL 指针。
 
@@ -581,18 +580,18 @@ World0 / World1 是两份内容包，同一 schema。126 条 `rest` 不同的记
 | 偏移 | 宽 | 原版包观察 | 状态 |
 | --- | ---: | --- | --- |
 | +0x00 | 8 | 名称指针 `0x00000001800xxxxx` | [确认] `name` |
-| +0x08 | 4 | u32，南瓜 2000，最大 420000（导善手杖），最小 100（碎片） | [推断] `base_price` |
+| +0x08 | 4 | u32，南瓜 2000，最大 420000（导善手杖），最小 100（碎片） | [确认] `base_price`（运行时 `+0x2C`） |
 | +0x0C | 4 | 146 条为 `-1`；否则像 World DLL 内偏移（如肉桂 `0x79f8`） | [未知] |
 | +0x10 | 4 | 与 +0x0C 同时为 `-1` 或同时非 `-1` | [未知] |
-| +0x14 | 1 | 0–12，与种类菜单 13 档对齐 | [推断] `eItemKind` |
+| +0x14 | 1 | 0–12，与种类菜单 13 档对齐 | [确认] `eItemKind`（运行时 `+0x29`） |
 | +0x15 | 1 | 0–6 或 `8`；`8` 常与 +0x0C==-1 同时出现。kind 8/9 上即使 +0x0C==-1 也走 0–6 | [未知] 兼有「能力下标 / 套装序号 / 哨兵 8」三种用法嫌疑 |
-| +0x16 | 1 | 武器/防具/发现物多为 `0x18=24`；人物用具为 0–8、13–15、17–20 | [未知] 不是 `eSkill`（`NUM_SKILL=10`）。更像岗位/舱室轨 |
-| +0x17 | 1 | 仅 kind 2/3/4 非 0：武器 15–62，防具 18–65，用具 12–80 | [推断] `ITEMEFFECT_AMOUNT` / 攻防显示值 |
-| +0x18 | 1 | 183 条为 `98`；否则落在 0–96 的 `eTown` | [推断] 关联港或「98=未绑」 |
+| +0x16 | 1 | 非用具全为 `0x18=24`；人物用具为 0–8、13–15、17–20 | [确认] `eCabinKind`（`0x18`=无舱哨兵 → `null`；合法 23 种），运行时 `+0x39`；舱室→技能见 02 §3.5 |
+| +0x17 | 1 | 仅 kind 2/3/4 非 0：武器 15–62，防具 18–65，用具 12–80 | [确认] 效果量（加到技能），运行时 `+0x3A` |
+| +0x18 | 1 | 183 条为 `98`；否则落在 0–96 的 `eTown` | [推断] 关联港；`98` 只在 `legacy_codec` 解成 `null`，种植判定不用 |
 | +0x19 | 1 | 取值 0、8、10、11；World1 有 97 条与 World0 不同 | [未知] |
 | +0x1A..0x1F | 6 | 全 0 | [确认] 填充 |
 
-`CItem::vfunc_05` 拷贝整条后写一串 `*(sB0+0x29)`…`+0x3c` 的运行时字节，与世界表字段的对应 `[未知]`。
+`CItem::vfunc_05` 的运行时对应 `[确认]`（指令 `0x1402ad18d..0x1402ad202`）：`+0x2C`←`+0x08`，`+0x30`(8B)←`+0x0C..+0x13`，`+0x29`←`+0x14`，`+0x38`←`+0x15`，`+0x39`←`+0x16`，`+0x3A`←`+0x17`，`+0x3B`←`+0x18`，`+0x3C`←`+0x19`；名字 `lstrcpyA` 到 `+0x10`。
 
 `ITEMSTATE_BITS` 位宽、`eItemTag=7` 的枚举名、`CItemElement+0x39c8` 的 7 字节、`NUM_KIND=9`（RTC，未必是道具）全部 `[未知]`。
 

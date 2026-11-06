@@ -2,7 +2,7 @@
 
 原版内容包。`NUM_TRADINGITEM=105`（id 0–104），`INVALID_TRADINGITEM=-1`。空货格 / 空特产品哨兵 `ITEM_EMPTY=106`（`0x6A`），**不在** 0–104 内。
 
-`TradingItemID.h` 只有计数，没有逐项枚举名。名称来自 `Game/DK4HD_sc.exe` `.rdata` 从「小麦」起连续 105 个 GBK C 字符串（文件偏移 `0x5b65e4`）。同区有 stride 16 的记录表（文件偏移 `0x686b90`），每条 `name_ptr` + 8 字节；其中 extra 的第 3 字节为 `0–18`，与 `NUM_TRADINGITEMKIND=19` 一致，作 `kind_id` `[确认]`。种类中文名原版头文件未写，不编造。
+`TradingItemID.h` 只有计数，没有逐项枚举名。名称来自 `Game/DK4HD_sc.exe` `.rdata` 从「小麦」起连续 105 个 GBK C 字符串（文件偏移 `0x5b65e4` = VA `0x1405b77e4`，按 `.rdata` 段差 `0x140001200` 换算）。另有 stride 16 的记录表在 `.data`（文件偏移 `0x686b90` = VA `0x140688190`，段差 `0x140001600`），每条 `name_ptr` + 8 字节；其中 extra 的第 3 字节为 `0–18`，与 `NUM_TRADINGITEMKIND=19` 一致，作 `kind_id` `[确认]`。种类中文名原版头文件未写，不编造。
 
 说明文案来自 `Game/SC/mesfile.dk4` / `srcdata/catalog/mesfile_sc.txt`，自 `0x11fb` 小麦/稻米至 `0x2d9b` 糖胶/鸟粪石。mesfile 把多件说明打进同一 C 字符串；按与名称表相同的顺序切开。配对依据：名称表第 0 条是小麦、mesfile 第一段也是小麦/稻米，末条名称鸟粪石对应末段鸟粪石说明，中间 105 条一一对应 `[确认]`。名称本身不在 mesfile 短串里。
 
@@ -119,7 +119,9 @@
 | id | key | 说明 |
 | --- | --- | --- |
 | 105 | （无此货物） | `NUM_TRADINGITEM=105`，合法货物是 0–104 |
-| 106 | `trading_item.empty` | `ITEM_EMPTY`，空货格 / 空特产品槽 |
+| 106 | —（原版字节） | `ITEM_EMPTY`，空货格 / 空特产品槽。新引擎运行时用 `null`，106 只在 `ids/legacy_codec.yaml` 编解码（D1） |
+
+存储宽度：港口特产品槽的 `item_id` 是 **u8**（`fn_140266800` `movzx byte`），文化表每圈 105 个 u16 按交易品下标排（`CCulture::vfunc_05` 循环 `< 0x69`）。所以原版格式最多 255 个 id 且 106 必须空着；新增交易品不能沿用「整数 + 106 哨兵」，见 [04-id-registry.md](../00-overview/04-id-registry.md)「扩展风险」。
 
 ## 计数
 

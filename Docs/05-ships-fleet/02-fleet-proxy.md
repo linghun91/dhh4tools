@@ -16,7 +16,7 @@
 
 - 船体数值、货格内容（`01-ship-model.md`；本系统只持有 `ship_instance_id`）
 - 舱室人事（`03-cabins-crew-posts.md`）
-- 地方舰队买货折扣公式的能力修正器（人物系统提供，经济系统执行）
+- 地方舰队买货折扣用到的技能值（人物系统提供 `Skill(person, skill_key)`，公式在本篇，经济系统执行扣款）
 - 海战 AI（`07-combat`）
 - 航线、风向（`06-ocean`）
 
@@ -31,9 +31,10 @@
 
 ### 玩家舰队
 
-- `[确认]` `NUM_FLEETSHIP=5`。来源：`FleetShipID.h`、`Constants.h`、`mesfile_sc.txt` `0x7df7`「一只舰队最多可以有五艘船」。
-- `[确认]` `CFleetShip` 尺寸 `0x10`，字段 `+0x8`、`+0x9`。空构造：`+0x8=0xD0`、`+0x9=0x15`。来源：`CFleetShip.cpp`、`fields.tsv`。
-- `[确认]` `CFleet` 构造在 `+0x18` 建 5 个 `CFleetShip`（`fn_1400017df(..., 0x10, 5)`），初始化 `+0x75=5`、`+0x7c=1`。来源：`CFleet.cpp`。
+- `[确认]` `NUM_FLEETSHIP=5`。证据类型：构造计数（`CFleet` 构造 `fn_1400017df(..., 0x10, 5)`）+ 循环上界；RTC 投票 236 次只作旁证。来源：`FleetShipID.h`、`Constants.h`、`mesfile_sc.txt` `0x7df7`「一只舰队最多可以有五艘船」。
+- `[确认]` `CFleetShip` 尺寸 `0x10`，字段 `+0x8`、`+0x9`。空构造 / 清空（`fn_14000dc06`）：`+0x8=0xD0`、`+0x9=0x15`；放船（`fn_140007153`，`0x1400ef900`）：`+0x8=eShip`、`+0x9=0x15`。只写一个字节，不分配、不复制 `CShip`。来源：`CFleetShip.cpp` + 反汇编。
+- `[确认]` `CFleet` 构造在 `+0x18` 建 5 个 `CFleetShip`（`fn_1400017df(..., 0x10, 5)`）。`+0x75=5`、`+0x7c=1` 是 `vfunc_05`（`0x1402ac940`，按模板开局）写的，不是构造。来源：`CFleet.cpp` + 反汇编 `0x1402acb13` / `0x1402acb1f`。
+- `[确认]` `fn_14000c144`（`0x1400f0bf0`）取舰队所在港：`+0x80` 位 3 置位则返回 `0x62`（在海），否则返回 `+0x70`。`0x62` 是「无港」哨兵，与 `CShip+0x54`、货格 `+2` 同值。
 - `[确认]` 换旗舰：「一旦改变旗舰，船舱担任者将被解任。」「请决定新舰队的旗舰。」来源：`mesfile_sc.txt` `0x2f0f` / `0x30a3`。人事清槽的规则落在 `03`，本系统发事件。
 - `[确认]` 「提督不担任舰长怎么行？」来源：`mesfile_sc.txt` `0x80a7`。
 - `[确认]` 非玩家势力货物不走 5×5 真实货格，走 `CFleet+0x74`「一条记录 + 数量」。来源：`srcdata/docs/trade_stack.md`。
@@ -47,19 +48,19 @@
 - `[确认]` 战斗中误击会喊「是我，地方舰队的。」来源：`0xfda7` / `0xfe13`。
 - `[确认]` UI：`CChangeProxyFleetView`，RTC `eFleetShip`；另有函数 RTC `aeProxyShip` 20 字节 = 5×4。来源：`CChangeProxyFleetView.cpp`、`catalog/rtc.json` `0x140154cb0`。
 - `[确认]` 账本：`CFleetElement+0x3738`，循环 **6** 槽；`srcdata/docs/exe_caps.md` 写 `mgr+0x3738+idx*0x18`：`+0x00..0x0B` 上月，`+0x0C` 支出，`+0x10` 收入，`+0x14` 投资。余额 = 收入 − 支出 − 投资。
-- `[确认]` 地方舰队自动买货 `fn_140010d25` / body `0x1400f6d20`：`cost = price * qty * (1000 - Ability(captain, 4) + rand(100)) / 1000`，记入账本。能力结算 > 1000 时原版会爆。来源：`exe_caps.md`。本系统不内嵌六维，只消费人物修正器。
+- `[确认]` 地方舰队自动买货 `fn_140010d25` / body `0x1400f6d20`：`cost = price * qty * (1000 - Skill(提督, 会计术) + rand(100)) / 1000`，记入账本。人是 `fn_1400078a1(fleet)`（`0x1400f0ad0`）= `CFleet+0x10` 提督；为 `0xEC` 时返回 NULL，**不打折**按原价。`fn_14000e1ce(person, 4)` 的 4 是 `eSkill` 会计术，不是六维（`03-characters/03`）。原始指令 `0x1400f741a..0x1400f7464`：`mov edx,4; call fn_14000e1ce; mov ecx,0x3e8; sub ecx,eax; … call rand(0x64); add; imul ecx,eax（32 位）; xor edx,edx; div 0x3e8（无符号）`。随后 `fn_140006e88(提督)` 给段 1 经验 +10（`0x1400f7480`）。技能值上限 `skill_value_cap=500`，括号恒 ≥ 500；只有把技能值上限改到 1000 以上括号才会变负、被 `div` 当巨大无符号数。来源：反汇编。
 - `[未知]` `NUM_PROXYFLEET` 整数未还原。6 本账本是否 = 1 玩家 + 5 委任，未证明。
 
 ### 阵型
 
-- `[确认]` `CChangeFormationView` 按 `eFleetShip` 0–4 循环，空位 `0xD0`；确认时在起点 / 终点间插值 **8** 步（`s64 > 7`）。来源：`CChangeFormationView.cpp`。
+- `[确认]` `CChangeFormationView` 按 `eFleetShip` 0–4 循环，空位 `0xD0`；确认时在起点 / 终点间插值 **8** 帧：`s64` 0..7，`fn_140008e9f(&posStart, &posEnd, s64, 7)`，分母 7，含首尾。来源：`CChangeFormationView.cpp` L131–L139。
 - `[未知]` 阵型种类枚举名与数量。没有 `NUM_FORMATION` 符号。
 
 ### 移动船
 
-- `[确认]` `NUM_MOBILESHIP=20`，`NUM_MOBILEFLEET=4`。来源：`MobileShipID.h`、`MobileFleetID.h`、`num_values.json`。
+- `[确认]` `NUM_MOBILESHIP=20`（证据：`CMobileShipElement` 构造计数 20），`NUM_MOBILEFLEET=4`（证据：`CFleetElement+0x35f0` 存档循环 4 条，见下）。头文件 / `num_values.json` 的值只是 RTC 投票旁证。
 - `[确认]` `CMobileShip` 尺寸 `0x30`，存档字段 `+0x8`、`+0xC`、`+0x10`、`+0x14`、`+0x16`、`+0x18`、`+0x1A`、`+0x1B`。来源：`CMobileShip.cpp`。
-- `[确认]` `CMobileShipElement` 构造：20 个 `CMobileShip`（步长 `0x30`）+ `+0x1038` 处 21 个步长 `0x18` 的对象 + `+0x1230` 处 **100** 个步长 `0x30` 的对象（与 `NUM_SHELL=100` 相符，炮弹池挂在移动船元素上）。来源：`CMobileShipElement.cpp`。
+- `[确认]` `CMobileShipElement` 构造：20 个 `CMobileShip`（步长 `0x30`）+ `+0x1038` 处 21 个步长 `0x18` 的 `CBattleGun` + `+0x1230` 处 **100** 个步长 `0x30` 的 `CShell`（`fn_140007dce(..., 0x18, 0x15)` / `(..., 0x30, 0x64)`）。炮与弹池挂在移动船元素上；类名依据见 `08-gun-shell-catalog.md`。来源：`CMobileShipElement.cpp`。
 - `[确认]` `CFleetElement+0x35f0` 起 4 条 4 字节记录，与 `NUM_MOBILEFLEET=4` 同数。来源：`CFleetElement.cpp` 存档循环。
 - `[未知]` `NUM_MOBILEFLEETKIND`、`NUM_MOBILESHIPSTATE`、`NUM_FLEETSTATE`、`NUM_FLEETAIMKIND`、`NUM_FLEETCOLOR`。
 
@@ -71,24 +72,39 @@
 
 ### 模板字节（World0，步长 0x18）
 
-下面是对 24 字节的切分。字段名除哨兵外都是 `[推断]`，依据写在节 9。
+`CFleet::vfunc_05`（`0x1402ac940`）把 24 字节读进栈上 `r_sFixFleet`（`rsp+0x28`），再逐字节搬进 `CFleet`。`[确认]` 搬运关系来自原始指令；「含义」列除注明外是 `[推断]`。
 
-| 偏移 | 宽 | 推断 | 依据 |
-| --- | --- | --- | --- |
-| `+0x00` | u8 | `person_id`（提督） | 舰队 0–6 等于主角 0–6；空槽常见 `0xEC` |
-| `+0x01..+0x05` | 5×u8 | 五艘船引用，空=`0xD0` | `CFleet::vfunc_05` 对 5 槽取数，`==0xD0` 则跳过 |
-| `+0x06..+0x07` | 2 B | 全 0 | 69 条皆 0 |
-| `+0x08..+0x0B` | u32 LE | 大地图 X | 仅少数非 0；舰队 4 = `0x81B8=33208`，近马尼拉 `33424` |
-| `+0x0C..+0x0F` | u32 LE | 大地图 Y | 舰队 4 = `0x2128=8488`，近马尼拉 `8368` |
-| `+0x10..+0x11` | u16 LE | `town_id` | 舰队 0=11 里斯本、1=7 斯德哥尔摩、2=2 阿姆斯特丹、3=54 杭州、6=67 波托韦洛 |
-| `+0x12` | u8 | 种类 / 势力 / 状态 | 取值 0、1、7、8、`0x0B` |
-| `+0x13` | u8 | 常 `0x62=98` | 98 号人物是「广场的店主」，更像哨兵 |
-| `+0x14` | u8 | 常 `0xEC` | 与舱室空人物相同 |
-| `+0x15` | u8 | 常 `0x6A` | `ITEM_EMPTY` |
-| `+0x16` | u8 | 0/1 标志 | World0 / World1 此位有差异 |
-| `+0x17` | u8 | 全 0 | |
+| 偏移 | 宽 | 搬到 `CFleet` | 含义 | 依据 |
+| --- | --- | --- | --- | --- |
+| `+0x00` | u8 | `+0x10` | `person_id`（提督） | 舰队 0–6 等于主角 0–6；空槽 `0xEC` |
+| `+0x01..+0x05` | 5×u8 | `CFleetShip[i]+0x8` | `eShip` 实例槽；`0xD0` 跳过 | `[确认]` `cmp 0xd0` 后 `fn_140007153`；值都在 100–202，即预置船槽（`01`） |
+| `+0x06..+0x07` | 2 B | — | 不读 | 69 条皆 0 |
+| `+0x08..+0x0F` | 2×u32 | `+0x68`（qword 整拷） | 大地图 X / Y | 舰队 4 = `33208, 8488`，近马尼拉 `33424, 8368` |
+| `+0x10` | u8 | `+0x70` | `town_id`；`0x62` = 无港 | `[确认]` `fn_14000c144` 返回 `+0x70`；舰队 0=11 里斯本、1=7、2=2、3=54、6=67 |
+| `+0x11` | u8 | `+0x71` | 未命名 | 皆 0；**单独**一字节，不是 `town_id` 高位 |
+| `+0x12` | u8 | `+0x72` | 种类 / 势力 / 状态 | 取值 0、1、7、8、`0x0B` |
+| `+0x13` | u8 | `+0x73` | 常 `0x62` | 与「无港」同值，更像港口哨兵而不是人物 98 |
+| `+0x14` | u8 | — | 常 `0xEC` | `vfunc_05` 不搬 |
+| `+0x15` | u8 | `+0x74` | NPC 紧凑货记的商品；`0x6A` = 空 | `[确认]` 搬运；`trade_stack.md` 的 `CFleet+0x74` |
+| `+0x16` | u8 | `+0x80` | 状态位 | `+0x80` 位 3 = 在海（`fn_14000c144`） |
+| `+0x17` | u8 | — | 不读 | 全 0 |
+
+`vfunc_05` 另写 `+0x75=5`、`+0x7C=1`，并在 `+0x70 != 0x62` 时把舰队登记到所在港。
+
+- `[确认]` 模板船引用是**共享的预置船槽**，不是新船：同一舰队里常有重复（舰队 9 `64 64 64` = 三个槽都指 100 号「小型汉萨式帆船」；舰队 8 `AA AA A9 A9 A9`），`fn_140007153` 只写一个字节。NPC 舰队的船因此只是「船体定义 + `CFleetShip+0x9`」，没有独立 `CShip` 状态。`+0x9` 初值 `0x15=21`，含义 `[未知]`。
+- `[确认]` 引用到的船名（槽 − 100 = `hull_id`，名称来自 exe，逐行见 `05`）：`0xC2` 卡鲁提拉、`0xC3` 维斯泰洛斯、`0xC4` 阿伦海姆、`0xC5` 春申、`0xC6` 华昌、`0xC7` 埃斯佩兰莎、`0xC8` 安娜希莉雅、`0xC9` 拉乌卡、`0xCA` 怪鱼（舰队 62，提督 197）；`0x64`–`0x85` 船坞模板 0–33；`0x86`–`0xA3` 商用 / 运输变体；`0xA4`–`0xC1` 武装变体。
 
 驻港与主角开场港一致，只对 0、1、2、3、6 `[确认]` 数字；「+0x00 就是该剧本主角」是 `[推断]`。舰队 4 驻马尼拉、舰队 5 驻巴士拉，未在文案里交叉证明。
+
+### World0 vs World1
+
+`[确认]` 69 条里 **57 条**不同（逐字节比 `world/World0_fleet.c` 与 `World1_fleet.c`）：
+
+- 舰队 0–3 只差 `+0x16`（W0 = 0，W1 = 1）。
+- 45 条的五船引用不同（如舰队 5 `BE BE 9F BD D0` → `C8 7E BD D0 D0`，舰队 9 `64 64 64 D0 D0` → `A4 A4 A4 64 64`）。
+- 舰队 42 的 `+0x10` 不同（54 → 0）；41 的 `+0x12` 不同（0 → 1）；43、46–57、62 的 `+0x14` 在 W1 统一为 `0x63`。
+
+两份是同一 schema 的不同内容，不能只记「舰队 5 不同」。
 
 ## 3. 实体与 ID
 
@@ -104,7 +120,7 @@
 | 舰队颜色 | `eFleetColor` | `[未知]` | — | `fleet_color_id` |
 | 账本槽 | — | 6 | — | `ledger_slot` |
 
-`eFleet` 0–68 在 `FleetID.h` 写成 `eFleet_000` … `eFleet_068`，没有人类可读别名。重构 key 暂用 `fleet_000`。禁止编造「某某提督舰队」作为原版包名字。
+`eFleet` 0–68 在 `FleetID.h` 写成 `eFleet_000` … `eFleet_068`，没有人类可读别名。重构 key 暂用 `vanilla:fleet_000`，`vanilla_index` 只供导入。运行时空值一律 `null`；表中 `0xD0`、`0xEC`、`0x62`、`0x6A`、`0x46`（空舰队）只在 `ids/legacy_codec.yaml`（D1）。禁止编造「某某提督舰队」作为原版包名字。
 
 ## 4. 算法 / 公式
 
@@ -119,25 +135,42 @@ can_create_proxy =
 ledger.balance = ledger.income - ledger.expense - ledger.investment
 # +0x00..0x0B 为上月三元组，月结时滚动
 
-# 地方舰队买货成本（原版；重构时读人物修正器，不读六维）
+# 地方舰队买货成本（原版；读技能值，不读六维）
 raw = price * qty
-buy_cost = raw * (params.buy_divisor - captain_buy_ability + rand(params.buy_rand)) / params.buy_divisor
-# buy_divisor=1000, buy_rand=100, ability 来自 Ability(captain, 4) 再夹到属性结算上限
-# 能力 > 500 时原版会炸；内容包 default 把修正器封在 caps.proxy_buy_ability_cap=500
+holder = Fleets.admiral(fleet_id)                      # 原版 CFleet+0x10；空 → 不打折
+buy_cost = holder == null ? raw
+         : raw * (params.buy_divisor - Skill(holder, accounting) + rand(params.buy_rand)) / params.buy_divisor
+Progression.grant_exp(holder, add{track_b: 10}, roll_mode_default, source: proxy_buy)   # fn_140006e88；段 1 = track_b
+# buy_divisor=1000, buy_rand=100（rand 取 0..99）；Skill 已夹到 $caps.skill_value_cap（原版 500）
+# 原版不会炸：括号 >= 1000-500 = 500。只有 skill_value_cap > buy_divisor 时括号才变负（原版 32 位无符号 div 爆成巨数）。
+# 重构：加载时校验 $caps.skill_value_cap < buy_divisor；int_mode 可选 i64_sat 并把括号夹到 >= 0
 
 # 阵型插值
-formation_lerp_steps = formulas.formation_lerp_steps   # 8（循环 0..7）
+formation_lerp_frames = formulas.formation_lerp_frames  # 8（s=0..7，t=s/7，含首尾）
 ```
 
 命令（内容，不是公式）：目标必须是已注册 `town_id` 或 `person_id`。种类从文案抽出，id 待 RTC / 命令枚举还原后入库。
+
+岗位持有人（D2，供 `07-combat`、`06-ocean`、`04-economy` 共用）：
+
+```
+post_holder(fleet, post, ship = flagship(fleet)) =
+    if fleet has cabin bindings:                      # 原版只有玩家本舰队（CFleetElement+0x3600，5 船 × 31 舱）
+        room = posts[post].room                       # 原版 fn_140007e19；posts.yaml（03-characters）持有
+        return Cabins.binding(ship, slot_of(ship, room)).person    # 03
+    return post_fallback[post](fleet, ship)           # 原版：本舰队提督，或该船舰长 CShip+0x50
+```
+
+`post_fallback` 写在 `config/fleets/post_rules.yaml`，原版包把各调用点的「否则」分支逐条登记，引擎不 `if 玩家`。
 
 ## 5. 耦合分析
 
 原版：
 
 - `CFleet::vfunc_05` 直接 `GetFixFleetProc`，再按字节建 `CFleetShip`。
+- NPC 舰队的船只是指向预置船槽 100–206 的字节，多条舰队、同队多槽共用一个 `CShip`：船体定义被当成实例用。重构必须把「舰队船位 → `hull_id`（定义）」和「→ `ship_instance_id`（有状态的活船）」分成两种引用。
 - 玩家货物在船上，NPC 货物在 `CFleet+0x74`。同一 `CountFleetItem` / `AddLoad` 两支。来源：`trade_stack.md`。
-- 地方舰队买货读船长能力下标 4（精神）。应改为读 `ModifierSet.buy_cost_factor`。
+- 地方舰队买货写死「提督 + 技能 4」。重构：公式 `refs` 写 `skill: accounting`、持有人取 `Fleets.admiral(fleet)`，输入单位是技能值（0–`skill_value_cap`），不读六维、不比 id。
 - 换旗舰清舱室担任者：舰队系统发事件，人事系统执行。
 - 月结 `CFleetElement::vfunc_04`（约 `0x140100180`）付不起的支出滚下月。来源：`exe_caps.md`。
 - 移动船元素里塞了 100 个炮弹对象，航海表现和战斗弹药池绑在一起。
@@ -153,19 +186,32 @@ world_fleets: 69                 # 原版包实例数
 mobile_ships: 20
 mobile_fleets: 4
 ledger_slots: 6
-proxy_create_gold: 100000
-proxy_buy_ability_cap: 500
+# 买货不另设能力上限：引用 $caps.skill_value_cap（03-characters），校验 < buy_divisor
 ```
 
 ```yaml
 # config/formulas/fleets.yaml
 schema: dk4.formulas.fleets
 version: 1
-proxy_create_gold: 100000
-buy_divisor: 1000
-buy_rand: 100
-formation_lerp_steps: 8
-npc_compact_cargo: true          # 原版 NPC 走 fleet 紧凑货记
+proxy_create:                             # §4 can_create_proxy 的金币门槛
+  impl: vanilla.proxy_create
+  params: { proxy_create_gold: 100000 }
+proxy_buy_cost:
+  impl: expr
+  int_mode: vanilla_i32
+  quirks: { unsigned_div: true }          # 原版 div 0x3e8 无符号
+  refs: { skill: vanilla:accounting }    # refs 只放内容 key
+  params: { buy_divisor: 1000, buy_rand: 100, exp_track: track_b, exp_gain: 10 }   # track_b = 原版段 1
+  inputs: [raw, skill]                    # skill = 调用方对 Fleets.admiral(fleet_id) 求 Modifiers.eval("skill.accounting")；无提督传 null（提督不是岗位）
+  expr: "skill == null ? raw : udiv(raw * (buy_divisor - skill + rand(buy_rand)), buy_divisor)"
+  golden: [ { raw: 1000, skill: 500, rand: 0, out: 500 } ]
+formation_lerp:                           # §4 阵型插值
+  impl: vanilla.formation_lerp
+  params: { formation_lerp_frames: 8 }    # s=0..7，t=s/7，含首尾
+npc_cargo:
+  impl: vanilla.npc_cargo
+  params:
+    npc_compact_cargo: true          # 原版 NPC 走 fleet 紧凑货记
 ```
 
 ```yaml
@@ -189,9 +235,8 @@ orders:
 # config/fleets/formations.yaml
 schema: dk4.fleets.formations
 version: 1
-slots: 5
-empty_instance: 0xD0
-lerp_steps: 8
+slots: 5                         # 空位运行时为 null；原版 0xD0 只在 legacy_codec
+lerp_frames: 8
 # 阵型种类原版未还原，先只保留槽规则
 kinds: []
 ```
@@ -201,23 +246,24 @@ kinds: []
 schema: dk4.fleets.templates
 version: 1
 pack: vanilla-world0
-- id: 0
-  key: fleet_000
-  name: null
-  admiral_person_id: 0            # [推断]
-  town_id: 11                     # 里斯本 [推断]
-  x: 0
-  y: 0
-  ships: [0xC2, 0xD0, 0xD0, 0xD0, 0xD0]
-  byte_12: 1
-  byte_13: 0x62
-  byte_14: 0xEC
-  cargo_item_id: 106              # 0x6A
-  flag_16: 0
-  unknown_bytes: [0x00, 0x00, 0x00]  # +0x06,+0x07,+0x17
+templates:
+  - key: vanilla:fleet_000
+    vanilla_index: 0
+    name: null
+    admiral: vanilla:raphael_castro # +0x00 = 0 [推断]；原版 0xEC → null
+    town: vanilla:lisbon            # +0x10 = 11 → CFleet+0x70；原版 0x62 → null（在海）
+    x: 0
+    y: 0
+    ships: [vanilla:carutira]       # hull key；原版字节 0xC2 = 模板槽 194 = hull vanilla_index 94。开局时克隆成新实例，不挂模板
+    byte_12: 1
+    byte_13: 0x62                   # 语义未知的原始字节，原样保留，不当 id 解释
+    byte_14: 0xEC                   # 同上；vfunc_05 不读
+    cargo_item: null                # 原版 0x6A = 空
+    flag_16: 0                      # World1 为 1
+    unknown_bytes: [0x00, 0x00, 0x00]  # +0x06,+0x07,+0x17
 ```
 
-World1 同一 schema，另份 `packs/vanilla-world1/fleets/templates.yaml`。已知差异：舰队 5 的五艘船引用从 `BE BE 9F BD D0` 变成 `C8 7E BD D0 D0`；多条 `flag_16` 不同。
+World1 同一 schema，另份 `packs/vanilla-world1/fleets/templates.yaml`。差异见节 2「World0 vs World1」（57/69 条不同），由导出脚本逐字节生成，禁止手抄。
 
 ## 7. 独立旋钮
 
@@ -233,7 +279,7 @@ World1 同一 schema，另份 `packs/vanilla-world1/fleets/templates.yaml`。已
 事件：
 
 - `FleetSpawned { fleet_id, town_id }`
-- `FleetArrived { fleet_id, town_id }`
+- 到港：不由本系统发；订阅 ocean 的 `ArrivedAtTown { fleet_id, town_id }`
 - `FlagshipChanged { fleet_id, ship_instance_id }`  → 人事订阅并清舱室
 - `ProxyFleetCreated { proxy_fleet_id, admiral_person_id, cost_gold }`
 - `ProxyFleetDisbanded { proxy_fleet_id }`
@@ -246,7 +292,8 @@ World1 同一 schema，另份 `packs/vanilla-world1/fleets/templates.yaml`。已
 - `Fleets.template(fleet_id) -> Template`
 - `Fleets.ships(fleet_id) -> [ship_instance_id]`  （空槽不出现或给 `empty`）
 - `Fleets.flagship(fleet_id) -> ship_instance_id`
-- `Fleets.admiral(fleet_id) -> person_id`
+- `Fleets.admiral(fleet_id) -> person_id?`
+- `Fleets.post_holder(fleet_id, post_key, ship_instance_id?) -> person_id?`  （一级查询，D2；默认旗舰）：玩家舰队按 `03` 的舱室绑定（岗位 → 舱室种类 → 旗舰该舱的担任者）；`captain` 岗对非旗舰取该船 `CShip+0x50`；NPC 舰队无绑定时按 `post_fallback`（原版：提督 / 本船舰长）。替代战斗、航海、经济里的「玩家取岗位 N，否则取提督 / 船长」三分支
 - `Fleets.ledger(ledger_slot) -> { income, expense, investment, last_month }`
 - `Fleets.location(fleet_id) -> { town_id | x, y }`
 
@@ -265,19 +312,20 @@ World1 同一 schema，另份 `packs/vanilla-world1/fleets/templates.yaml`。已
 ### 模板 24 字节里尚未钉死的
 
 - `+0x00` 是否**总是** `person_id`（0–6 很像，舰队 7 = 108「酒馆的掌柜」则不像战斗提督）
-- `+0x01..+0x05` 是 `ship_instance_id`（0–206）还是别的打包值。数值常 ≥ 100，故**不是** `eShip` 船体目录
+- `CFleetShip+0x9`（初值 `0x15`）的含义；NPC 船的耐久 / 水手存在哪里
 - `+0x06..+0x07` 恒 0
 - `+0x12` 取值 `{0,1,7,8,0x0B}`：可能是势力、目标种类或状态
-- `+0x13` 恒像 `0x62`，人物 98 是广场店主
-- `+0x16` 布尔含义
+- `+0x13` 常 `0x62`（= 无港哨兵），少数 `0x2D` / `0x52` / `0x4E`；字段名未知
+- `+0x14` 不被 `vfunc_05` 搬运，谁读它未查到
+- `+0x16` → `CFleet+0x80` 状态位；位 0 含义（位 3 = 在海已确认）
 - `+0x17` 恒 0
 - 未用槽 63–68：`person=0xEC`，船全 `0xD0`，`town=0x62=98`（没有 98 号港）
 
 ### World0 69 条 hex
 
-名称栏原版为空。城镇名按 `+0x10` u16 **对照** `Docs/_data/towns.tsv`，标 `[推断]`。
+名称栏原版为空。`+0x10` 是 u8 `town_id`（`[确认]` 搬到 `CFleet+0x70`，`fn_14000c144` 读它），城镇名按 `Docs/_data/towns.tsv` 对照。
 
-| id | hex | +00 | 五船 | xy | town `[推断]` | +12 | +16 |
+| id | hex | +00 | 五船 | xy | town | +12 | +16 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | 0 | `00c2d0d0d0d0000000000000000000000b000162ec6a0000` | 0 | C2 D0×4 | 0,0 | 11 里斯本 | 01 | 00 |
 | 1 | `01c3d0d0d0d00000000000000000000007000162ec6a0000` | 1 | C3 D0×4 | 0,0 | 7 斯德哥尔摩 | 01 | 00 |

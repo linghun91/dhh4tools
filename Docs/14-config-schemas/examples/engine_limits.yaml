@@ -1,7 +1,7 @@
 schema: dk4.engine_limits
-version: 1
-# 实现硬顶。内容包不可突破。溢出策略一律 saturate，禁止绕回 0。
-# 所属：Docs/13-algorithms/02-caps-ranges.md
+version: 2
+# 实现硬顶。引擎自带，内容包 / 模组不可改。溢出策略一律 saturate，超过则启动失败，禁止绕回。
+# 所属：Docs/13-algorithms/02-caps-ranges.md；键名随 Docs/11-progression/01-level-exp-skills.md §6
 
 overflow: saturate
 
@@ -11,12 +11,10 @@ integer:
   uint32: 4294967295
   int32: 2147483647
 
-level_per_track: 255          # 再高原版 32 位 isqrt 变 0
-total_level: 510              # 255 * 2
-ability_growth_cap: 255       # 六维 uint8
-ability_settled_cap: 65535    # 结算路径曾用 16 位立即数
-skill_cap: 510                # 两段等级之和
-town_develop: 65535           # uint16
-cargo_stack: 255              # 件数 uint8；UI 宽度不是这条
-gold: 2147483647
-exp_per_track: 4294967295
+level_hard: 255               # 原版 isqrt 内 q*0x10000 在 256 级回绕（F-PROG-01）
+ability_stored_hard: 255      # 六维 uint8
+skill_value_hard: 65535
+exp_hard: 4294967295          # uint32
+town_develop_hard: 65535      # uint16
+cargo_stack_hard: 255         # 件数 uint8
+gold_hard: 2147483647

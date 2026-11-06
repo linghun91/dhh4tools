@@ -1,0 +1,32 @@
+schema: dk4.formulas.factions
+version: 1
+# 片段：流行品份额与发信（F-ECO-04/05/06）。所属：Docs/02-factions/03-relations-influence.md、04-letters-licenses.md；总表 Docs/13-algorithms/01-formulas.md
+# 消费方是 factions（订阅 economy 的 SoldFashionGoods），参数只在本文件出现一次（词表 §14-9）；economy 只发事件，不持这些键。
+# 关系、影响力、占领、战争等段见所属文档；宗主上缴金额式在 formulas/tribute.yaml（economy），执行步 factions.suzerain_tribute。
+
+fashion_share_threshold:              # F-ECO-04：每种流行品的件数门槛
+  impl: expr
+  int_mode: vanilla_i32
+  params: { fashion_threshold_numer: 1, fashion_threshold_denom: 2 }   # 原版 ceil(s/2)（0x1402776ea）
+  refs: { cabin_role: cargo_room }    # 货物仓库间数（原版舱室种类 10；不是「扫描 10 格」）
+  inputs: [cargo_rooms]               # Σ Ships.cabin_count(ship_id, cargo_room)，五船合计
+  expr: "(cargo_rooms * fashion_threshold_numer + fashion_threshold_denom - 1) / fashion_threshold_denom"
+  golden: [{cargo_rooms: 5, out: 3}, {cargo_rooms: 4, out: 2}]
+
+fashion_share_gain:                   # F-ECO-05：份额 < share_letter_cut 时；两槽都有流行品时两种都须达标
+  impl: vanilla.fashion_share_gain
+  int_mode: vanilla_i32               # cdq; idiv 6; inc（0x140277dda），有符号
+  params: { fashion_share_div: 6, fashion_gain_add: 1 }
+  inputs: [x0, x1, threshold, share]  # threshold = fashion_share_threshold；结果经 Share.add 封顶（F-ECO-07）
+  modifiers: factions.influence_gain  # 影响力 x0 + x1 的出口，ctx.source: fashion_sale；剧本 2 ×2 由 narrative/scenarios.yaml 注入，公式不再乘
+
+fashion_letter:                       # F-ECO-06：份额 ≥ share_letter_cut 时发介绍信 / 推荐信
+  impl: vanilla.fashion_letter
+  int_mode: vanilla_i32               # 有符号 cmp
+  params:
+    share_letter_cut: 80              # 0x50；低于此走 fashion_share_gain
+    letter_intro_min: 10              # 0x140277e63
+    letter_intro_max: 15              # 0x140277e71
+    letter_recommend_min: 16          # 0x14027805f
+    letter_upgrade_min: 16            # 介绍信升推荐信，独立立即数 0x14027829d
+  inputs: [x, share, letter_state]    # x = x0 + x1（不看 threshold）；letter_state 是枚举 none | intro | recommend

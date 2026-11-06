@@ -1,0 +1,10 @@
+schema: dk4.ships.figureheads
+version: 1
+# 加效果不改公式：向修正器注册表登记贡献（D2）。key 必须已在 modifiers.yaml 注册。
+figureheads:
+  - key: mymod:albatross
+    item: mymod:albatross_figurehead          # 本模组 items.yaml 里另加
+    name_key: mymod:figurehead.albatross.name
+    effects:
+      - { key: fleet.search_radius_add, stage: add, value: 8, scope: fleet_any, stack: once }
+      - { key: fleet.speed, stage: mul, value: { num: 21, den: 20 }, order: 15, scope: fleet_any, stack: once }

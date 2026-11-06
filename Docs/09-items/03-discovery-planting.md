@@ -10,8 +10,8 @@
 
 管：
 
-- kind `plant_discovery`（原版包 id 0–19）→ `trading_item_id` 的声明
-- 广场「如果有那%s，%s会成为这个城市的特产品」这条命令怎么发
+- kind `plant_discovery`（原版包 id 0–19）的持有、消耗与「进交易所时询问」流程（交易品外键归 economy 目录）
+- 进交易所时「如果有那%s，%s会成为这个城市的特产品」这条询问的触发谓词（原版 `fn_1400085d0`）
 - kind `gift`（原版包 id 127–147）在村落的赠礼偏好（区域文案）
 - `CItemMysteryHunting` 只读的配方表（碎片拼合）
 - 上述流程消耗唯一物、发事件；真正改特产品槽交给 economy
@@ -25,7 +25,7 @@
 - 航海护佑 20–23 怎么挡老鼠、坏血病、暴风雨（ocean 读 `voyage_charm` 效果）
 - 广场 UI、选物窗绘制（`CPlazaView`、`CSelectItemView` 是 View）
 
-拆分：items 只说「这件 `item_id` 种下去会变成哪件 `trading_item_id`」。economy 听 `PlantSpecialProduct` 后找空槽写入。禁止 items 直接改 `CTown` 特产品字节。
+拆分：「哪件交易品要哪件发现物」是交易品目录的外键（economy）；items 只负责持有、消耗、发命令。items 向 economy 发**命令** `PlantSpecialProduct`，economy 清该港该槽的待种锁（`plant_lock`）、置交易品发现位后发事件 `SpecialPlanted`，items 收到再交出发现物（`00-overview/10` §13.3）。禁止 items 直接改 `CTown` 特产品字节。触发点是 economy 的 `TradeOpened`（进交易所、卸货之后），不是 town 自定事件。
 
 ## 2. 原版事实
 
@@ -96,17 +96,40 @@ World1 同 231 名，种植行 `+0x18` **大量不同**（01 已记 126 条 rest
 
 两包同一 schema，用内容包覆盖，引擎禁止 `if world==1`。
 
-### 2.3 广场：发现物 → 特产品
+### 2.3 交易所：发现物 → 特产品（`[确认]`，指令还原）
 
-mesfile SC `0x7737` `[确认]`：
+旧稿写「广场 NPC」，错。调用链：`CTownScene::vfunc_02` → `fn_14000e0e3`（body `0x1402764a0`，进**交易所**：先 `CTrade::UnpackFromShip`，再本函数，再播行情寒暄 msg `0x393..0x395`）→ `fn_1400085d0`（body `0x140274be0`，RTC `eSpecialProduct` `eItem` `aeSpecialProduct` `aeItem`）。消息号按 exe 消息表解码（`11-progression/01` §2）：`0x374` 询问、`0x375` 接受、`0x376` 拒绝；即 mesfile 文本偏移 `0x7737` / `0x779f` 一带。
 
-> 你！不把那东西让给我吗！？如果有那%s，%s会成为这个城市的特产品……，怎么样？真的！你是好人，最好的人。
+```
+cands = []
+for item in 0 .. 0xe7-1:                         # NUM_ITEM
+    skip 若 item == 当前某选中项（vtbl+0x20 / fn_140006f19）[未知]
+    skip 若 not fn_1400103a7(item)               # 道具状态 +0x3c 位 2；[推断] 已持有
+    skip 若 kind(item) != 0                      # fn_14000598e：只认 kind 0
+    for slot in 0 .. 4:                          # NUM_SPECIALPRODUCT
+        t = town.special_slot(slot)              # fn_140009101；0x6a = 空
+        if t == 0x6a: continue
+        if TradingItem[t].unlock_item != item: continue  # 交易品目录 +11（运行时 +0x15），fn_140004dc2
+        if not town.slot_bit0(slot): continue           # fn_140010375：该槽「待发现物」锁位
+        if town.slot_value(slot) < slot.threshold: continue   # fn_14000bc03（港运行时 +0x1e+2*slot）vs 槽 WORD+2（上架门槛）
+        cands.append((item, slot))
+if cands:
+    (item, slot) = cands[rand(len)]              # fn_140005272，均匀
+    ask msg 0x374(item 名, 交易品名)
+    yes: fn_14000513c(t)                         # 交易品置全局发现位
+         fn_140012dc3(town, slot)                # 清该槽 bit0
+         道具所有者改成类型 6（交出，消耗）       # fn_140127040(&o, 6) + fn_140010393
+         msg 0x375「真的！你是好人，最好的人。」
+    no:  msg 0x376「是吗，你真小气。」
+```
 
-拒绝 `0x779f`：「是吗，你真小气。」上下文是广场人群（同段有阿科布、流行、投资），不是海上探索。
+要点：
 
-两个 `%s`：第一件是手上的发现物（`eItem` 名），第二件是将出现的交易品（`eTradingItem` 名）`[推断]`。没有还原出填槽函数，经济侧只承认「收到解锁槽命令」。
-
-世界表 97 港 × 5 槽里，空槽 `item_id=106` 共 45 个 `[确认]` `towns_world0.json`。攻略所谓「原产物导入才出现的特产品」与这 45 个空位同一数量级，但是否一一对应 `[未知]`。
+- 目标港由**港口自己的 5 槽**决定：槽里早已写好该交易品，只是 bit0 锁着。不是「找空槽写入」，与 45 个 106 空槽无关。
+- 「发现物 → 交易品」外键在**交易品目录** +11（`04-economy/01` §2.1），不在 `SItem`；`SItem +0x18` 不参与。
+- 每次进交易所最多问一次，候选里随机挑一个。
+- 槽值未到门槛不问；同港多槽同时满足时只出一个。
+- 接受后交易品全局变「已发现」，其它港同槽仍各受 bit0 / 门槛约束。
 
 鲨鱼幼鱼：ocean 文案「得到了鲨鱼的幼鱼」「也许会成为新的交易品」（`0x4A0F`、`0x11473`）。那是获得 id 4 的途径，不是种植公式。目录里已有交易品鱼翅（21）。
 
@@ -143,32 +166,32 @@ mesfile SC `0x7737` `[确认]`：
 
 ### 2.5 发现物对应哪件交易品
 
-`SItem` 里**没有** `eTradingItem` 字段 `[确认]` 布局。对照只能靠名称 + 百科 + 口味 `[推断]`：
+`SItem` 里没有 `eTradingItem` 字段；外键反向写在交易品目录 +11（exe `.data 0x140688190`，`04-economy/01-trading-items.md` §2.1）`[确认]`。一件发现物可对应多件交易品：
 
-| eItem | 交易品 id | key | 依据 |
-| ---: | ---: | --- | --- |
-| 0 南瓜种子 | 7 | pumpkin | 名称；汉堡槽已有 7 |
-| 1 番茄苗 | 9 | tomato | 名称；百科「红茄子」 |
-| 2 香蕉树 | 10 | banana | 名称 |
-| 3 蜜蜂窝 | 12 | honey | 说明写蜂蜜 |
-| 4 小鲨鱼 | 21 | shark_fin | 海洋「新交易品」+ 百科鱼翅 |
-| 5 胡椒粒 | 22 | pepper | 名称 |
-| 6 丁香粒 | 23 | clove | 名称 |
-| 7 肉桂树 | 25 | cinnamon | 名称 |
-| 8 甜椒果 | 26 | allspice | SC 短名「甜椒」；备选辣椒 30，未钉 |
-| 9 咖啡树 | 31 | coffee | 名称 |
-| 10 茶树 | 32 | tea | 名称 |
-| 11 可可果 | 33 | cacao | 名称 |
-| 12 烟草苗 | 34 | tobacco | 名称 |
-| 13 炼金术书 | — | — | 「矿石」；具体 `eTradingItem` `[未知]` |
-| 14 玻璃辞典 | 42 | glassware | 名称 |
-| 15 蚕 | 49 | silk | 说明吐丝；汉城槽有 49 |
-| 16 织布机 | — | — | 「纺织」；伦敦/毛织品 51 是候选，未钉 |
-| 17 珍珠贝 | 73 | pearl | 名称 |
-| 18 中医宝典 | — | — | 「中药」；人参 80 / 冬虫夏草 83 都可能 |
-| 19 山竹果种子 | 89 | mangosteen | 名称；马六甲槽有 89 |
+| eItem | 交易品 id | World0 有此货槽的港数 |
+| ---: | --- | ---: |
+| 0 南瓜种子 | 7 南瓜 | 6 |
+| 1 番茄苗 | 9 番茄 | 7 |
+| 2 香蕉树 | 10 香蕉 | 10 |
+| 3 蜜蜂窝 | 12 蜂蜜、102 蜡 | 6 |
+| 4 小鲨鱼 | 20 鱼子酱、21 鱼翅 | 4 |
+| 5 胡椒粒 | 22 胡椒 | 6 |
+| 6 丁香粒 | 23 丁香 | 5 |
+| 7 肉桂树 | 25 肉桂 | 5 |
+| 8 甜椒果 | 26 | 3 |
+| 9 咖啡树 | 31 咖啡 | 12 |
+| 10 茶树 | 32 茶 | 7 |
+| 11 可可果 | 33 可可 | 5 |
+| 12 烟草苗 | 34 烟草 | 10 |
+| 13 炼金术书 | 41 白金 | 2 |
+| 14 玻璃的制作辞典 | 42 玻璃 | 7 |
+| 15 蚕 | 49 丝绸 | 7 |
+| 16 织布机 | 51–54 四种织品 | 21 |
+| 17 珍珠贝 | 73 珍珠 | 4 |
+| 18 中医宝典 | 83 冬虫夏草 | 1（杭州） |
+| 19 山竹果种子 | 89 山竹果 | 4 |
 
-未钉的三行 YAML 写 `trading_item_id: null`。禁止为填表编造。
+港数按 `towns_world0.json` 槽内交易品统计；哪些槽 bit0 初始置位（真正需要发现物）在运行时初值段，未拆 `[未知]`。旧稿按名称猜的表（甜椒/炼金术书/织布机/中医宝典「未钉」）作废。
 
 ### 2.6 村落赠礼
 
@@ -243,11 +266,11 @@ kind 6 碎片 14 件，id 174–187，标价一律 100，World0 `+0x18=98` `[确
 | 航海护佑 | `item_id` kind 1 | 4（20–23） | — | **不**进种植表 |
 | 赠礼 | `item_id` kind 7 | 21（127–147） | — | `planting.yaml` `gifts` |
 | 碎片 | `item_id` kind 6 | 14（174–187） | — | `hunting.yaml` 材料 |
-| 特产品槽 | `(town_id, slot 0–4)` | 每港 5 | `trading_item.empty=106` | 不拥有；命令 economy |
-| 关联港字节 | `item.+0x18` | 0–96 或 98 | 98 = 未绑 `[推断]` | 内容字段 `anchor_town_id` |
+| 特产品槽 | `(town, slot)` | 每港 5 | 空槽运行时 `None`（原版 106 只在导入层） | 不拥有；查询 / 事件给 economy |
+| 关联港字节 | `item.+0x18` | 0–96 或 98 | 98 = 未绑 `[推断]` | 内容字段 `anchor_town: Option<town key>`；98 只在 `ids/legacy_codec.yaml` 解成 `null` |
 | 村落 | `village_id` | 24 | -1 | 赠礼目标；定义在 world |
 | 配方 | `recipe_id` / key | 原版未计数 | — | `hunting.yaml` 表长 |
-| 区域标签 | `region_tag` | 文案 7 圈级 | — | 北海…新大陆；不是 `eSeaArea` |
+| 区域标签 | `region_tag` | 文案级 | — | 与七大海域重合的直接用 `major_sea` key（`config/world/major_seas.yaml`：north_sea…new_world）；`black_sea` `tropics` `china` 是纯文案 tag。不是 `eSeaArea` |
 
 禁止：
 
@@ -256,7 +279,7 @@ kind 6 碎片 14 件，id 174–187，标价一律 100，World0 `+0x18=98` `[确
 - 把 20–21 写进种植成功路径
 - 把 191 藏宝图写进 `hunting.yaml` 产出
 
-模组可加种植行，id 不覆盖 0–230。引擎按表长，不写死 20。
+模组加种植行用命名空间字符串 key（如 `mymod:saffron_bulb`），整数在加载时分配；引擎按表长，不写死 20。
 
 ## 4. 算法 / 公式
 
@@ -265,49 +288,43 @@ kind 6 碎片 14 件，id 174–187，标价一律 100，World0 `+0x18=98` `[确
 ### 4.1 参数
 
 ```
-# config/items/planting.yaml 与 caps 共用
-unbound_town_id          = 98        # +0x18 哨兵，NUM_TOWN+1
-special_slots_per_town   = 5         # NUM_SPECIALPRODUCT
-empty_trading_item_id    = 106       # ITEM_EMPTY
-item_unique_stack        = 1         # 发现物不堆叠
-consume_on_plant         = true      # [推断] 交出去才能变特产品
+# config/items/planting.yaml
+item_unique_stack        = 1         # 发现物不堆叠（caps）
+consume_on_plant         = true      # [确认] 所有者改类型 6
 consume_on_gift          = true      # [推断] 「给我」
 consume_on_combine       = true      # [推断] 拼合
 ```
 
-### 4.2 种植
+每港槽数读 economy 的槽表长；原版哨兵 98（未绑港）、106（空货）只在 `ids/legacy_codec.yaml`（D1），本表不出现。
 
-广场 NPC 开口的条件未还原。重构只提供查询，由 town-life / narrative 决定何时播 `0x7737`。
+### 4.2 种植（原版谓词已还原，见 2.3）
 
 ```
-function can_plant(town_id, item_id, fleet_id) -> bool:
-    row = Planting.get(item_id)
-    if row is none: return false                 # 非种植行（含 20–21）
-    if not Items.owned(fleet_id, item_id): return false
-    if row.trading_item_id is none: return false # 未钉交易品，禁止猜
-    slots = Economy.specials(town_id)            # LIVE
-    if any slot.item_id == row.trading_item_id: return false   # 已是特产品
-    if not any slot.item_id == empty_trading_item_id: return false
-    # climate_tags ∩ town.region_tags ：[未知] 是否为硬条件
-    # vanilla 先不拦；内容包可开 require_region: true
-    return true
+on TradeOpened { session_id, fleet_id, town_id }:    # economy 事件；原版：进交易所、卸货之后
+    cands = []
+    for item_id in Items.owned_by_kind(fleet_id, plant_kinds):      # vanilla: [plant_discovery]
+        for slot in Economy.specials(town_id):                      # LIVE，表长 = 该港槽数
+            t = slot.trading_item_id
+            if t is none: continue
+            if t not in Economy.plant_items_of(item_id): continue   # 交易品目录外键（发现物 → [交易品]）
+            if not slot.plant_lock: continue                        # 原版 bit0
+            if slot.value < slot.listing_threshold: continue        # 原版 +0x1e+2k vs WORD+2
+            cands.append((item_id, slot.index))
+    if cands is empty: return
+    (item_id, slot) = pick(cands, plant_pick, rng = "items.plant")  # vanilla: uniform；命名随机流（D7）
+    emit PlantOffered { town_id, slot, item_id, trading_item_id }   # UI 播询问
 
-function plant(town_id, item_id, fleet_id):
-    if not can_plant(...):
-        emit PlantRejected { town_id, item_id, reason }
-        return                       # 「你真小气」走 UI，不扣物
-    Items.DiscardItem { fleet_id, item_id }      # unique → 0
-    emit PlantSpecialProduct {
-        town_id,
-        trading_item_id: row.trading_item_id,
-        item_id
-    }
-    # economy 订阅后：找一个 empty 槽写入 trading_item_id，发 SupplyChanged
+on AcceptPlant { fleet_id, town_id, slot, item_id }:
+    r = PlantSpecialProduct { fleet_id, town_id, slot, item_id }   # 命令 → economy（00-overview/10 §13.3）；economy 置发现位 + 清该槽 plant_lock
+    if r is null: emit PlantRejected { town_id, item_id, reason: slot_not_awaiting }
+
+on SpecialPlanted { town_id, slot, trading_item, fleet_id, item_id }:   # economy 唯一发出（词表 §14-25）
+    Items.discard(fleet_id, item_id)                                # fleet_id 由载荷带回，不自持待决记录；consume_on_plant；原版物主改类型 6（fn_140127040(&o,6) + fn_140010393）
 ```
 
-`anchor_town_id`（`+0x18`）**不**参与 `can_plant`。它只是内容注释 / 百科「原产地」。
+`plant_items_of` 归 economy（交易品目录 +11，外键 `unlock_item`；旧名 `plant_item`，词表 §14-2），items 不再存 `trading_item_id`。重构允许一对多（vanilla 已有：蜜蜂窝→蜂蜜/蜡、织布机→四种织品）。
 
-气候标签是内容，不是 `CClimate`。`require_region` 默认 false，与气候文档「闲聊不进逻辑表」一致。
+`anchor_town`（`+0x18`）**不**参与。气候/区域标签只用于文案，原版没有区域判定。
 
 ### 4.3 村落赠礼
 
@@ -321,7 +338,7 @@ function present_gift(village_id, gift_item_id, fleet_id):
     liked = region_match(row.liked_region_tags, village.region_tags)
     # liked 只影响文案/报酬表；匹配规则 [未知]
     if consume_on_gift:
-        Items.DiscardItem { fleet_id, gift_item_id }
+        Items.discard(fleet_id, gift_item_id)
     emit VillageGiftPresented {
         village_id,
         gift_item_id,
@@ -349,8 +366,8 @@ function combine(fleet_id, item_ids: [item_id]):
         if not Items.owned(fleet_id, id): return
     if recipe.consume_inputs:
         for id in recipe.inputs:
-            Items.DiscardItem { fleet_id, id }
-    Items.AcquireItem { fleet_id, recipe.output_item_id }
+            Items.discard(fleet_id, id)
+    Items.acquire(fleet_id, recipe.output_item_id)
     emit ItemsCombined { fleet_id, recipe_key, output_item_id }
 ```
 
@@ -362,8 +379,8 @@ function combine(fleet_id, item_ids: [item_id]):
 
 原版：
 
-- 广场对话、选物、特产品槽、世界表 `+0x18` 搅在一起
-- 种植成功直接改港口 5 槽（函数未还原，但 mesfile 与空槽并存）
+- 交易所入口函数里顺手扫全部 231 件道具 × 5 槽，读交易品目录外键、港口槽锁位与门槛，再直接改发现位与槽锁（`fn_1400085d0`）
+- 外键反向放在交易品目录，道具表不知道自己能种成什么
 - 赠礼、情报、位置提示同一段 mesfile
 - `CItemMysteryHunting` 既是 View 又可能被探索/港口打开
 - World0 / World1 用 DLL 换关联港，逻辑仍是同一份 exe
@@ -371,10 +388,12 @@ function combine(fleet_id, item_ids: [item_id]):
 重构：
 
 ```
-items.planting.yaml  --PlantSpecialProduct-->  economy.unlock_slot
+items  --query plant_items_of(item) / specials(town)--> economy
+items  --PlantSpecialProduct（命令）-->  economy（置发现位 + 清槽锁）
+economy --SpecialPlanted-->  items（交出发现物）
 items.planting.yaml  --VillageGiftPresented-->  narrative / ocean（报酬）
 items.hunting.yaml   --ItemsCombined-->         items 库存
-town-life plaza      只决定何时问「让给我吗」
+economy trade        进交易所时发 TradeOpened，items 据此评估候选
 world                只提供 town_id / village_id / region_tags
 ocean                只负责搜到幼鱼、发现村；不填特产品
 remains / 地点地图   不进本表
@@ -389,92 +408,52 @@ economy 不读 `eItem`。world 不读背包。combat 不出现。
 schema: dk4.items.planting
 version: 1
 pack: vanilla-world0
-unbound_town_id: 98
-consume_on_plant: true          # [推断]
+consume_on_plant: true          # [确认] 所有者改类型 6
 consume_on_gift: true           # [推断]
 require_region: false           # 气候句默认不进判定
-region_tags:                    # 文案圈，不是 eSeaArea
+region_tags:                    # 文案用；前 7 个即 major_sea key
   - north_sea
   - mediterranean
-  - black_sea
   - africa
-  - tropics
   - indian_ocean
   - se_asia
   - east_asia
-  - china
   - new_world
+  - black_sea                   # 纯文案 tag
+  - tropics
+  - china
 
-plants:
-  - item_id: 0
-    key: pumpkin_seed
-    trading_item_id: 7          # pumpkin [推断] 名称
-    anchor_town_id: 98          # World0 +0x18
-    region_tags: [north_sea]
-    unknown_bytes:
-      plus_15: 8
-      plus_16: 24
-      plus_17: 0
-      plus_19: 8
+plant_kinds: [vanilla:plant_discovery]   # 原版只认 kind 0
+plant_pick: uniform              # 多候选时的挑法；随机流 items.plant
+trigger: trade_opened            # 原版 fn_14000e0e3
 
-  - item_id: 1
-    key: tomato_seedling
-    trading_item_id: 9
-    anchor_town_id: 98
-    region_tags: [mediterranean]
-
-  - item_id: 5
-    key: peppercorn
-    trading_item_id: 22
-    anchor_town_id: 42          # 卡利卡特；不是种植目标
+plants:                          # 只放 items 自己的内容；交易品外键在 economy 目录 unlock_item
+  - item: vanilla:pumpkin_seed
+    anchor_town: null           # World0 +0x18=98；不参与判定
+    region_tags: [north_sea]    # 口味文案用
+    unknown_bytes: { plus_15: 8, plus_19: 8 }
+  - item: vanilla:peppercorn
+    anchor_town: vanilla:calicut        # +0x18=42
     region_tags: [se_asia]
-
-  - item_id: 8
-    key: bell_pepper
-    trading_item_id: 26         # allspice；备选 30 chili，见第 9 节
-    anchor_town_id: 61          # 哈瓦那
-    region_tags: [africa]
-
-  - item_id: 13
-    key: alchemy_book
-    trading_item_id: null       # 「矿石」未钉到具体 id
-    anchor_town_id: 98
-    region_tags: [africa]
-
-  - item_id: 16
-    key: loom
-    trading_item_id: null       # 纺织类未钉
-    anchor_town_id: 0           # 伦敦
-    region_tags: [north_sea, mediterranean]
-
-  - item_id: 19
-    key: mangosteen_seed
-    trading_item_id: 89
-    anchor_town_id: 47          # 马六甲
-    region_tags: [se_asia]
-
-# id 2–4, 6–7, 9–12, 14–15, 17–18 按第 2.5 节填；20–21 禁止出现在 plants
+# voyage_charm（20–21）禁止出现在 plants
 
 gifts:
-  - item_id: 127
-    key: frozen_rose
+  - item: vanilla:frozen_rose
     liked_region_tags: [north_sea]
-    anchor_town_id: 98
+    anchor_town: null
     rewards: []                 # [未知]
-  - item_id: 130
-    key: bread_mortar
+  - item: vanilla:bread_mortar
     liked_region_tags: [north_sea]
-    anchor_town_id: 25          # 亚历山大；口味却是北欧 [未知] 对齐
+    anchor_town: vanilla:alexandria     # +0x18=25；口味却是北欧 [未知] 对齐
     rewards: []
-  - item_id: 147
-    key: rainbow_parrot
+  - item: vanilla:rainbow_parrot
     liked_region_tags: [new_world]
-    anchor_town_id: 98
+    anchor_town: null
     rewards: []
 # 其余 127–147 按 2.6 表
 ```
 
-World1 包只覆盖 `anchor_town_id`（及 rest 未命名字节），不换 schema。例：World1 南瓜 `anchor_town_id: 65`。
+World1 包只覆盖 `anchor_town`（及 rest 未命名字节），不换 schema。例：World1 南瓜 `anchor_town: vanilla:veracruz`。
 
 ```yaml
 # config/items/hunting.yaml
@@ -486,36 +465,37 @@ consume_inputs: true            # [推断]
 ui_object_size: 0x320           # 析构立即数；给 UI，不给判定
 
 recipes:
-  - key: mystery_slate
-    inputs: [176, 183]          # 石板上 / 下
-    output_item_id: null        # 未钉，禁止猜
+  - key: vanilla:mystery_slate
+    inputs: [vanilla:mystery_slate_top, vanilla:mystery_slate_bottom]
+    output: null                # 未钉，禁止猜
     consume_inputs: true
 
-  - key: bamboo_craft
-    inputs: [179, 186]
-    output_item_id: null
+  - key: vanilla:bamboo_craft
+    inputs: [vanilla:tang_bamboo_craft, vanilla:bamboo_craft_diagram]
+    output: null
 
-  - key: sun_sheath
-    inputs: [180, 187]
-    output_item_id: null
+  - key: vanilla:sun_sheath
+    inputs: [vanilla:ritual_knife, vanilla:sun_pattern_sheath]
+    output: null
 
 # 其余 8 件碎片不成对名称：不进 recipes，留 unknown_fragments
-unknown_fragments: [174, 175, 177, 178, 181, 182, 184, 185]
+unknown_fragments: [vanilla:old_parchment, vanilla:patterned_cloth, vanilla:unwithering_lotus, vanilla:ancient_kingdom_coin,
+                    vanilla:red_dye, vanilla:brass_oil_lamp, vanilla:kushan_platter, vanilla:lotion_jar]
 ```
 
 `01` 里的 `config/items/recipes.yaml` 并入本文件，不再单列第三份真相。
 
-地点地图、藏宝图、贤者地图的「揭示遗迹」仍在 `items.yaml` 的 `unlock_remain` / `unlock_village`，由 world 订阅。本文件不写 `remain_id`。
+地点地图、藏宝图、贤者地图的「揭示遗迹」仍在 `items.yaml` 的 op `mark_remains_discovered` / `mark_village_discovered`（旧名 `unlock_remain` / `unlock_village`）：items 发命令 `World.mark_*_discovered(id, via: item, item_id)`，world 置位并发事件（词表 §14-23）。本文件不写 `remains_id`。
 
 ## 7. 独立旋钮
 
 | 旋钮 | 文件 | 改它不必动 |
 | --- | --- | --- |
-| 种植行、交易品外键 | `planting.yaml` | economy 只收 `trading_item_id` |
-| `anchor_town_id` / World1 差 | 内容包 | 判定默认不读它 |
+| 种植行（口味、关联港） | `planting.yaml` | 交易品外键在 economy 目录 `unlock_item` |
+| `anchor_town` / World1 差 | 内容包 | 判定默认不读它 |
 | `require_region`、区域标签 | `planting.yaml` | 气候系统、海域表 |
-| `consume_on_plant` / gift / combine | 同上 / hunting | 库存仍走 `DiscardItem` |
-| 空槽哨兵、每港槽数 | `caps.yaml` | 与 economy 共用 |
+| `consume_on_plant` / gift / combine | 同上 / hunting | 库存仍走 `Items.discard` |
+| 每港槽数 | economy 槽表长 | 本系统按表长循环 |
 | 赠礼喜欢哪一圈 | `gifts[].liked_region_tags` | 村落坐标 |
 | 配方输入/产出 | `hunting.yaml` | UI 只列材料 |
 | `CItemMysteryHunting` 矩形 | ui 布局 | 配方表 |
@@ -528,20 +508,20 @@ unknown_fragments: [174, 175, 177, 178, 181, 182, 184, 185]
 
 ```
 Planting.get(item_id) -> PlantRow | none
-Planting.can_plant(town_id, item_id, fleet_id) -> bool
+Planting.offer_candidates(town_id, fleet_id) -> [(item_id, slot)]
 Planting.gift(item_id) -> GiftRow | none
 Hunting.match([item_id]) -> Recipe | none
 Hunting.recipes() -> [Recipe]
 ```
 
-`PlantRow = { item_id, trading_item_id | null, anchor_town_id, region_tags }`  
-`GiftRow = { item_id, liked_region_tags, anchor_town_id, rewards }`  
-`Recipe = { key, inputs, output_item_id | null, consume_inputs }`
+`PlantRow = { item, anchor_town | null, region_tags }`；交易品外键查 `Economy.plant_items_of`。
+`GiftRow = { item, liked_region_tags, anchor_town | null, rewards }`  
+`Recipe = { key, inputs, output | null, consume_inputs }`
 
 命令：
 
 ```
-PlantSpecial { fleet_id, town_id, item_id }      # 本系统检表、扣物、发事件
+AcceptPlant { fleet_id, town_id, slot, item_id }  # 回应 PlantOffered；向 economy 发命令 PlantSpecialProduct { fleet_id, town_id, slot, item_id }，收到 SpecialPlanted 后按载荷 fleet_id + item_id 扣物
 PresentVillageGift { fleet_id, village_id, item_id }
 CombineItems { fleet_id, item_ids }              # 与 01 相同，改查 hunting.yaml
 ```
@@ -549,23 +529,28 @@ CombineItems { fleet_id, item_ids }              # 与 01 相同，改查 huntin
 事件：
 
 ```
-PlantSpecialProduct { town_id, trading_item_id, item_id }
-PlantRejected { town_id, item_id, reason }       # not_owned / not_plant / no_empty_slot / already_special / output_unspecified
+PlantOffered { town_id, slot, item_id, trading_item_id }    # UI 播 msg 0x374
+PlantRejected { town_id, item_id, reason }       # declined / not_owned / slot_not_awaiting
 VillageGiftPresented { village_id, gift_item_id, matched }
 ItemsCombined { fleet_id, recipe_key, output_item_id }
 CombineRejected { item_ids, reason }
 ```
 
-economy 订阅 `PlantSpecialProduct` 后：
+订阅：`TradeOpened`（economy，种植询问触发）、`SpecialPlanted`（economy，交出发现物）。
+
+economy 执行命令 `PlantSpecialProduct` 时（原版 `fn_14000513c` + `fn_140012dc3`；接口归 `04-economy/04` §2.9，items 不调用）：
 
 ```
-Economy.unlock_special_slot(town_id, trading_item_id)
-# 写第一个 empty 槽；没有空槽则发 SupplyUnchanged，items 不负责回滚（事务在命令里先 can_plant）
+交易品置全局发现位                                 # fn_14000513c
+清该槽 plant_lock（bit0）                          # fn_140012dc3；槽里的交易品原本就在，不写新槽
+emit SpecialPlanted { town_id, slot, trading_item, fleet_id, item_id }   # fleet_id / item_id 原样取自命令（词表 §14-25）
 ```
 
-查询 world：`Village.def` / `Village.discovered` / `town.region`。查询 economy：`specials(town_id)`。不反向写。
+`AcceptPlant` 先 LIVE 复核候选仍成立（持有、槽仍 plant_lock、值仍过门槛），不成立发 `PlantRejected`，不扣物。
 
-存档：不另存种植表。状态是「背包有没有这件发现物」+「该港槽里是不是已经有这件交易品」。读档后不必重建派生缓存。
+查询 world：`Village.def` / `Village.discovered` / `Towns.def(town_id).culture`。查询 economy：`specials(town_id)`。不反向写。
+
+存档：不另存种植表。状态是「背包有没有这件发现物」+ economy 的「交易品发现位」「港槽待种锁」。读档后不必重建派生缓存。
 
 UI 回调只带 `fleet_id` + `town_id`/`village_id` + `item_id`。人已离队、村未发现、港已卸载：no-op。
 
@@ -573,13 +558,13 @@ UI 回调只带 `fleet_id` + `town_id`/`village_id` + `item_id`。人已离队�
 
 | 项 | 来源 | 等级 |
 | --- | --- | --- |
-| 广场开口的完整谓词（是否要空槽、是否看区域、是否看份额） | 仅 mesfile `0x7737` | `[未知]` |
-| 种植是否必须消耗发现物 | 文案「让给我」 | `[推断]` true |
+| 种植询问谓词 | `fn_1400085d0` 指令 | `[确认]`（2.3） |
+| 「当前选中项」排除（vtbl+0x20 / `fn_140006f19`） | 同上 | `[未知]` |
+| 道具状态 `+0x3c` 位 2 = 已持有 | `fn_1400103a7` | `[推断]` |
+| 港运行时 `+0x1e+2*slot` 的语义（与商业发展度关系） | `fn_14000bc03` | `[推断]` |
+| 各港槽 bit0（待种锁）初值 | 运行时初值段 | `[未知]` |
 | `+0x18` 除关联港以外的用法 | 全表统计 | `[推断]` 港 id / 98；种植判定不用 |
 | `+0x15/+0x16/+0x19` 在 kind 0 上的含义 | hex | `[未知]` |
-| 炼金术书 / 织布机 / 中医宝典 → 哪件 `eTradingItem` | 只有种类口味 | `[未知]` |
-| 甜椒果 = 26 还是 30 | SC 短名 vs 「辣椒的一种」说明 | `[推断]` 先 26 |
-| 45 个空槽是否就是种植目标全集 | 数量相近 | `[未知]` |
 | World1 `+0x18` 差是否改「原产地」叙事 | 两包 hex | `[确认]` 有差；语义仍按关联港 |
 | `0x84cf` 链是否就是村落赠礼 | 选物 +「给我」 | `[推断]` 赠礼 UI；可能与酒馆共用 |
 | 赠礼成功报酬 | 无函数 | `[未知]` 禁止编造「必掉南瓜种子」 |

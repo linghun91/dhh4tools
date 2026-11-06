@@ -1,0 +1,40 @@
+schema: dk4.narrative.scenarios
+version: 3
+# 片段。所属：Docs/10-narrative/01-scenarios.md（字段以该篇 §6 为准）；D5：公式与引擎不比较剧本号。
+# flags → 布尔开关，公式 enabled_by: scenario_flag.<key>；modifiers → ScenarioSelected 时注入修正器注册表（source = scenario:vanilla:raphael 形式）。
+# 乘除差异一律走 modifiers（D5），不用旗标；修正器 key 见 modifiers.yaml / 10-key-glossary §6.2。
+# 剧本 → 玩家势力字段 player_force（旧名 protagonist_force 作废，词表 §14-1）。key 定义行与引用都写全命名空间（§14-4）。
+# 开局舰队不在本表：narrative/starting_fleets.yaml 以剧本 key 登记（05-ships-fleet/05，§14-12）。
+
+scenarios:
+  - key: vanilla:raphael
+    vanilla_index: 0                       # 原版 eScenario；只供导入
+    protagonist: vanilla:raphael_castro
+    player_force: vanilla:castro           # fn_140009df9 表 {0,2,1,3,20,13,21}[0]
+    world_pack: vanilla-world0             # 原版 fn_14000ff60 写死 scenario >= 4 → World1；重构只看本字段
+    event_pack: vanilla-ev0
+    map_point_unlock_table: vanilla:map_point_unlock_0      # 港口地图点解锁表（01-world/10）；先过据点港门再查表（§14-11）
+    modifiers:
+      - { key: request.reward_gold,         stage: mul, value: { num: 3, den: 2 } }    # 委托报酬 ×3/2
+      - { key: invest.military_min_fee_pct, stage: mul, value: { num: 8, den: 10 } }   # 军事投资八折
+      - { key: factions.influence_gain,     stage: mul, value: { num: 2, den: 1 }, when: { source: remains } }   # 遗迹首访影响力 ×2
+
+  - key: vanilla:lulu
+    vanilla_index: 2
+    protagonist: vanilla:lulu_agate
+    player_force: vanilla:agate
+    world_pack: vanilla-world0
+    event_pack: vanilla-ev2
+    modifiers:
+      - { key: trade.sell_price_pct,    stage: mul, value: { num: 105, den: 100 } }
+      - { key: factions.influence_gain, stage: mul, value: { num: 2, den: 1 }, when: { source: fashion_sale } }   # 流行品影响力 ×2；公式里不再乘
+
+  - key: vanilla:tia
+    vanilla_index: 6
+    protagonist: vanilla:tia_chaska
+    player_force: vanilla:quintin_veras
+    world_pack: vanilla-world1
+    event_pack: vanilla-ev6
+    flags:
+      pay_suzerain_tribute: true           # 宗主 / 附庸税开关：factions.suzerain_tribute 在 forces 阶段执行（§14-20）；金额式 formulas/tribute.yaml enabled_by: scenario_flag.pay_suzerain_tribute
+    modifiers: []

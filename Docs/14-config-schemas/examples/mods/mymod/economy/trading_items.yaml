@@ -1,0 +1,11 @@
+schema: dk4.economy.trading_items
+version: 1
+# 新 ID：只写 key，整数由加载器分配（见 ids/generated.snippet.yaml 的 mymod:tea_brick）。
+items:
+  - key: mymod:tea_brick
+    name_key: mymod:trading_item.tea_brick.name
+    kind: vanilla:stimulant
+    data_price: 2600
+    grade_step: 500
+    initially_discovered: false
+    unlock_item: null

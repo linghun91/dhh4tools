@@ -1,90 +1,31 @@
 schema: dk4.world.towns
-version: 1
-# 原版内容包片段。数据：Docs/_data/towns_world0.json
-# 坐标是原版单位，不是 World.dat 2500×2500 下标；换算 [未知]，禁止擅自 /8。
-# region 是否等于 eCountry [未知]。市价不在本表。
+version: 2
+# 原版内容包片段。数据：Docs/_data/towns_world0.json。所属：Docs/01-world/02-towns.md
+# 只放 world 字段（含发展度初值 develop_initial）。特产品槽 → economy/special_products.yaml；份额槽 +0x4C → factions/town_shares_initial.yaml；
+# 流行 +0x7E → factions/fashion_initial.yaml；地图点 +0x48 → town/town_map_points.yaml（D10 按所有权拆）。
+# 坐标与航行坐标同一空间 [推断]；/16 → World.dat 2500×1250 chip 下标（01-world/01）。
 
 towns:
-  - id: 0
-    key: london
-    name: 伦敦
-    name_i18n:
-      zh-CN: 伦敦
-    x1: 20080
-    y1: 4272
-    x2: 20136
-    y2: 4280
+  - key: vanilla:london
+    vanilla_index: 0
+    name_key: town.london.name
+    coords: { space: original, x1: 20080, y1: 4272, x2: 20136, y2: 4280 }
     is_capital: true
-    region: 0
+    culture: vanilla:england       # 原 +0x25（JSON culture_id 0）→ factions/cultures.yaml
+    remains: vanilla:stonehenge    # 原 +0x26（JSON remains_id 0）
+    known_at_start: true           # +0x46 bit0
+    develop_initial: { commerce: 4600, military: 4400 }   # +0x52 2×u16；发展度归 world Towns（06）
     unknown:
-      b38: 0
-      b39: 0
-    special_products:
-      - slot: 0
-        trading_item_id: 99
-        supply_or_price: 4500
-        grade: 15
-        empty: false
-      - slot: 1
-        trading_item_id: 47
-        supply_or_price: 2000
-        grade: 25
-        empty: false
-      - slot: 2
-        trading_item_id: 51
-        supply_or_price: 2000
-        grade: 25
-        empty: false
-      - slot: 3
-        trading_item_id: 90
-        supply_or_price: 4000
-        grade: 12
-        empty: false
-      - slot: 4
-        trading_item_id: 91
-        supply_or_price: 3500
-        grade: 12
-        empty: false
-    unknown_bytes: "01007f01000004501a001a00f811301100000000000000000000000026020f000000590119000000e501190000007e040c00000060090c006a006a000c00"
+      byte_0x27: 0
 
-  - id: 1
-    key: bristol
-    name: 布里斯托尔
-    name_i18n:
-      zh-CN: 布里斯托尔
-    x1: 19632
-    y1: 4304
-    x2: 19624
-    y2: 4312
+  - key: vanilla:bristol
+    vanilla_index: 1
+    name_key: town.bristol.name
+    coords: { space: original, x1: 19632, y1: 4304, x2: 19624, y2: 4312 }
     is_capital: false
-    region: 0
+    culture: vanilla:england
+    remains: null                  # 原版 26 = 无，只在 legacy_codec
+    known_at_start: true
+    develop_initial: { commerce: 1500, military: 1800 }
     unknown:
-      b38: 26
-      b39: 0
-    special_products:
-      - slot: 0
-        trading_item_id: 6
-        supply_or_price: 1000
-        grade: 12
-        empty: false
-      - slot: 1
-        trading_item_id: 47
-        supply_or_price: 2000
-        grade: 20
-        empty: false
-      - slot: 2
-        trading_item_id: 51
-        supply_or_price: 1500
-        grade: 15
-        empty: false
-      - slot: 3
-        trading_item_id: 92
-        supply_or_price: 1000
-        grade: 17
-        empty: false
-      - slot: 4
-        trading_item_id: 96
-        supply_or_price: 2000
-        grade: 25
-        empty: false
-    unknown_bytes: "01009f010000043c1a001a00dc050807000000000000000000000000c2010c0000007c011400010008020f000000b801110000004c0419006a006a000c00"
+      byte_0x27: 0

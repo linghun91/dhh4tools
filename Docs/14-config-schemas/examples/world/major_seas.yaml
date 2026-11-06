@@ -1,0 +1,13 @@
+schema: dk4.world.major_seas
+version: 1
+# 七大海域：全仓唯一注册表（文件在 world/；ID 域登记与 MajorSea.* 查询归 factions，Docs/02-factions/06-seven-culture-circles.md）。
+# key 见 Docs/00-overview/10-key-glossary.md §8。旧路径 factions/major_seas.yaml、旧 key southeast_asia 是别名。
+major_seas:
+  - { key: vanilla:north_sea,     vanilla_index: 0, name_key: major_sea.north_sea,     rect: [19200, 2720, 22880, 5120] }
+  - { key: vanilla:mediterranean, vanilla_index: 1, name_key: major_sea.mediterranean, rect: [17760, 3840, 24320, 8160] }
+  - { key: vanilla:africa,        vanilla_index: 2, name_key: major_sea.africa,        rect: [16640, 8000, 26368, 14400] }
+  - { key: vanilla:indian_ocean,  vanilla_index: 3, name_key: major_sea.indian_ocean,  rect: [24320, 5920, 31360, 10560] }
+  - { key: vanilla:se_asia,       vanilla_index: 4, name_key: major_sea.se_asia,       rect: [30560, 8000, 35200, 11200] }
+  - { key: vanilla:east_asia,     vanilla_index: 5, name_key: major_sea.east_asia,     rect: [31360, 5056, 35840, 8000] }
+  - { key: vanilla:new_world,     vanilla_index: 6, name_key: major_sea.new_world,     rect: [7040, 5200, 16640, 11520] }
+world_view: { key: vanilla:whole_world, name_key: major_sea.whole_world, rect: [0, 0, 40000, 20000] }   # 不是海域行（地图帧 7 / 原版哨兵 8）

@@ -8,6 +8,8 @@
 - **薄** — 有专篇或散落，缺图、缺表、缺公式、缺出现条件
 - **无** — 清单里的轴在 Docs 里还没有独立规格
 
+「状态」列记的是补文档**之前**的状态；「本轮补」列的文档均已存在（逐个核对过路径）。
+
 | 清单轴 | 细项 | 状态 | 已有文档 | 本轮补 |
 | --- | --- | --- | --- | --- |
 | 地图 | 航海地图 | 薄 | `01-world/01-map-and-sea-areas.md`（`World.dat` 2500²） | `01-world/06-three-maps.md` |
@@ -49,6 +51,27 @@
 
 不在这份清单、Docs 里已经单列的：黄金航路、委托、小游戏、存档、四语言。保持原目录，不合并进大佬轴。
 
+## 第一轮核查后的更正
+
+上表「状态」「已有文档」两列记的是补文档之前的认识，其中几条已被源码推翻。以本节为准。
+
+| 轴 | 旧认识 | 核查结论 | 文档 |
+| --- | --- | --- | --- |
+| 舰船 船型 / 船种 | `NUM_SHIP=100`、`NUM_SHIPTYPE=5`、名未抽 | 船体定义 107 条（实例槽 100–206，另有 0–99 动态槽）、船模 39 条，名字都在 exe；`NUM_SHIPTYPE=5` 是 RTC 投票误采 | `05-ships-fleet/01`、`05` |
+| 舰船 炮台 | 每舰队 5 炮位 | `NUM_BATTLEGUN=5` 误采；海战炮池 21（gun i ↔ 船 i，20 = 城炮）；`NUM_SHIPMAST` 实为 3 | `05-ships-fleet/04`、`08`、`07-combat/01` |
+| 人物 六维 / 等级 | 「属性结算 500」 | 500 是**技能值**上限；六维上限 100；exp 30–59 为 0 级 | `03-characters/03`、`11-progression/01` |
+| 人物 身心 | 身体 6 态、精神 4 态 | 身体 7 态（含疲劳）、精神 6 态 | `03-characters/07` |
+| 名声 / 爵位 | 有专篇 | 原版**不存在**名声与爵位；`fame.yaml` 默认关闭 | `11-progression/02` |
+| 港口设施 | 教会是设施 | 12 种地图点；遗址 / 教会 / 城门共用 `CMpRemains`，是按日仪式 | `01-world/10`、`08-town-life/01`、`05` |
+| 剧情 条件 | 9 种 kind 名未知 | kind 0–8 全部 `[确认]`；终局、小游戏 opcode 已钉 | `10-narrative/03` |
+| 日期经纬 坐标体系 | 换算未还原、禁止除 8 | 航行坐标 `/16` → chip；`World.dat` 2500×1250 uint16 | `01-world/01`、`06`、`07` |
+| 调节因子 补给 / 视野 | 消耗量、半径公式无 | 补给日耗、探索全流程、遭遇分带 `[确认]` | `06-ocean/01`、`02`、`13-algorithms/03` |
+| 航行 风速 / 帆 | 三处除数未知 | `+s/10`、`×4/5`、`/3` 全钉 | `06-ocean/01` |
+| 黄金航路 | 30 节点权重 | 那是完成动画时间轴，已撤回；月初奖金 `fn_1400108fc` 已钉，节点表与点亮条件仍未知 | `06-ocean/03`、`05-config-architecture.md` |
+| 海域文化圈 商品价格 | 是否按文化分表未钉 | 21 文化圈 × 105 卖价底表 `[确认]`（SC `.rdata 0x1405b6160`） | `02-factions/06`、`04-economy/02` |
+| 7×uint / 文化圈 | 7 格当文化圈 | 七大海域 + 21 文化圈（见下节，已纠正） | `02-factions/06` |
+| 海域 | 25 个航海分区（`NUM_SEAAREA=25`） | 25 是投票误采；`eSeaArea` 就是七大海域，原版无细分区，`sea_areas` 只作模组扩展 | `01-world/01`、`04-id-registry.md` |
+
 ## 冰山下（自行补的轴）
 
 大佬清单是分类提示，不是穷举。下面这些原版有系统、上一轮 Docs 只有一句或没有专篇，本轮一并抽：
@@ -65,17 +88,24 @@
 | 船坞额外船体 | `05-ships-fleet/07-dock-warehouse.md` |
 | 海战阵型 / 命令 / happening | `07-combat/05-formation-happening.md` |
 | 种子种植 → 特产品 | `09-items/03-discovery-planting.md` |
-| 死亡 / 寿终 / 继承 | `11-progression/03-gameover-succession.md` |
+| 死亡 / 寿终 / Game Over（原版**无继承**，继承只作默认关闭的挂钩） | `11-progression/03-gameover-succession.md` |
 | World0 vs World1 全差异 | `10-narrative/04-world0-world1-diff.md` |
 | 12 种地图点 | `01-world/10-mappoint-kinds.md` |
 | 炮种 / 炮弹名录 | `05-ships-fleet/08-gun-shell-catalog.md` |
-| 旅馆 / 教会 / 宫殿内部规则 | `08-town-life/05-inn-church-palace.md` |
+| 旅馆 / 王宫规则；教会是地图点 kind 10 的按日仪式，**不是设施** | `08-town-life/05-inn-church-palace.md` |
 | NPC 舰队大地图 AI | `06-ocean/06-npc-fleet-ai.md` |
 | 战利品 / 俘船 / 俘虏 | `07-combat/06-prizes-capture.md` |
 | 广场情报 / 广告人 | `08-town-life/06-plaza-intel-adman.md` |
 | 疲劳 / 伤病 / 精神 | `03-characters/07-fatigue-health-mood.md` |
 | 付费查行情 | `04-economy/08-price-intel.md` |
 | 通关画廊点数 | `10-narrative/05-gallery-unlock.md` |
+| 原版世界 tick 顺序 / 日历门 | `02-original-architecture.md`、`05-config-architecture.md`「tick 顺序」 |
+| 随机数（CRT `rand`，`time()` 播种，不进存档） | `05-config-architecture.md`「随机数」 |
+| 模组：命名空间、覆盖合并、存档 id 重映射、迁移 | `05-config-architecture.md` |
+| 修正器堆叠顺序（技能 + 装备 → 身心系数 → 封 500） | `03-decoupling-principles.md` 原则 6 |
+| 跨系统架构决策 D1–D10（ID、修正器、公式层、时间、剧本旗标、派生量、存档、叙事、动作执行器、内容提取） | `09-architecture-decisions.md` |
+| 事件 / 查询 / 命令规范名与所有权裁决 | `06-system-interfaces.md` |
+| 全局 key 词表（修正器、技能 / 六维、岗位、舱室 role、caps、配置路径、海域、特产品槽字段、tick 阶段）与别名对照 | `10-key-glossary.md` |
 
 ## 大佬补刀（11-06 16:55 后）
 

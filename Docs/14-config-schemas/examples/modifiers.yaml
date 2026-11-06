@@ -1,0 +1,70 @@
+schema: dk4.modifiers
+version: 2
+# 修正器 key 注册（D2）。贡献写在各内容表的 effects / modifiers，不在这里。
+# 规范 key 表：Docs/00-overview/10-key-glossary.md §6.2（本文件与之逐条对应；新增 key 先登记词表）。
+# 所属：Docs/13-algorithms/01-formulas.md「修正器注册表」；Docs/00-overview/03-decoupling-principles.md 原则 6
+# 不是修正器：Ocean.search_radius(fleet_id)（派生量查询）、技能式等级项 min(L0+L1, $caps.skill_level_cap)、
+#   「有没有测量员」（旧稿 fleet.survey_unlock，改为 Fleets.post_holder(fleet_id, surveyor) != null）、布尔开关（Scenario.flag(key)，D5）。
+stages: [base, add, mul, clamp, override]   # 固定；同 stage 内按 order，再按 source
+presets:
+  vanilla_i32: { div: trunc, width: wrap32 }
+keys:
+  # characters：十技能各一 key（skill.<skill_key>），提供方可写通配 skill.*（身体态乘子）
+  skill.vitality:       { type: int, owner_system: characters, clamp: [0, $caps.skill_value_cap] }
+  skill.leadership:     { type: int, owner_system: characters, clamp: [0, $caps.skill_value_cap] }
+  skill.helmsmanship:   { type: int, owner_system: characters, clamp: [0, $caps.skill_value_cap] }
+  skill.surveying:      { type: int, owner_system: characters, clamp: [0, $caps.skill_value_cap] }
+  skill.accounting:     { type: int, owner_system: characters, clamp: [0, $caps.skill_value_cap] }
+  skill.fencing:        { type: int, owner_system: characters, clamp: [0, $caps.skill_value_cap] }
+  skill.gunnery:        { type: int, owner_system: characters, clamp: [0, $caps.skill_value_cap] }
+  skill.persuasion:     { type: int, owner_system: characters, clamp: [0, $caps.skill_value_cap] }
+  skill.tactics:        { type: int, owner_system: characters, clamp: [0, $caps.skill_value_cap] }
+  skill.observation:    { type: int, owner_system: characters, clamp: [0, $caps.skill_value_cap] }
+  # 六维：base = 人物状态（≤ $caps.ability_cap），mul = 精神态（characters/vitals.yaml）；原版 mul 后不再夹
+  ability.stamina:      { type: int, owner_system: characters }
+  ability.agility:      { type: int, owner_system: characters }
+  ability.charm:        { type: int, owner_system: characters }
+  ability.intelligence: { type: int, owner_system: characters }
+  ability.spirit:       { type: int, owner_system: characters }
+  ability.luck:         { type: int, owner_system: characters }
+  # ability_raw.<ability_key>：只有 base，禁止挂贡献（person.hp_max 走 vitality 配对 stamina + spirit；combat.crit_luck 读 luck）
+  ability_raw.stamina:  { type: int, owner_system: characters, base_only: true }
+  ability_raw.agility:  { type: int, owner_system: characters, base_only: true }
+  ability_raw.charm:    { type: int, owner_system: characters, base_only: true }
+  ability_raw.intelligence: { type: int, owner_system: characters, base_only: true }
+  ability_raw.spirit:   { type: int, owner_system: characters, base_only: true }
+  ability_raw.luck:     { type: int, owner_system: characters, base_only: true }
+  person.hp_max:        { type: int, owner_system: characters }
+  # ocean
+  fleet.speed:          { type: int, owner_system: ocean, int_mode: vanilla_i32 }   # 速度条：船首像 ×11/10（order 10）、×4/5（order 20）
+  fleet.speed_move:     { type: int, owner_system: ocean, int_mode: vanilla_i32 }   # 实际移动：海战态 ×1/3（order 900，写速度条之后）
+  fleet.search_radius_add: { type: int, owner_system: ocean, default: 0 }          # 海豚像 +16（stack: once）
+  fleet.happening_block: { type: set, of: happening, owner_system: ocean }         # 圣母像 [vanilla:scurvy, vanilla:plague]
+  fleet.rat_auto_clear: { type: bool, owner_system: ocean, default: false }        # 金黄色的猫
+  fleet.fatigue_days_randomized: { type: bool, owner_system: ocean, default: false }   # 处女像 [推断]
+  fleet.sail_handling:  { type: int, owner_system: ocean }                          # 预留，原版无贡献
+  fleet.helm:           { type: int, owner_system: ocean }                          # 预留
+  fleet.navigation:     { type: int, owner_system: ocean }                          # 预留
+  supply.food_div:      { type: int, owner_system: ocean, default: 0 }              # 小猪像 +2
+  supply.food_stock_pct: { type: int, owner_system: ocean, default: 100 }          # 结局 rats override 95
+  supply.water_div:     { type: int, owner_system: ocean, default: 0 }              # 结局 storm/blizzard/rain/snow +10
+  # ships
+  ship.durability_max:  { type: int, owner_system: ships }                          # 白鲸像 +10
+  ship.repair_cost:     { type: int, owner_system: ships }                          # 船木工按等级 mul (100 - discount)/100（F-ADJ-04）
+  # combat
+  combat.gun_power:     { type: int, owner_system: combat }                         # 龙像 +2
+  combat.melee_damage:  { type: int, owner_system: combat, int_mode: vanilla_i32 }  # 王者像 ×6/5，只加己方
+  combat.engage_fear_crew_div: { type: int, owner_system: combat, default: 0 }      # 0 = 无；怪鱼像 override 10
+  combat.hull_floor_at_zero: { type: bool, owner_system: combat, default: false }   # 魔鬼像、提督像
+  combat.crew_floor_at_zero: { type: bool, owner_system: combat, default: false }   # 提督像
+  combat.initiative:    { type: int, owner_system: combat }                         # base = 提督 skill.leadership
+  combat.crit_luck:     { type: int, owner_system: combat }                         # base = ability_raw.luck
+  combat.level_bonus:   { type: int, owner_system: combat }                         # F-ADJ-05 anBonus
+  # economy / items / town / factions
+  trade.npc_buy_cost:   { type: int, owner_system: economy }                        # base = F-ECO-01
+  trade.item_shop_price: { type: int, owner_system: items }                         # base = F-ECO-02
+  trade.sell_price_pct: { type: int, owner_system: economy, default: 100 }          # 剧本 2 ×105/100
+  trade.price_intel_fee_pct: { type: int, owner_system: economy, default: 100 }     # 原版无贡献
+  factions.influence_gain: { type: int, owner_system: factions, ctx: [force, major_sea, source] }   # source: fashion_sale | investment | remains；剧本 2 × fashion_sale ×2、剧本 0 × remains ×2
+  invest.military_min_fee_pct: { type: int, owner_system: economy, default: 100 }   # 剧本 0 ×8/10
+  request.reward_gold:  { type: int, owner_system: town }                           # 剧本 0 ×3/2（无符号截断）

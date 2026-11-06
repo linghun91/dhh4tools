@@ -9,7 +9,7 @@
 **管：**
 
 - 介绍信 / 推荐信两种 `letter_kind` 的状态机（无 / 介绍 / 推荐，互斥、单槽）
-- 从经济事件 `DealCommitted` 判定是否发信、发哪种、是否升级
+- 从经济事件 `SoldFashionGoods` 判定是否发信、发哪种、是否升级
 - 在宫殿花费信件、换多少份额、哪些港算小城市
 - 委托 kind 12/13 的完成条件与交信消耗
 - `eLICENSELOCATIONCHOICES` 的 ID 空间（宫殿菜单项表长）
@@ -78,7 +78,7 @@ return 2                          # 无信
 - `[确认]` 文案：`mesfile_sc.txt` `0x7be3`、`0x7ca3`、`0x7cd7`、`0x7d17`、`0x7d47`。`0x7d47` 三句连在一起：介绍信去**小城市**王宫 / 总督府；推荐信「不管哪个城市」；「介绍信只能用在小城市，如果是推荐信，则任何城市都通用。」
 - `[确认]` 任务日志句「得到介绍信。得到推荐信。」`0x318b`。
 
-重构后 economy 只 `emit DealCommitted`；是否发信由本系统决定。禁止 `CTrade` 自己 `41ce`。
+重构后 economy 只 `emit SoldFashionGoods`（economy 03 §8）；是否发信由本系统决定。禁止 `CTrade` 自己 `41ce`。
 
 ### 2.4 花费：宫殿 `fed4`
 
@@ -121,7 +121,7 @@ return 2                          # 无信
 - `[确认]` `fn_14000c71b`（`0x1402626d0`）：`GetFixTown`（`fn_140003643` → `fn_140004a66`，步长 `0x84`）读 **`BYTE [STown+0x24]`**，非 0 返回 1，否则 0。
 - `[确认]` `STown+0x24` 即港口表 `is_capital`。来源：`Docs/01-world/02-towns.md`、`towns_world0.json`。21 座首都，其余 76 座非首都。
 - `[确认]` 介绍信在 `c71b == 1`（首都）被拒；推荐信不看这一位。与 `0x7d47`「介绍信只能用在小城市 / 推荐信任何城市」一致。
-- `[确认]` **不是**发展度阈值。03 把「小城市判定」列成未知并猜测发展度，以本篇汇编为准。
+- `[确认]` **不是**发展度阈值。03 §9 已同步改为 `is_capital == 0`。
 - `[推断]` 文案「小城市」= `is_capital == 0`。`eTownKind` 海域图循环上界 2 是首都 / 非首都画法，不是第三套城市等级。
 
 ### 2.6 委托：消耗方，不是发放方
@@ -142,7 +142,7 @@ return 2                          # 无信
 | 12 | 持介绍信 `0x186a0 = 100000`；否则 `0x1fbd0 = 130000`（推荐信走这枝，「更好了」） |
 | 13 | `0x249f0 = 150000` |
 
-之后若 `fn_140004a1b == 0`，金额 `* 3 / 2`。该开关语义 `[未知]`。
+之后若 `fn_140004a1b(DAT_144296500) == 0`，金额 `* 3 / 2`（无符号 `div 2`）。`fn_140004a1b` 读 `DAT_144296500+0x7C` = `eScenario`（`[确认]`，见 01 §2）：**剧本 0（拉斐尔）委托报酬 ×1.5**。这一步在 `fn_140010e10` 跳转表之后，对所有委托种类生效，不只 12/13。重构：委托报酬统一过修正器 `request.reward_gold`（stage `mul`，3/2，source `scenario:raphael`），由剧本包注入；本篇不判剧本。
 
 委托**不调用** `41ce(0/1)`。玩家必须先在交易所拿到信，再送到公会；交了就不能再去宫殿用。
 
@@ -162,71 +162,74 @@ return 2                          # 无信
 | 宫殿选项 | 菜单下标 0–7 | 8（运行时读表长） | `-1` | `location_choice_id` |
 | `eLICENSELOCATIONCHOICES` | 符号 only | `[未知]` 整型；8 `[推断]` | `-1` | 与 `location_choice_id` 同一张表 |
 | 小城市 | `is_capital == 0` | World0：76 | 首都 21 座不是 | 谓词，不是第二套 `town_id` 枚举 |
-| `eItem` 信 | 无 | — | — | 仅当 `storage: item` 才分配 `id >= 1000` |
+| `eItem` 信 | 无 | — | — | 仅当 `storage: item` 才在模组命名空间新增道具 key（如 `mymod:intro_letter`），由加载器分配下标 |
 
 哨兵：
 
-- 无信用 `none`，不要用 `item_id = 0`（南瓜种子）或 `232`（道具空槽）或 `106`（货格空）。
-- 空菜单项用 `-1`，不要用 0（0 是签新约）。
+- 无信用 `none`，不要用 `item_id = 0`（南瓜种子）或 `232`（道具空槽）或 `106`（货格空）。原版 `bd98` 的 0/1/2 与 `+0x78` 位号只在 `ids/legacy_codec.yaml` 出现。
+- 空菜单项用 `null`，不要用 0（0 是签新约）。
 - 一次只允许一封。升级是原地改 kind，不是第二槽。
 
-模组若改 `storage: item`：两件新道具，kind 自定，不覆盖 0–230；持有查询改走 `Items.has`，花费走 `Items.consume`。原版包必须 `storage: flag`。
+模组若改 `storage: item`：两件新道具用模组命名空间 key，不覆盖 `vanilla:*`；持有查询改走 `Items.has`，花费走 `Items.consume`。原版包必须 `storage: flag`。
 
 ## 4. 算法 / 公式
 
 数值进 `config/formulas/factions.yaml` 与 `config/caps.yaml`。原版立即数当 default。禁止在宫殿 / 交易所代码里写 `5`、`10`、`80`、`16`。
 
 ```yaml
-# config/caps.yaml  （本系统用到的键；与 03 / 13 共用）
-share_cap: 100
-share_high: 80
+# config/caps.yaml  （本系统用到的键；定义在 03，同键同值）
+share_max: 100
 share_slots_per_town: 3
-letter_lo: 10              # 介绍信件数下沿（含）
-letter_hi: 16              # 推荐信件数下沿（含）；介绍信含到 hi-1
 ```
 
 ```yaml
-# config/formulas/factions.yaml  本系统段
+# config/formulas/factions.yaml  本系统段（D3 形状，与 03 同一文件）
 schema: dk4.formulas.factions
-version: 1
+version: 2
 
-# 获得。件数阈值与 03 letters_from_fashion / F-ECO-06 必须同键同值
-letters_from_fashion:
-  share_high: 80
-  intro_min_qty: 10          # letter_lo
-  intro_max_qty: 15          # letter_hi - 1
-  recommend_min_qty: 16      # letter_hi
-  upgrade_intro_to_recommend_min_qty: 16
+# 获得。件数阈值与 03 fashion_letter / F-ECO-06 必须同键同值
+fashion_letter:              # 与 03 同一段（只定义一次；此处为摘录）
+  impl: vanilla.fashion_letter
+  int_mode: vanilla_i32
+  params:
+    share_letter_cut: 80
+    letter_intro_min: 10
+    letter_intro_max: 15
+    letter_recommend_min: 16
+    letter_upgrade_min: 16
 
 # 宫殿花费
 letters_at_palace:
-  intro_share_delta: 5
-  recommend_share_delta: 10
-  no_share_foothold: 1       # 己方份额 < 1 时用信落脚
-  remaining_base: 100        # 与 share_cap 对齐
+  impl: vanilla.letter_palace_share
+  params:
+    intro_share_delta: 5
+    recommend_share_delta: 10
+    no_share_foothold: 1       # 己方份额 < 1 时用信落脚
+    remaining_base: $caps.share_max   # 引用 caps，不另写 100
 
 # 委托报酬（kind 12/13）
 letters_as_request:
-  intro_request_gold_if_intro: 100000
-  intro_request_gold_if_recommend: 130000
-  recommend_request_gold: 150000
-  gold_boost_numer: 3        # *3/2 的开关条件 [未知]
-  gold_boost_denom: 2
+  impl: vanilla.letter_request_reward
+  params:
+    intro_request_gold_if_intro: 100000
+    intro_request_gold_if_recommend: 130000
+    recommend_request_gold: 150000
+  # 剧本 0 的 ×3/2 不在这里：修正器 request.reward_gold（剧本包注入，08-town-life 委托系统求值）
 ```
 
 ### 4.1 发信 `grant_from_fashion`
 
-输入：`share`、`sold_fashion_qty`、当前 `letter_kind`。只在 `share >= share_high` 时运行。
+输入：`share`（本系统 `Share.of`）、`sold_fashion_qty`（事件里两格流行品件数和）、当前 `letter_kind`。只在 `share >= share_letter_cut` 时运行。
 
 ```
 x = sold_fashion_qty
-if kind == none and intro_min_qty <= x <= intro_max_qty:  grant intro
-if kind == none and x >= recommend_min_qty:               grant recommend
-if kind == intro and x >= upgrade_min_qty:                grant recommend
+if kind == none and letter_intro_min <= x <= letter_intro_max:  grant intro
+if kind == none and x >= letter_recommend_min:                  grant recommend
+if kind == intro and x >= letter_upgrade_min:                   grant recommend
 else:                                                     no-op
 ```
 
-`share < share_high` 不进本函数（那是 `F-ECO-05`）。
+`share < share_letter_cut` 不进本函数（那是 `F-ECO-05`）。
 
 ### 4.2 小城市 `is_small_city(town_id)`
 
@@ -245,7 +248,7 @@ kind = Letters.get(holder)
 if kind == none: reject
 if kind == intro and not is_small_city(town_id): reject   # 不消耗
 if Share.foreign_slots_full(town_id, force_id): reject
-if Share.of(town_id, force_id) >= share_cap: reject
+if Share.of(town_id, force_id) >= share_max: reject
 
 if Share.of(town_id, force_id) < 1:
     grant = no_share_foothold
@@ -259,7 +262,7 @@ Share.add(town_id, force_id, grant, reason="letter")
 Letters.set(holder, none)
 ```
 
-`remaining_room` 原版至少是 `share_cap − 己方份额`。他势力「本地」份额如何挤占 `[未知]`，未还原前**不要**实现那一轮扣减；最坏只是略多给几点，可被 `share_cap` 封住。禁止发明「发展度 × 5%」。
+`remaining_room` 原版至少是 `share_max − 己方份额`。他势力「本地」份额如何挤占 `[未知]`，未还原前**不要**实现那一轮扣减；最坏只是略多给几点，可被 `share_max` 封住。禁止发明「发展度 × 5%」。
 
 `Share.add` 内部仍走 03 的饱和。本系统不直接写槽字节。
 
@@ -270,9 +273,9 @@ kind 12: ok = Letters.get(holder) in {intro, recommend}
 kind 13: ok = Letters.get(holder) == recommend
 if ok:
     gold = table[kind, Letters.get(holder)]
-    # gold_boost 条件未还原前不乘
+    gold = Modifiers.eval("request.reward_gold", { request_kind: kind, base: gold })   # 原版剧本 0 ×3/2，无符号截断
     Letters.set(holder, none)
-    emit RewardGold { gold }
+    Force.add_gold(Force.player(), gold, reason="request_reward")   # 成功后 factions 发 ForceGoldChanged
 ```
 
 实现约束：发信、升级、消耗必须在同一同步栈里改唯一状态；禁止「先给道具再清旗」的双轨。`storage: item` 时用事务化转移（扣信 → 加份额 / 发金币 → 失败回滚）。
@@ -309,34 +312,24 @@ schema: dk4.factions.letters
 version: 1
 pack: vanilla-world0
 
-# 原版：旗。改成 item 时 kinds[].item_id 必填且 ≥ 1000
+# 原版：旗。改成 item 时 kinds[].item 必填（道具 key，模组命名空间）
 storage: flag                  # flag | item
 
 kinds:
-  - id: 0
-    key: intro
+  - key: vanilla:intro
     name: 介绍信
     name_i18n: ui.letter.intro
-    bit: 0                     # 仅文档对照；运行时不要散落 bit 号
-    bd98: 0
     usable_in: small_city
     palace_delta_key: intro_share_delta
-    grant_41ce: 0
-    item_id: null              # storage: item 才填
-  - id: 1
-    key: recommend
+    item: null                 # storage: item 才填
+  - key: vanilla:recommend
     name: 推荐信
     name_i18n: ui.letter.recommend
-    bit: 1
-    bd98: 1
     usable_in: any_city
     palace_delta_key: recommend_share_delta
-    grant_41ce: 1
-    item_id: null
-none:
-  key: none
-  bd98: 2
-  grant_41ce: 2                # 消耗
+    item: null
+# 「无信」= null，不是一行。原版编码（+0x78 bit0/bit1、bd98 0/1/2、41ce 参数）只进
+# config/ids/legacy_codec.yaml：letter: { intro: { bit: 0, code: 0 }, recommend: { bit: 1, code: 1 }, none_code: 2 }
 
 # 小城市。原版包唯一谓词：非首都
 small_city:
@@ -349,8 +342,8 @@ small_city:
 obtain:
   fashion_sale:
     enabled: true
-    require_share_at_least: share_high
-    source_event: DealCommitted
+    require_share_at_least: share_letter_cut
+    source_event: SoldFashionGoods
   requests:
     enabled: false             # 原版委托不发信。模组可改 true
     grant_on_complete: null
@@ -369,31 +362,31 @@ spend:
     kinds:
       - request_kind: get_intro_letter
         original_kind_byte: 12
-        accept: [intro, recommend]
+        accept: [vanilla:intro, vanilla:recommend]
         gold:
           intro: intro_request_gold_if_intro
           recommend: intro_request_gold_if_recommend
       - request_kind: get_recommend_letter
         original_kind_byte: 13
-        accept: [recommend]
+        accept: [vanilla:recommend]
         gold:
           recommend: recommend_request_gold
 
-# eLICENSELOCATIONCHOICES。表长运行时读。vanilla 8 项 [推断]
+# eLICENSELOCATIONCHOICES。表长运行时读，列表顺序 = 菜单顺序。vanilla 8 项 [推断]
 location_choices:
-  - { id: 0, key: sign_contract,     enabled_when: share_eq_0,           dispatch: Contract.sign }
-  - { id: 1, key: assist_defense,    enabled_when: always,               dispatch: Palace.assistDefense }
-  - { id: 2, key: spend_recommend,   enabled_when: letter_eq_recommend,  dispatch: Letters.spendAtPalace }
-  - { id: 3, key: spend_intro,       enabled_when: letter_eq_intro,      dispatch: Letters.spendAtPalace }
-  - { id: 4, key: display_treasure,  enabled_when: has_displayable_item, dispatch: Palace.displayTreasure }
-  - { id: 5, key: retrieve_treasure, enabled_when: has_deposited_item,   dispatch: Palace.retrieveTreasure }
-  - { id: 6, key: offer_brand,       enabled_when: unknown,              dispatch: Palace.offerBrand }
-  - { id: 7, key: leave,             enabled_when: always,               dispatch: ui.close }
+  - { key: vanilla:sign_contract,     vanilla_index: 0, enabled_when: share_eq_0,           dispatch: Contract.sign }
+  - { key: vanilla:assist_defense,    vanilla_index: 1, enabled_when: always,               dispatch: Palace.assistDefense }
+  - { key: vanilla:spend_recommend,   vanilla_index: 2, enabled_when: letter_eq_recommend,  dispatch: Letters.spendAtPalace }
+  - { key: vanilla:spend_intro,       vanilla_index: 3, enabled_when: letter_eq_intro,      dispatch: Letters.spendAtPalace }
+  - { key: vanilla:display_treasure,  vanilla_index: 4, enabled_when: has_displayable_item, dispatch: Palace.displayTreasure }
+  - { key: vanilla:retrieve_treasure, vanilla_index: 5, enabled_when: has_deposited_item,   dispatch: Palace.retrieveTreasure }
+  - { key: vanilla:offer_brand,       vanilla_index: 6, enabled_when: unknown,              dispatch: Palace.offerBrand }
+  - { key: vanilla:leave,             vanilla_index: 7, enabled_when: always,               dispatch: ui.close }
 ```
 
 World0 / World1 同一 schema。信旗是玩家状态，不进内容包实例表。
 
-`config/ids/` 从本表收集 `letter.intro` / `letter.recommend` / `letter.none` 与 `location_choice.*`。
+`config/ids/` 从本表收集 `letter.intro` / `letter.recommend` 与 `location_choice.*`；「无信」是 `null`，不进注册表。
 
 文案 key 进 `ui/strings.*.yaml`：`0x7d47`、`0xb69f` 等只在那里出现，不进本文件。
 
@@ -408,7 +401,7 @@ World0 / World1 同一 schema。信旗是玩家状态，不进内容包实例表
 - 是否允许无信仍扩份额（原版菜单不亮，默认否）
 - 叙事 `Letters.grant` 开关
 
-不在本文件改：市价、合约金公式、发展度上限、`eItem` 0–230 名录、亲笔信友好度。改 `share_cap` 在 `caps.yaml`，本系统的 `remaining_base` 必须跟它走。
+不在本文件改：市价、合约金公式、发展度上限、`eItem` 0–230 名录、亲笔信友好度。改 `share_max` 在 `caps.yaml`，本系统的 `remaining_base` 必须跟它走。
 
 ## 8. 对外接口
 
@@ -448,7 +441,7 @@ Letters.clear(holder_id, reason)             # 仅调试 / 剧本；玩法走 sp
 
 | 来源 | 事件 | 本层动作 |
 | --- | --- | --- |
-| economy | `DealCommitted { town_id, force_id, fashion_sold_qty, share }` | `grant_from_fashion` |
+| economy | `SoldFashionGoods { town_id, force_id, items[], qtys[], hold_sum, bargain_ok }` | 份额自己查；`x = Σ 两格流行品件数` 后 `grant_from_fashion` |
 | town-life | 宫殿槽 2/3 | `spendAtPalace` |
 | town-life | `RequestCompleted` 且 kind ∈ {12,13} | 先 `satisfies`，再 `deliverForRequest` |
 | narrative | 脚本 | `grant` / `clear` |
@@ -466,7 +459,7 @@ Letters.clear(holder_id, reason)             # 仅调试 / 剧本；玩法走 sp
 | `+0x78` 其余 bit | 只证明 bit0/1 是信 | 其它位的语义 |
 | 他势力「本地」份额挤占 | `fed4` 调 `12c0b` / `cffe` 后改 `sBC` | 任何具体式子 |
 | `0x547` 枝 | `sB4==0` 时拒 | 与友好度 / 母港的确认关系 |
-| `fn_140004a1b` | 真则委托金不 `*3/2` | 难度 / 剧本 / 技能 |
+| `fn_140004a1b` | 读 `DAT_144296500+0x7C` = `eScenario` `[确认]`；`== 0` 则 `*3/2` | 难度 / 技能；只对 12/13 生效 |
 | 槽 6 何时亮 | 品牌奉献 | 与「年结品牌」的双射 |
 | 防卫项是否改份额 | `1077b` 有份额读取 | 防卫成功 = 加份额 |
 | 无信调用 `fed4` | else 枝 +5 | 可玩路径 |

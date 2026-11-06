@@ -1,0 +1,15 @@
+schema: dk4.economy.special_products
+version: 2
+# 槽 → 交易品的唯一所有者（world/towns.yaml 不重复）。所属：Docs/04-economy/04-special-products-investment.md
+# 定义段 +0x28：+0 交易品 u8；+2 u16 listing_threshold（商业发展度 ≥ 门槛才上架）；+4 u8 supply_base。
+# 初值段 +0x60：+0 bit0 plant_lock；+2 u16 槽底价 data_price；+4 initial_supply。
+# 字段名见 Docs/00-overview/10-key-glossary.md §10；Docs/_data/towns_world0.json 同名。交易品外键写 trading_item（不用 item，避免与道具域混淆）。
+
+towns:
+  - town: vanilla:london
+    slots:                                # 原版每港 5 槽；运行时按列表长
+      - { slot: 0, trading_item: vanilla:coal,   listing_threshold: 4500, supply_base: 15, data_price: 550 }
+      - { slot: 1, trading_item: vanilla:wool,   listing_threshold: 2000, supply_base: 25, data_price: 345 }
+      - { slot: 2, trading_item: vanilla:woolen, listing_threshold: 2000, supply_base: 25, data_price: 485 }
+      - { slot: 3, trading_item: vanilla:musket, listing_threshold: 4000, supply_base: 12, data_price: 1150 }
+      - { slot: 4, trading_item: vanilla:cannon, listing_threshold: 3500, supply_base: 12, data_price: 2400 }

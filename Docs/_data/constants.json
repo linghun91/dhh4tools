@@ -270,7 +270,7 @@
     "ITEM_EMPTY": 106,
     "NUM_ADDPARTS": 9,
     "NUM_ATTACKERFLEETSHIP": 5,
-    "NUM_BATTLEGUN": 5,
+    "NUM_BATTLEGUN": 21,
     "NUM_BATTLERESULT": 5,
     "NUM_BUTTON": 4,
     "NUM_CABINSURFACE": 31,
@@ -299,13 +299,13 @@
     "NUM_SEAAREA": 25,
     "NUM_SELECTITEMTAG": 6,
     "NUM_SHELL": 100,
-    "NUM_SHIP": 100,
+    "NUM_SHIP": 207,
     "NUM_SHIPCABIN": 31,
     "NUM_SHIPLOAD": 5,
     "NUM_SHIPLOADCARGO": 5,
     "NUM_SHIPLOAD_EXCH": 5,
-    "NUM_SHIPMAST": 100,
-    "NUM_SHIPTYPE": 5,
+    "NUM_SHIPMAST": 3,
+    "NUM_SHIPTYPE": 39,
     "NUM_SKILL": 10,
     "NUM_SMOKE": 8,
     "NUM_SPECIALPRODUCT": 5,
@@ -320,5 +320,232 @@
     "NUM_TRADINGITEMKIND": 19,
     "NUM_TRIGGERKIND": 9,
     "NUM_VILLAGE": 24
+  },
+  "values_note": "values 已按 Docs/00-overview/04-id-registry.md 修正投票误采项（见 evidence.*.vote_raw）。原始投票值在 srcdata/catalog/num_values.json。投票（fill_gaps.py 众数）不得作 [确认]。",
+  "evidence": {
+    "ITEM_EMPTY": {
+      "type": "Constants.h",
+      "level": "[确认]"
+    },
+    "NUM_ADDPARTS": {
+      "type": "循环",
+      "level": "[确认]"
+    },
+    "NUM_ATTACKERFLEETSHIP": {
+      "type": "投票",
+      "level": "[推断]"
+    },
+    "NUM_BATTLEGUN": {
+      "type": "循环",
+      "level": "[推断]",
+      "vote_raw": 5,
+      "note": "fn_14000ee8a cmp eBattleGun,0x15（05-ships-fleet/08）"
+    },
+    "NUM_BATTLERESULT": {
+      "type": "投票",
+      "level": "[推断]"
+    },
+    "NUM_BUTTON": {
+      "type": "投票",
+      "level": "[推断]"
+    },
+    "NUM_CABINSURFACE": {
+      "type": "投票",
+      "level": "[推断]"
+    },
+    "NUM_DECKADDPARTS": {
+      "type": "投票",
+      "level": "[推断]"
+    },
+    "NUM_EQUIP": {
+      "type": "投票",
+      "level": "[推断]"
+    },
+    "NUM_FLEET": {
+      "type": "表长",
+      "level": "[确认]"
+    },
+    "NUM_FLEETSHIP": {
+      "type": "表长",
+      "level": "[确认]"
+    },
+    "NUM_FORCE": {
+      "type": "表长",
+      "level": "[确认]"
+    },
+    "NUM_FORCECOLOR": {
+      "type": "循环",
+      "level": "[确认]"
+    },
+    "NUM_HAPPENING": {
+      "type": "投票",
+      "level": "[推断]"
+    },
+    "NUM_INDEX": {
+      "type": "投票",
+      "level": "[推断]"
+    },
+    "NUM_INVADEFLEETSHIP": {
+      "type": "投票",
+      "level": "[推断]"
+    },
+    "NUM_ITEM": {
+      "type": "表长",
+      "level": "[确认]"
+    },
+    "NUM_KIND": {
+      "type": "投票",
+      "level": "[推断]"
+    },
+    "NUM_MAPPOINTKIND": {
+      "type": "循环",
+      "level": "[确认]"
+    },
+    "NUM_MOBILEFLEET": {
+      "type": "循环",
+      "level": "[确认]"
+    },
+    "NUM_MOBILESHIP": {
+      "type": "循环",
+      "level": "[确认]"
+    },
+    "NUM_NEXTBASETOWN": {
+      "type": "投票",
+      "level": "[推断]",
+      "note": "待重查"
+    },
+    "NUM_NOWPERSON": {
+      "type": "投票",
+      "level": "[推断]"
+    },
+    "NUM_PERSON": {
+      "type": "表长",
+      "level": "[确认]"
+    },
+    "NUM_PERSONEQUIP": {
+      "type": "循环",
+      "level": "[确认]"
+    },
+    "NUM_REQUEST": {
+      "type": "循环",
+      "level": "[确认]"
+    },
+    "NUM_ROUTE": {
+      "type": "循环+表长",
+      "level": "[确认]"
+    },
+    "NUM_SCENARIO": {
+      "type": "表长",
+      "level": "[确认]"
+    },
+    "NUM_SCHEME": {
+      "type": "投票",
+      "level": "[推断]"
+    },
+    "NUM_SEAAREA": {
+      "type": "投票",
+      "level": "无证据",
+      "note": "fill_gaps 窗口越界误采；函数体内 eSeaArea 上界 7"
+    },
+    "NUM_SELECTITEMTAG": {
+      "type": "投票",
+      "level": "[推断]"
+    },
+    "NUM_SHELL": {
+      "type": "循环",
+      "level": "[确认]"
+    },
+    "NUM_SHIP": {
+      "type": "表长+循环",
+      "level": "[推断]",
+      "vote_raw": 100,
+      "note": "CShipElement 构造 0xCF；fn_14000ceaa 扫 0..0xCF。100 是动态段/预置段分界（05-ships-fleet/01）"
+    },
+    "NUM_SHIPCABIN": {
+      "type": "循环",
+      "level": "[确认]"
+    },
+    "NUM_SHIPLOAD": {
+      "type": "循环",
+      "level": "[确认]"
+    },
+    "NUM_SHIPLOADCARGO": {
+      "type": "投票",
+      "level": "[推断]"
+    },
+    "NUM_SHIPLOAD_EXCH": {
+      "type": "投票",
+      "level": "[推断]"
+    },
+    "NUM_SHIPMAST": {
+      "type": "投票众数",
+      "level": "[推断]",
+      "vote_raw": 100,
+      "note": "RTC 立即数 3×21，被 fill_gaps 的 >=4 过滤后误取 100"
+    },
+    "NUM_SHIPTYPE": {
+      "type": "循环",
+      "level": "[推断]",
+      "vote_raw": 5,
+      "note": "eShipType 循环上界 0x27；可买 0x22=34（05-ships-fleet/01）"
+    },
+    "NUM_SKILL": {
+      "type": "循环+表长",
+      "level": "[确认]"
+    },
+    "NUM_SMOKE": {
+      "type": "投票",
+      "level": "[推断]"
+    },
+    "NUM_SPECIALPRODUCT": {
+      "type": "表长",
+      "level": "[确认]"
+    },
+    "NUM_SPECIALPRODUCTCNT": {
+      "type": "投票",
+      "level": "[推断]"
+    },
+    "NUM_TARGETFLEETSHIP": {
+      "type": "投票",
+      "level": "[推断]"
+    },
+    "NUM_THISFORCE": {
+      "type": "投票",
+      "level": "[推断]"
+    },
+    "NUM_TOWN": {
+      "type": "表长",
+      "level": "[确认]"
+    },
+    "NUM_TOWN2": {
+      "type": "投票",
+      "level": "[推断]"
+    },
+    "NUM_TOWNFASHION": {
+      "type": "投票",
+      "level": "无证据",
+      "note": "误采；eTownFashion 循环上界 2"
+    },
+    "NUM_TOWNSHARE": {
+      "type": "投票",
+      "level": "无证据",
+      "note": "误采；推断为份额槽 3"
+    },
+    "NUM_TRADINGITEM": {
+      "type": "表长+循环",
+      "level": "[确认]"
+    },
+    "NUM_TRADINGITEMKIND": {
+      "type": "循环",
+      "level": "[确认]"
+    },
+    "NUM_TRIGGERKIND": {
+      "type": "投票",
+      "level": "[推断]"
+    },
+    "NUM_VILLAGE": {
+      "type": "循环",
+      "level": "[确认]"
+    }
   }
 }

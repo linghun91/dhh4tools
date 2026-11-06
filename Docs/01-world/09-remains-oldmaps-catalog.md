@@ -2,7 +2,7 @@
 
 world 拥有遗迹 / 村落的 **ID、显示名、静态坐标、发现位形状**。古地图是 `eItem`，持有与使用走 items；本篇只回答「这张地图声明揭示哪个发现点」。海上怎么搜、弹什么窗口，见 [03-villages-discovery.md](03-villages-discovery.md) 与 [06-ocean/02-search-encounters.md](../06-ocean/02-search-encounters.md)、[09-items/01-item-catalog.md](../09-items/01-item-catalog.md)。
 
-本篇补 03 未抽出的 **25 个遗迹名**、**24 个村落名与原版坐标**，以及 `eItem` 155–173 对遗迹 / 村落的对照。对照只写源码或文案能钉住的字段；`item_id → remain_id` 的整数表 **未在 exe 里找到**，禁止把 `SItem+0x18` 的城镇 ID 当成遗迹下标。
+本篇补 03 未抽出的 **25 个遗迹名**、**24 个村落名与原版坐标**，以及 `eItem` 155–173 对遗迹 / 村落的对照。`config/world/remains.yaml` 的 schema 由本篇拥有（§6）；`villages.yaml` 的 schema 在 `03`，本篇只给全表数值。对照只写源码或文案能钉住的字段；`item_id → remains_id` 的整数表 **未在 exe 里找到**，禁止把 `SItem+0x18` 的城镇 ID 当成遗迹下标。
 
 ## 1. 职责边界
 
@@ -10,7 +10,7 @@ world 拥有遗迹 / 村落的 **ID、显示名、静态坐标、发现位形状
 
 - `eRemains` 25 条定义（名字、发现位形状）
 - `eVillage` 24 条定义（名字、原版坐标、静态附加字节）
-- 古地图道具 → 发现点的 **声明表**（`config/world/unlock_maps.yaml`）
+- 古地图道具 → 发现点的对照证据（声明表本体是 `config/discovery/old_maps.yaml`，`11` §6.2）
 - `CMpRemains` / `CGetOldMapWindow` 与资源包的归属（逻辑 ID vs UI）
 
 不管：
@@ -37,7 +37,7 @@ world 拥有遗迹 / 村落的 **ID、显示名、静态坐标、发现位形状
 | RTC `eRemains` 立即数统计 `[[25,1],[5,1]]` | [确认] | `srcdata/catalog/num_from_rtc.json`。`5` 的语义 [未知] |
 | `NUM_VILLAGE = 24`，`INVALID_VILLAGE = -1` | [确认] | `VillageID.h`，`num_values.json` |
 | 近港筛选哨兵 `0x19` = 25 = `NUM_VILLAGE+1` | [确认] | `fn_14000bcf3` body `0x140151250` |
-| `REMAINSSTATE_BITS` 符号在，位宽未恢复 | [确认] | `Remains.h`，`asserts.txt`，`constants.json` |
+| `REMAINSSTATE_BITS` 符号在；实体是 `CRemains+0x8` u8（§2.2） | [确认] | `Remains.h`，`asserts.txt`，`constants.json`，字节存档器 |
 | 遗迹 / 村落都不在 `GetFixTownProc` 等五个导出里 | [确认] | `srcdata/source/world/DllMain.cpp` |
 
 `0x19` 在遗迹路径是 **表长 25**（循环 `id >= 25` 结束）。在村落近港路径是 **空哨兵 25**（合法 id 0–23）。不要混用。
@@ -47,7 +47,8 @@ world 拥有遗迹 / 村落的 **ID、显示名、静态坐标、发现位形状
 | 事实 | 等级 | 来源 |
 | --- | --- | --- |
 | `CRemains : CSaveObject`。每个对象步长 `0x10` | [确认] | 构造分配参数 `0x10, 0x19`；索引 `fn_14000a3b2` `imul rax, 0x10` 后 `+8` |
-| 存档 / 读档只写 `+0x8`（`vfunc_07` / `vfunc_06` → `fn_14000c6da` / `fn_14000c978`） | [确认] | `CRemains.cpp` |
+| 存档 / 读档只写 `+0x8`（`vfunc_07` / `vfunc_06` → `fn_14000c6da` / `fn_14000c978`）。`fn_14000c6da` 是**字节**存档器（`CWorldData::vfunc_07` 也用它存 `+0x14/+0x1c..+0x1e` 单字节），故 `REMAINSSTATE_BITS` = `CRemains+0x8` **1 字节** | [确认] 存档宽度；`sizeof=1` [推断] | `CRemains.cpp`、`0x1402abf30` |
+| 位 0 = 已发现：`fn_14000c6f3`（body `0x1400c8790`）= `fn_1400c5fa0(&+8, 0) > 0`（`movzx` 字节与位掩码）；首次进入时 `fn_14000f27c` 调 `fn_1401ef750(&+8, 0, 1)` 置位 | [确认] | 反汇编 |
 | `vfunc_05` 把 `+0x8` 置 0 | [确认] | 同文件 |
 | `CRemainsElement` 挂在 `CWorld +0xf0d0` | [确认] | `CWorld.cpp` 构造 |
 | 取遗迹元素：`fn_14001199b` 返回 `CWorld+0xf0d0` | [确认] | body `0x1402a8880` |
@@ -56,9 +57,10 @@ world 拥有遗迹 / 村落的 **ID、显示名、静态坐标、发现位形状
 | 指针表 25 个非 0 指针，第 26 槽为 0 | [确认] | 表 VA `0x1405b2f80`；字符串 `0x1405b3070`–`0x1405b31d8`，GBK |
 | `CRemains` **不是** `CLocator`。对象内没有坐标字段 | [确认] | 类层次 `CRemains -> CSaveObject -> CObject`；体积 `0x10` |
 | 25 对原版坐标不在 `.rdata` 连续 `(x,y)` 表里（按伦敦量级扫描为 0） | [确认] | 对 SC exe `.rdata` 扫描 |
-| 发现位另有一份：`fn_14000a321` 用 `fn_140011cc5` 读某对象 `+0x34` 的 bit，`fn_1400134e4` 置位 | [确认] | `fn_1402aad20.cpp`。该对象是玩家还是世界 [未知] |
+| 发现位另有一份：`fn_14000a321` 用 `fn_140011cc5` 读某对象 `+0x34` 起的位数组（`byte[id>>3] & (1<<(id&7))`），`fn_1400134e4` 置位；条件是 `CRemains` 位 0 已置。调用者 `fn_14000d684`（RTC `cSaveDataFile`）与 `fn_14000e8a4`。同函数前半对 231 道具做同样的「收录」 | [确认] 控制流；对象是存档级收藏/图鉴记录 [推断] | `fn_1402aad20.cpp`、xref |
+| **遗迹挂在港口上**：`fn_140002450(town)`（body `0x1402611b0`）= 港口定义表 `STown+0x26` 字节。值 `0x1a`（26）= 无遗迹 | [确认] | 反汇编 + `catalog/world_tables.json` |
 
-遗迹全名（SC exe GBK，下标即 `remain_id`）`[确认]`：
+遗迹全名（SC exe GBK，下标即 `remains_id`）`[确认]`：
 
 | id | key | name |
 | ---: | --- | --- |
@@ -90,6 +92,22 @@ world 拥有遗迹 / 村落的 **ID、显示名、静态坐标、发现位形状
 
 `key` 是重构别名，不是原版枚举符。
 
+遗迹 → 港口（`STown+0x26`，World0 与 World1 相同）`[确认]`：
+
+| remain | 港 | remain | 港 | remain | 港 |
+| ---: | --- | ---: | --- | ---: | --- |
+| 0 巨石阵 | 0 伦敦 | 9 金字塔 | 25 亚历山大 | 17 武宁王陵 | 57 汉城 |
+| 1 木造教堂 | **无** | 10 泥清真寺 | 29 圣乔治 | 18 金阁寺 | 59 大阪 |
+| 2 圣马丁教堂 | 5 汉堡 | 11 辛巴威 | 34 索法拉 | 19 图拉战士像 | 61 哈瓦那 |
+| 3 木条教堂 | 7 斯德哥尔摩 | 12 巴斯拉清真寺 | 38 巴士拉 | 20 太阳和月亮的金字塔 | 65 委拉克鲁斯 |
+| 4 岩心寺 | 24 贝鲁特 | 13 泰姬玛哈陵 | 42 卡利卡特 | 21 马丘比丘 | 67 波托韦洛 |
+| 5 圣地亚哥大教堂 | 13 塞维利亚 | 14 吴哥窟 | 47 马六甲 | 22 蒂卡尔 | 66 梅里达 |
+| 6 罗马竞技场 | 15 热那亚 | 15 婆罗浮屠 | 50 雅加达 | 23 佛塔 | 45 加尔各答 |
+| 7 巴特农神殿 | 19 雅典 | 16 紫禁城 | 54 杭州 | 24 阿瑜陀耶 | 81 吉阿丁 |
+| 8 洞窟修道院 | 22 伊斯坦布尔 | | | | |
+
+入口：港内地图点 kind 9/10/11 都分发到 `CMpRemains`（`10-mappoint-kinds.md` 2.3）。World1 给这 24 港置了其中一位（教堂类多为 10 教会，城市类多为 11 城门，废墟类多为 9 遗址）；World0 初值一律不置，只能运行时开（`fn_140001f87`，`[推断]` 剧本/事件改港数据）。
+
 ### 2.3 村落对象与坐标
 
 | 事实 | 等级 | 来源 |
@@ -98,7 +116,8 @@ world 拥有遗迹 / 村落的 **ID、显示名、静态坐标、发现位形状
 | `CVillageElement` 在 `CWorld +0x19f38`；存档只写元素 `+0x8`，**不**循环 24 个村落对象 | [确认] | `CWorld.cpp`，`CVillageElement.cpp` |
 | 运行时数组：`fn_14000e912` `imul rax, 0x48` + `lea` → `0x1442a72e0`（`.data` BSS，24×`0x48`） | [确认] | body `0x1402a03d0` |
 | 静态定义表：`fn_1400032c9` 循环 `id >= 0x18`，源步长 `0x38`，`lea` → `0x140687b40` | [确认] | body `0x1402a04d0` |
-| 源记录：`+0x00` 名字指针；`+0x08/+0x0C` 两个 `int32` 拷到对象 `+0x18/+0x1C`；`+0x10..+0x2C` 六个 `int32` 各 ×16 写到 `+0x20..+0x3C`；`+0x30/+0x31` 两字节 → `+0x40/+0x41` | [确认] | 同函数 |
+| 源记录：`+0x00` 名字指针；`+0x08/+0x0C` 两个 `int32` 拷到对象 `+0x18/+0x1C`；`+0x10..+0x2C` **八个** `int32` 各 `imul 0x10` 写到 `+0x20..+0x3C`；`+0x30/+0x31` 两字节 → `+0x40/+0x41`；`+0x32..+0x37` 全 0 | [确认] | 同函数 |
+| 那八个 `int32` = **两块盲区壳矩形** `{x,y,w,h}×2`，单位是 chip（×16 后进原版空间）。对象 `+0x20/+0x28`、`+0x30/+0x38` 正是 `fn_140003553` 按 `eBlindArea` 0/1 读的点/尺寸（`06-three-maps.md` 2.7）。17/24 个村点落在第 0 块 ×16 内 | [确认] 拷贝与消费者；单位 chip [推断] | 反汇编 `0x1402a04d0`、`0x1402a01c0` |
 | `+0x18/+0x1C` 是原版坐标（与港口同一空间：伦敦 `20080,4272`） | [确认] | 值域与港口表重叠；北海道 `(35712,5248)` 在大阪 `(35040,6144)` 北侧（y 更小） |
 | 显示名 C-string 在 `.rdata` `0x1405ace78` 起，GBK | [确认] | 源记录 `+0x00` |
 | `CVillage::vfunc_03` 调 `fn_14000cf90(5, id)`：把 kind=5 与 id 打成名字句柄 | [确认] | `CVillage.cpp`；`fn_14000cf90` kind 0=港 / 1=舰队 / 2=道具 / 3=船 / 4=junction，5 走默认打包 |
@@ -106,34 +125,36 @@ world 拥有遗迹 / 村落的 **ID、显示名、静态坐标、发现位形状
 
 村落全表（SC exe，下标即 `village_id`）`[确认]`：
 
-| id | key | name | x | y | u8_30 | u8_31 | i32×16 六个源值 |
-| ---: | --- | --- | ---: | ---: | ---: | ---: | --- |
-| 0 | inuvik | 依努维克 | 4880 | 2304 | 5 | 10 | 254, 0, 284, 188, 0, 0 |
-| 1 | hawaii | 夏威夷 | 2256 | 7536 | 4 | 9 | 0, 325, 254, 331, 0, 0 |
-| 2 | rio_de_janeiro | 里约热内卢 | 15120 | 12544 | 2 | 4 | 806, 720, 234, 118, 0, 0 |
-| 3 | churchill | 丘吉尔 | 9584 | 3472 | 6 | 9 | 538, 0, 282, 272, 0, 0 |
-| 4 | valdivia | 瓦尔迪维亚 | 11824 | 14272 | 6 | 5 | 440, 838, 366, 412, 0, 0 |
-| 5 | nome | 诺姆 | 1600 | 2416 | 5 | 9 | 0, 0, 254, 325, 0, 0 |
-| 6 | cape_cod | 鳕角 | 12176 | 5344 | 6 | 3 | 538, 272, 502, 53, 0, 0 |
-| 7 | montevideo | 孟特维的亚 | 13248 | 14304 | 2 | 5 | 806, 838, 234, 412, 0, 0 |
-| 8 | hekla | 海克拉 | 17968 | 2912 | 0 | 2 | 1040, 0, 160, 240, 0, 0 |
-| 9 | karibib | 卡里比布 | 21600 | 12544 | 2 | 1 | 1040, 900, 608, 350, 0, 0 |
-| 10 | farwell | 法尔维尔 | 15584 | 2688 | 0 | 7 | 820, 0, 220, 272, 0, 0 |
-| 11 | tahiti | 塔希提 | 3568 | 11648 | 4 | 10 | 0, 656, 440, 594, 0, 0 |
-| 12 | dikson | 迪克逊 | 28960 | 1824 | 0 | 10 | 1520, 0, 440, 370, 0, 0 |
-| 13 | azores | 亚束尔 | 16864 | 5696 | 1 | 1 | 1040, 240, 70, 260, 0, 0 |
-| 14 | santa_barbara | 圣巴巴拉 | 6608 | 6144 | 6 | 8 | 254, 188, 284, 137, 254, 325 |
-| 15 | narvik | 纳尔维克 | 22032 | 2240 | 0 | 2 | 1200, 0, 320, 170, 1430, 170 |
-| 16 | rabaul | 雷巴求 | 33648 | 11824 | 3 | 4 | 1648, 660, 262, 156, 1910, 700 |
-| 17 | callao | 喀劳 | 11248 | 10944 | 6 | 7 | 440, 720, 366, 118, 0, 0 |
-| 18 | hokkaido | 北海道 | 35712 | 5248 | 5 | 3 | 1960, 180, 364, 136, 2240, 316 |
-| 19 | perth | 珀斯 | 32848 | 13520 | 3 | 5 | 1648, 816, 552, 434, 0, 0 |
-| 20 | guam | 关岛 | 36192 | 8288 | 4 | 7 | 2200, 500, 300, 316, 0, 0 |
-| 21 | tiksi | 季克西 | 34336 | 1920 | 5 | 10 | 1960, 0, 540, 180, 0, 0 |
-| 22 | korf | 科尔夫 | 38368 | 3280 | 5 | 5 | 2324, 180, 176, 320, 0, 0 |
-| 23 | wanganui | 汪加努 | 39424 | 14400 | 4 | 9 | 2200, 816, 300, 434, 0, 0 |
+| id | key | name | x | y | u8_30 | u8_31 | 壳 0 `{x,y,w,h}`（chip） | 壳 1 `{x,y,w,h}`（chip） |
+| ---: | --- | --- | ---: | ---: | ---: | ---: | --- | --- |
+| 0 | inuvik | 依努维克 | 4880 | 2304 | 5 | 10 | 254, 0, 284, 188 | — |
+| 1 | hawaii | 夏威夷 | 2256 | 7536 | 4 | 9 | 0, 325, 254, 331 | — |
+| 2 | rio_de_janeiro | 里约热内卢 | 15120 | 12544 | 2 | 4 | 806, 720, 234, 118 | — |
+| 3 | churchill | 丘吉尔 | 9584 | 3472 | 6 | 9 | 538, 0, 282, 272 | — |
+| 4 | valdivia | 瓦尔迪维亚 | 11824 | 14272 | 6 | 5 | 440, 838, 366, 412 | — |
+| 5 | nome | 诺姆 | 1600 | 2416 | 5 | 9 | 0, 0, 254, 325 | — |
+| 6 | cape_cod | 鳕角 | 12176 | 5344 | 6 | 3 | 538, 272, 502, 53 | — |
+| 7 | montevideo | 孟特维的亚 | 13248 | 14304 | 2 | 5 | 806, 838, 234, 412 | — |
+| 8 | hekla | 海克拉 | 17968 | 2912 | 0 | 2 | 1040, 0, 160, 240 | — |
+| 9 | karibib | 卡里比布 | 21600 | 12544 | 2 | 1 | 1040, 900, 608, 350 | — |
+| 10 | farwell | 法尔维尔 | 15584 | 2688 | 0 | 7 | 820, 0, 220, 272 | — |
+| 11 | tahiti | 塔希提 | 3568 | 11648 | 4 | 10 | 0, 656, 440, 594 | — |
+| 12 | dikson | 迪克逊 | 28960 | 1824 | 0 | 10 | 1520, 0, 440, 370 | — |
+| 13 | azores | 亚束尔 | 16864 | 5696 | 1 | 1 | 1040, 240, 70, 260 | — |
+| 14 | santa_barbara | 圣巴巴拉 | 6608 | 6144 | 6 | 8 | 254, 188, 284, 137 | 254, 325, 186, 331 |
+| 15 | narvik | 纳尔维克 | 22032 | 2240 | 0 | 2 | 1200, 0, 320, 170 | 1430, 170, 90, 70 |
+| 16 | rabaul | 雷巴求 | 33648 | 11824 | 3 | 4 | 1648, 660, 262, 156 | 1910, 700, 290, 116 |
+| 17 | callao | 喀劳 | 11248 | 10944 | 6 | 7 | 440, 720, 366, 118 | — |
+| 18 | hokkaido | 北海道 | 35712 | 5248 | 5 | 3 | 1960, 180, 364, 136 | 2240, 316, 84, 184 |
+| 19 | perth | 珀斯 | 32848 | 13520 | 3 | 5 | 1648, 816, 552, 434 | — |
+| 20 | guam | 关岛 | 36192 | 8288 | 4 | 7 | 2200, 500, 300, 316 | — |
+| 21 | tiksi | 季克西 | 34336 | 1920 | 5 | 10 | 1960, 0, 540, 180 | — |
+| 22 | korf | 科尔夫 | 38368 | 3280 | 5 | 5 | 2324, 180, 176, 320 | — |
+| 23 | wanganui | 汪加努 | 39424 | 14400 | 4 | 9 | 2200, 816, 300, 434 | — |
 
-`u8_30` 值域 0–6；`u8_31` 值域 1–10。不是 `eSeaArea`（25 档）。可能与盲区 / 气候带有关，**未命名**。六个 `int32` 乘 16 后进对象，像矩形或盲区多边形，禁止当第二套经纬。
+`—` = 四个 0，`fn_140003553` 见尺寸 `<= 0` 即跳过。旧稿只列了六个值，圣巴巴拉 / 纳尔维克 / 雷巴求 / 北海道 的壳 1 尺寸被截掉，已补全。
+
+`u8_30` 值域 0–6；`u8_31` 值域 1–10。不是 `eSeaArea`（25 档）。语义**未命名**。
 
 24 个中文名里 **没有**「岩窟」「廷巴克图」「北京」「德里」。这三处只出现在古地图 **道具名 / 说明** 里，不能直接写成 `village_id`。
 
@@ -154,7 +175,7 @@ world 拥有遗迹 / 村落的 **ID、显示名、静态坐标、发现位形状
 +0x19 = 0x08
 ```
 
-`+0x18` 落在 0–96 的 `eTown`，与 97 港表对得上 `[确认]` 值域。物品目录把它当「关联港」`[推断]`。**不是** `remain_id`（遗迹只有 0–24；例如去北京的地图 `+0x18=57` 是汉城）。
+`+0x18` 落在 0–96 的 `eTown`，与 97 港表对得上 `[确认]` 值域。物品目录把它当「关联港」`[推断]`。**不是** `remains_id`（遗迹只有 0–24；例如去北京的地图 `+0x18=57` 是汉城）。
 
 七张贤者地图（155–161，kind 9）：`+0x15 = 0..6` 连续，`+0x18 = 98`（`NUM_TOWN+1`，未绑港）。说明在 mesfile 各自一条或两条「古地图。画在…」。
 
@@ -194,7 +215,7 @@ world 拥有遗迹 / 村落的 **ID、显示名、静态坐标、发现位形状
 
 `0x1c42f` 另有「标着%s位置的地图。」——藏宝图 / 通用句，不是 12 张地点图。
 
-### 2.5 `item_id` → `remain_id` / `village_id`
+### 2.5 `item_id` → `remains_id` / `village_id`
 
 在 SC exe 全文搜索：
 
@@ -203,11 +224,11 @@ world 拥有遗迹 / 村落的 **ID、显示名、静态坐标、发现位形状
 - `sub r32, 0xA2`（162）：无
 - 对「巨石阵」字符串的指针：只有名字表自己
 
-结论：`[确认]` 不存在「`remain_id = item_id - 162`」或 12 槽整数对照表。引擎不得写 `if item==162: remain=0`。
+结论：`[确认]` 不存在「`remains_id = item_id - 162`」或 12 槽整数对照表。引擎不得写 `if item==162: remain=0`。
 
-名字对名字的 **推断**（只作注释，不进运行时外键）。规则：物品名 **且** 说明同时唯一指向某一遗迹名，才给 `remain_id`。
+名字对名字的 **推断**（只作注释，不进运行时外键）。规则：物品名 **且** 说明同时唯一指向某一遗迹名，才给 `remains_id`。
 
-| item | 物品名 / 说明 | 遗迹名 | remain_id | 强度 |
+| item | 物品名 / 说明 | 遗迹名 | remains_id | 强度 |
 | ---: | --- | --- | ---: | --- |
 | 162 | 环状石柱遗址；英国南部 | 巨石阵 | 0 | [推断] 强 |
 | 163 | 古代竞技场；古罗马首都 | 罗马竞技场 | 6 | [推断] 强 |
@@ -222,7 +243,7 @@ world 拥有遗迹 / 村落的 **ID、显示名、静态坐标、发现位形状
 | 172 | 古代城市遗址；废墟+远岛 | 马丘比丘 / 蒂卡尔 / 太阳金字塔 | — | 不填 |
 | 173 | 阿斯帝加王国 | 图拉战士像 / 太阳金字塔 | — | 不填 |
 
-12 张地点图覆盖不了 25 个遗迹。木造教堂、巴特农、辛巴威、婆罗浮屠、佛塔、阿瑜陀耶等 **没有** 对应 `eItem` 162–173。那些点只走海上探索。
+12 张地点图覆盖不了 25 个遗迹。木造教堂、巴特农、辛巴威、婆罗浮屠、佛塔、阿瑜陀耶等 **没有** 对应 `eItem` 162–173。原版遗迹的发现入口是**港内地图点**（§2.6），不是海上探索；地点地图与遗迹位之间仍未见代码连接。
 
 kind 8 遗物（乌勒尔弓箭…契慕斧头，14 件）可能是遗迹出土物，与 25 遗迹不是 1:1，本篇不连。
 
@@ -232,11 +253,25 @@ kind 8 遗物（乌勒尔弓箭…契慕斧头，14 件）可能是遗迹出土�
 | --- | --- | --- |
 | 类体积 `0x18`。构造写 vftable，`+0x10 = 0` | [确认] | `CMpRemains.cpp`；析构 `fn_14000750e(..., 0x18)` |
 | 无基类链上的 `CSaveObject` / `CLocator` | [确认] | `class_hierarchy.txt`：`CMpRemains` 单节点 |
-| 与 `CTownSceneView` 的 12 个 `eMapPointKind` 槽（`+0x80` 起）同属城镇地图点 | [推断] | `CTownSceneView` 循环 `eMapPointKind >= 0xc`；`CMpDock` 同类前缀 |
-| 贴图 `Game/Remains.dk4`。`fn_14001233c` 先加载 `EvFrame.dk4`，再 `fn_140010e6f(..., "Remains.dk4", sB8, &rcSrc)`，画布 `0x780×0x438`（1920×1080） | [确认] | `fn_1401eb2a0.cpp` body `0x1401ef150`。`sB8` 是帧下标，是否等于 `remain_id` [未知] |
-| 构造函数 **不** 写入 `remain_id` | [确认] | `CMpRemains.cpp` |
+| 港内地图点 kind 9/10/11 的处理类 | [确认] | 跳表 `0x14026d92c`（`10-mappoint-kinds.md` §2.3） |
+| 贴图 `Game/Remains.dk4`。`fn_14001233c` 先加载 `EvFrame.dk4`，再 `fn_140010e6f(..., "Remains.dk4", sB8, &rcSrc)`，画布 `0x780×0x438`（1920×1080） | [确认] | `fn_1401eb2a0.cpp` body `0x1401ef150`。`sB8` = `remains_id`（下一行） |
+| 构造函数 **不** 写入 `remains_id` | [确认] | `CMpRemains.cpp` |
+| 运行 `fn_14000f803(obj, scene, kind)`（body `0x140174c30`）：`remains_id = STown[当前港]+0x26`；`discovered = fn_14000c6f3(CRemains[remains_id])`；`fn_14001233c(view, remains_id)` 画 `Remains.dk4` **帧 = remains_id**；已发现走 `fn_14000eacf`（重访），否则走 `fn_14000c4d2`（首访） | [确认] | 反汇编 |
+| 首访 `fn_14000c4d2`：播曲 `0x32`；名字消息 `0x129`；`v = fn_14000f27c(remains, town, kind)`；若 `fn_140010f46()==0` 则 `v *= 2`；`fn_14000ae7a(player_force, major_sea(town), v)`；消息 `0x12a` 显示 `v` | [确认]；`fn_140010f46`（body `0x14009bc10`）→ `fn_140010131`（`0x1401cc0c0`，忽略参数）→ `fn_140004a1b(0x144296500)` 取 `+0x7c` = `eScenario`，即剧本 0 时 ×2 | 同上 |
+| 重访 `fn_14000eacf`（body `0x140173d80`）：读日历，`target = (fn_14000e68d()+1) % 28 + 1`，按 kind 9/10/11 分到 `0x140008e9a` / `0x140002171` / `0x14000e840`（仪式；城门分支走 `add_days(4)`） | [确认] | 反汇编；仪式玩法归 `08-town-life/05-inn-church-palace.md` |
+| `fn_14000f27c`：已发现返回 0；否则置位 0，按 `major_sea(town)` 取列（北海/地中海→0，非洲→1，印度洋/新大陆→2，东南亚/东亚→3），按 `kind-9` 取行，查表 `0x140686650`；若 `game+0x7c == 0`（`game+0x7c` = `eScenario`，`04-economy/07` §2.1）即剧本 0 则 `×2`；`fn_14000ae7a` 把值加到玩家势力 `+0x10+sea*2`（七大海域影响力 u16），夹到 `0x270f`=9999；返回该值 | [确认] | body `0x1401eefc0`、`0x140106540` |
 
-`CMpRemains` 是城镇场景里的地图点视图，不是遗迹定义表。定义在 `CRemains` + 名字指针表。
+影响力奖励表 `0x140686650`（`int32[3][4]`）`[确认]`：
+
+| kind | 北海·地中海 | 非洲 | 印度洋·新大陆 | 东南亚·东亚 |
+| --- | ---: | ---: | ---: | ---: |
+| 9 遗址 | 3 | 5 | 10 | 15 |
+| 10 教会 | 1 | 1 | 1 | 1 |
+| 11 城门 | 5 | 10 | 15 | 20 |
+
+表在 `.data`（文件偏移 = VA − `0x140001600`）。注意首访路径对同一势力加了两次（`fn_14000f27c` 内一次、`fn_14000c4d2` 再一次）。`[确认]` 两处 ×2 的条件相同，都是剧本 0：`fn_14000f27c` 返回的是已 ×2 的值（`0x1401ef0b6 shl eax,1` 后 `0x1401ef0d2` 返回），第二次再 ×2。剧本 0 合计 `2b + 4b = 6b`，其它剧本 `b + b`。是否原版 bug `[未知]`；重构用 `apply_twice: true` 显式开关复刻，两次都经 `factions.influence_gain` 修正器，第二次以第一次的返回值为底，正好复现 6b，不另设谓词。
+
+`CMpRemains` 是城镇场景里的地图点处理类，不是遗迹定义表。定义在 `CRemains` + 名字指针表 + `STown+0x26`。
 
 ### 2.7 `CGetOldMapWindow` 与古地图 UI
 
@@ -254,26 +289,26 @@ kind 8 遗物（乌勒尔弓箭…契慕斧头，14 件）可能是遗迹出土�
 | `CGetOldMapWindow::vfunc_03` 空函数 | [确认] | `CGetOldMapWindow.cpp` |
 | 窗内 GBK「名称：」（字节 `C1 B6 D6 D7 A3 BC`） | [确认] | `fn_140002e50` 里 `fn_140001e65` 的字面量 |
 
-古地图窗读的是 **道具记录**（步长 32），不是 `eRemains` 下标。揭示哪个发现点必须查 `unlock_maps.yaml`，不能从窗口类反推。
+古地图窗读的是 **道具记录**（步长 32），不是 `eRemains` 下标。揭示哪个发现点必须查 `discovery/old_maps.yaml`（`11` §6.2），不能从窗口类反推。
 
 ## 3. 实体与 ID
 
 | 实体 | ID | 原版计数 | 非法 / 哨兵 | 存档 |
 | --- | --- | --- | --- | --- |
-| 遗迹 | `remain_id` / `eRemains` | 25 | -1 | 每条 `CRemains+0x8`；另有 `+0x34` bitfield |
-| 村落 | `village_id` / `eVillage` | 24 | -1；近港空哨兵 25 | `CVillageElement+0x8` 仅 8 字节，24 个发现位如何挤进去 [未知] |
-| 村落盲区 | `eVillageBlindArea` | [未知] | `INVALID_VILLAGEBLINDAREA` | — |
+| 遗迹 | `remains_id` / `eRemains` | 25 | 运行时 `null`（原版 -1；港口表空 26，legacy） | 每条 `CRemains+0x8`（u8，位 0 = 已发现）；存档级收藏另有 `+0x34` 位数组 |
+| 村落 | `village_id` / `eVillage` | 24 | 运行时 `null`（原版 -1；近港空 25，legacy） | `CVillageElement+0x8` u32，每村一位（`03` §2） |
+| 村落盲区 | `eVillageBlindArea` | 2 `[推断]`（循环上界） | 尺寸 `<= 0` 即无 | 静态，不存档 |
 | 地点地图 | `item_id` 162–173 | 12 | 道具空槽 232 | items |
 | 贤者地图 | `item_id` 155–161 | 7 | 同上 | items；合成材料，不直接揭示点 |
-| 地图点种类 | `eMapPointKind` | 12 | -1 | `CMpRemains` 是其中一种视图 [推断] |
+| 地图点种类 | `eMapPointKind` | 12 | -1 | kind 9/10/11 → `CMpRemains` [确认] |
 
-运行时循环读表长。原版包默认 25 / 24。模组加行用 `id >= 1000` 或独立包，不覆盖 0–24 / 0–23。
+运行时循环读表长。原版包默认 25 / 24。模组加行用自己命名空间的 key（`mymod:new_ruin`），加载器顺序分配整数，不覆盖原版条目。
 
 禁止：
 
 - 用 `0` 当空遗迹 / 空村落（0 是巨石阵、依努维克）
-- 用 `item_id - 162` 当 `remain_id`
-- 用 `SItem+0x18` 当 `remain_id` 或 `village_id`
+- 用 `item_id - 162` 当 `remains_id`
+- 用 `SItem+0x18` 当 `remains_id` 或 `village_id`
 - 把「去北京的地图」写成 `village_id`（24 村里没有北京）
 
 ## 4. 算法 / 公式
@@ -287,33 +322,45 @@ remain.name_ptr_table          = exe+0x1405b2f80   # 内容管线抽出，运行
 village.count_original         = 24
 village.object_stride          = 0x48
 village.def_stride             = 0x38
-village.none                   = 25
 village.near_town.dx_limit     = 40000
 village.near_town.dy_limit     = 20000
 item.place_map_ids             = 162..173
 item.sage_map_ids              = 155..161
-item.empty_slot                = 232
 oldmap.window_slots            = 4
 oldmap.canvas                  = 1920 x 1080
 ```
 
-发现：
+原版哨兵（村落近港空 25、道具空槽 232、港口无遗迹 26）只在 `config/ids/legacy_codec.yaml`。
+
+发现（命令与事件形状见 `03` §8）：
 
 ```
-on UnlockRemain { remain_id }:
-    if remain_id not in remains: reject
-    remains_state[remain_id].discovered = true
-    # 不读背包
-
-on UnlockVillage { village_id }:
-    同上
+World.mark_remains_discovered(remains_id, via, town_id?, fleet_id?, item_id?)   # 未知 id → reject；不读背包
+World.mark_village_discovered(village_id, via, fleet_id?, item_id?)
 ```
 
-`UseItem` 在 items：查 `unlock_maps` 的 `unlocks` 列表，逐条发事件。`unlocks` 为空或 `type: unknown` 则只获得道具、不改发现位。
+`UseItem` 在 items：查 `discovery/old_maps.yaml` 的 `target`，有目标才调上面的命令（`via: item, item_id`），事件由 world 发。`target.key` 为 `null` 则只获得道具、不改发现位。
 
 近港村落伪代码见 03 篇 `fn_14000bcf3`。坐标用本表 `x,y`，不要扫 `World.dat`。
 
-遗迹坐标未抽出。海上命中遗迹走 ocean 的探索结果表，不在本系统按距离找点，直到坐标表补全。
+遗迹没有独立坐标：原版遗迹挂在港口上（`STown+0x26`），在港内点地图点进入。位置 = `LocatorRef(town, 所挂港)`；无挂港的遗迹（原版仅 1 木造教堂）只能由事件/其它路径发现。
+
+首访奖励（参数在 `remains.yaml` 的 `influence_reward`）：
+
+```
+on_enter_remains(town_id, kind):        # 即 11 §4.3 on_enter_town_map_point；world 订阅 FacilityEntered（kind 9/10/11）
+    r = Remains.at_town(town_id);  if r is null: return
+    if Remains.discovered(r): emit RemainsRevisited { remains_id: r, town_id, kind }; return   # town-life 据此跑仪式（原版 fn_14000eacf）
+    set_discovered(r)                    # world 内部置位；事件在末尾发一次
+    sea = MajorSea.of_town(town_id)
+    v = influence_reward.table[kind][influence_reward.col_by_major_sea[sea]]
+    # 剧本倍数（原版剧本 0 ×2）与上限 9999 都在 factions：Influence.add 前求修正器
+    # factions.influence_gain（ctx.source = remains），由剧本包注入，不比较剧本号
+    v = Influence.add(player_force, sea, v, reason: remains)   # 返回修正后、夹紧前的加值（06 / 词表 §14-26）
+    if influence_reward.apply_twice:              # 原版行为
+        Influence.add(player_force, sea, v, reason: remains)   # 同一修正器再乘一次 = 原版 fn_140010f46()==0 分支
+    emit RemainsDiscovered { remains_id: r, via: town_map_point, town_id, fleet_id, item_id: null }
+```
 
 ## 5. 耦合分析
 
@@ -330,198 +377,63 @@ on UnlockVillage { village_id }:
 
 | 数据 | 系统 |
 | --- | --- |
-| 遗迹 / 村落 id、名、村落坐标、静态附加字节 | world（本篇三份 yaml） |
+| 遗迹 / 村落 key、名、村落坐标、静态附加字节 | world（`remains.yaml` / `villages.yaml`） |
 | 已发现 bit | world 存档 |
-| 地图道具定义、持有 | items；`unlocks` 外键指向本篇 |
+| 地图道具定义、持有 | items |
+| 地图 → 发现点声明 | discovery `old_maps.yaml`（`11`） |
 | 搜索、命中 | ocean |
 | 古地图窗、遗迹图、发现标题 | ui |
 | 遗迹剧情 | narrative 订阅 `RemainsDiscovered` |
 
-items 不得在代码里写死 162→巨石阵。只读 `unlock_maps.yaml`。没有对应 ID 则 `type: unknown`，校验器警告、不失败启动（原版 12 张图本来就没把 25 个点盖满）。
+items 不得在代码里写死 162→巨石阵。只读 `old_maps.yaml`。没有对应目标则 `target.key: null`，校验器警告、不失败启动（原版 12 张图本来就没把 25 个点盖满）。
 
 ## 6. 解耦后的配置
 
-`config/world/remains.yaml`：
+`config/world/remains.yaml`（唯一 schema；`03` / `11` 引用本节）：
 
 ```yaml
 schema: dk4.world.remains
-version: 1
-pack: vanilla-sc-exe          # 主 exe，不是 World0.dll
-count_original: 25
-invalid: -1
-state_bits: unknown           # REMAINSSTATE_BITS
+version: 2
+pack: vanilla-core            # 名字表在主 exe，World0/World1 共用
+state:                        # 原版 REMAINSSTATE_BITS = CRemains+0x8 u8
+  discovered_bit: 0           # 其余位语义未知；存档按 key 存 flags，不复用原版位布局
+texture: { pack: Remains.dk4, index: vanilla_index }   # 帧号 = 原版下标 [确认]
 remains:
-  - id: 0
-    key: stonehenge
-    name: 巨石阵
-    name_i18n: remain.stonehenge.name
-    coords:
-      space: original
-      x: null                 # CRemains 无 Locator；表未抽出
-      y: null
-    map_point_kind_id: null
+  - key: vanilla:stonehenge           # 主键；导入器另写 vanilla_index: 0
+    name_key: remains.stonehenge.name   # 巨石阵
     discovered_by_default: false
-    map_item_ids: []          # 由 unlock_maps 反查，本表不写死
-    unknown_bytes: []
-  - id: 6
-    key: colosseum
-    name: 罗马竞技场
-    coords: { space: original, x: null, y: null }
-    discovered_by_default: false
-  # id 1..5, 7..24 同构，名字见 §2.2
+    stills: { layers: 4, flags: [1, 1, 1, 1] }   # OldMapStill [推断]，见 11
+  - key: vanilla:wooden_church        # 原版 1；无挂港
+    name_key: remains.wooden_church.name
+  - key: vanilla:colosseum            # 原版 6
+    name_key: remains.colosseum.name
+  # 其余同构，名字见 §2.2 表
+# 挂在哪座港只写在 towns.yaml 的 remains 字段（原版 STown+0x26），本表不存第二份；
+# Remains.town(key) 由加载器反查。位置 = LocatorRef(town, 该港)。
+# 入口 kind（9 遗址 / 10 教会 / 11 城门）由港口地图点位域决定（town-life），本表不存。
+influence_reward:             # 0x140686650；行 = 地图点 kind，列 = 七大海域分组
+  col_by_major_sea:           # 按 factions 的 major_sea key 映射，缺项校验失败
+    vanilla:north_sea: 0
+    vanilla:mediterranean: 0
+    vanilla:africa: 1
+    vanilla:indian_ocean: 2
+    vanilla:se_asia: 3
+    vanilla:east_asia: 3
+    vanilla:new_world: 2
+  table:
+    vanilla:remains: [3, 5, 10, 15]   # 行键 = map_point_kinds key
+    vanilla:church:  [1, 1, 1, 1]
+    vanilla:gate:    [5, 10, 15, 20]
+  # 剧本倍数：factions 修正器 factions.influence_gain（source: remains），原版剧本 0 ×2 由剧本包注入
+  apply_twice: true              # 原版首访加两次；改 false 即修正
+  # 第二次 ×2 不另设参数：原版 fn_140010f46 = eScenario，与第一次同为剧本 0 条件，走同一修正器
+# 上限 9999 是 factions 影响力 cap（fn_14000ae7a clamp 0x270f），不在本表重复
+# col_by_major_sea 的 key 来自 config/world/major_seas.yaml
 ```
 
-`config/world/villages.yaml`：
+`config/world/villages.yaml`：schema 见 `03-villages-discovery.md` §6（盲区存原版单位）。本篇 §2.3 表的盲区数值是 exe 源（chip 单位），导出脚本 ×16 后写入。
 
-```yaml
-schema: dk4.world.villages
-version: 1
-pack: vanilla-sc-exe
-sentinel_none: 25
-def_stride: 0x38
-object_stride: 0x48
-villages:
-  - id: 0
-    key: inuvik
-    name: 依努维克
-    name_i18n: village.inuvik.name
-    coords:
-      space: original
-      x: 4880
-      y: 2304
-    sea_area_id: null
-    blind_area_id: null
-    discovered_by_default: false
-    unknown_u8:
-      b30: 5
-      b31: 10
-    unknown_i32_x16: [254, 0, 284, 188, 0, 0]
-  - id: 18
-    key: hokkaido
-    name: 北海道
-    coords: { space: original, x: 35712, y: 5248 }
-    unknown_u8: { b30: 5, b31: 3 }
-    unknown_i32_x16: [1960, 180, 364, 136, 2240, 316]
-  # id 1..17, 19..23 同构，见 §2.3
-```
-
-`config/world/unlock_maps.yaml`：
-
-```yaml
-schema: dk4.world.unlock_maps
-version: 1
-pack: vanilla-world0          # 道具定义在 World DLL；揭示目标在 exe
-# 运行时只读 unlocks[]。inferred_name_match 是文档，提取器可保留但不参与判定。
-
-sage_maps:
-  - item_id: 155
-    item_key: thales_paper_map
-    sage_index: 0             # SItem+0x15 [推断]
-    unlocks: []               # 合成材料
-
-place_maps:
-  - item_id: 162
-    item_key: map_stonehenge
-    name: 去环状石柱遗址的地图
-    anchor_town_id: 2         # +0x18 阿姆斯特丹 [推断] 锚点港
-    unlocks: []               # 整数对照表未还原
-    inferred_name_match:
-      type: remain
-      remain_id: 0
-      remain_key: stonehenge
-      strength: strong        # 环状石柱 ↔ 巨石阵；英国南部
-  - item_id: 163
-    item_key: map_colosseum
-    anchor_town_id: 5         # 汉堡
-    unlocks: []
-    inferred_name_match:
-      type: remain
-      remain_id: 6
-      remain_key: colosseum
-      strength: strong
-  - item_id: 164
-    item_key: map_cave_village
-    anchor_town_id: 19        # 雅典
-    unlocks: []
-    inferred_name_match:
-      type: remain
-      remain_id: 8
-      remain_key: cave_monastery
-      strength: medium        # 物品写村庄；24 村无「岩窟」
-  - item_id: 165
-    item_key: map_sahara
-    anchor_town_id: 29        # 圣乔治
-    unlocks: []
-    inferred_name_match:
-      type: remain
-      remain_id: 10
-      remain_key: mud_mosque
-      strength: strong        # 廷巴克图 ↔ 泥清真寺
-  - item_id: 166
-    item_key: map_imperial_mosque
-    anchor_town_id: 34        # 索法拉
-    unlocks: []
-    inferred_name_match: { type: unknown }
-  - item_id: 167
-    item_key: map_mughal
-    anchor_town_id: 38        # 巴士拉
-    unlocks: []
-    inferred_name_match:
-      type: remain
-      remain_id: 13
-      remain_key: taj_mahal
-      strength: strong
-  - item_id: 168
-    item_key: map_ancient_temple
-    anchor_town_id: 50        # 雅加达
-    unlocks: []
-    inferred_name_match:
-      type: remain
-      remain_id: 14
-      remain_key: angkor
-      strength: strong
-  - item_id: 169
-    item_key: map_beijing
-    anchor_town_id: 57        # 汉城，不是遗迹下标
-    unlocks: []
-    inferred_name_match:
-      type: remain
-      remain_id: 16
-      remain_key: forbidden_city
-      strength: strong
-  - item_id: 170
-    item_key: map_royal_tomb
-    anchor_town_id: 54        # 杭州
-    unlocks: []
-    inferred_name_match:
-      type: remain
-      remain_id: 17
-      remain_key: muryeong_tomb
-      strength: medium
-  - item_id: 171
-    item_key: map_golden_temple
-    anchor_town_id: 42        # 卡利卡特
-    unlocks: []
-    inferred_name_match:
-      type: remain
-      remain_id: 18
-      remain_key: kinkaku
-      strength: strong
-  - item_id: 172
-    item_key: map_ancient_city
-    anchor_town_id: 65        # 委拉克鲁斯
-    unlocks: []
-    inferred_name_match: { type: unknown }
-  - item_id: 173
-    item_key: map_aztec
-    anchor_town_id: 61        # 哈瓦那
-    unlocks: []
-    inferred_name_match: { type: unknown }
-```
-
-把某条 `inferred_name_match` 升成真正的 `unlocks`，必须先在 exe / 事件脚本里钉到整数，再改 yaml 并升 `version`。禁止在引擎里读 `inferred_name_match`。
-
-`config/formulas/ocean.yaml` 近港段仍只属于 ocean，本篇不复制。
+古地图 → 发现点的声明只有一处：`config/discovery/old_maps.yaml`（schema 与全表见 `11-remains-puzzle-system.md` §6.2）。本篇 §2.5 的名字对齐只进该文件每行的 `inferred_name_match` 注释段，运行时不读。旧稿的 `config/world/unlock_maps.yaml` 并入该文件，不再单列。
 
 ## 7. 独立旋钮
 
@@ -529,13 +441,13 @@ place_maps:
 | --- | --- | --- |
 | 遗迹表长、名字 | `remains.yaml` | 25 |
 | 村落表长、名字、坐标 | `villages.yaml` | 24 |
-| 近港 dx/dy、哨兵 | `formulas/ocean.yaml` | 40000 / 20000 / 25 |
-| 哪张地图揭示哪个点 | `unlock_maps.yaml` | 12 张 `unlocks: []` |
+| 近港 dx/dy | `formulas/rumors.yaml`（`03`） | 40000 / 20000 |
+| 哪张地图揭示哪个点 | `discovery/old_maps.yaml` | 12 张 `target.key: null` |
 | 默认已发现 | 各条 `discovered_by_default` | false |
 | 古地图窗槽数、画布 | `ui/`（不进 world 表） | 4；1920×1080 |
 | World0 vs World1 | 道具在 DLL；点表在 exe | 点表一份 |
 
-改搜索成功率、测量士、道具标价不改本表。补遗迹坐标只改 `remains.yaml` 的 `coords`，不改 ocean 代码。
+改搜索成功率、测量士、道具标价不改本表。遗迹换挂港只改 `towns.yaml` 的 `remains`，不改 ocean 代码。
 
 ## 8. 对外接口
 
@@ -544,31 +456,19 @@ place_maps:
 查询：
 
 ```
-Remains.def(remain_id) -> RemainDef | none
-Remains.name(remain_id) -> str
-Remains.discovered(remain_id) -> bool
+Remains.def(remains_id) -> RemainsDef | null
+Remains.discovered(remains_id) -> bool
 Remains.count() -> int                    # 表长
-Village.def(village_id) -> VillageDef | none
+Remains.town(remains_id) -> town_id | null   # towns.yaml 反查
+Village.def(village_id) -> VillageDef | null
 Village.at_map(x, y, radius) -> [village_id]
 Village.discovered(village_id) -> bool
-UnlockMaps.for_item(item_id) -> [Unlock]  # 只返回 unlocks[]，不含 inferred_*
+OldMap.place_map(item_id) -> PlaceMapRow | null   # 见 11；只返回 target，不含 inferred_*
 ```
 
-命令（ocean / items / narrative 调用）：
+命令与事件：与 `03` §8 同一组（`World.mark_remains_discovered` / `World.mark_village_discovered`；`RemainsDiscovered` / `VillageDiscovered`）。
 
-```
-World.mark_remain_discovered(remain_id)
-World.mark_village_discovered(village_id)
-```
-
-事件：
-
-```
-RemainsDiscovered { remain_id, fleet_id, item_id | null }
-VillageDiscovered { village_id, fleet_id, item_id | null }
-```
-
-world 不读背包。`item_id` 由 items 在 `UseItem` 里带上。没有 `unlocks` 就不发事件。
+world 不读背包。`item_id` 由 items 在 `UseItem` 里带上。没有 `target` 就不发事件。
 
 不暴露 `CRemains*`、`CVillage*`、`0x1405b2f80`、mesfile 偏移。
 
@@ -576,15 +476,17 @@ world 不读背包。`item_id` 由 items 在 `UseItem` 里带上。没有 `unloc
 
 | 项 | 来源 | 等级 |
 | --- | --- | --- |
-| 25 个遗迹的原版坐标 | `CRemains` 无 Locator；`.rdata` 无 25 对 `(x,y)` | [未知] |
-| `REMAINSSTATE_BITS` 宽度；`CRemains+0x8` 与 `fn_14000a321` 的 `+0x34` bit 是否同一份 | 存档 + 扫描函数 | [未知] |
+| 25 个遗迹的原版位置 | 挂港口（`STown+0x26`），无独立坐标 | [确认] 24 条；木造教堂无港 |
+| `REMAINSSTATE_BITS` 位 1–7 | u8，位 0 = 已发现 | 其余位 [未知] |
+| `+0x34` 收藏位数组所在对象 | `cSaveDataFile` 路径 | [推断] 存档级图鉴 |
+| `fn_140010f46` 谓词（首访第二次加成是否 ×2） | `fn_140010131(fn_14000dbfc())` → `game+0x7c` | [确认] `eScenario`（剧本 0 ×2）；重构走 `factions.influence_gain` |
+| 首访「加两次影响力」是否设计意图 | 反汇编 | [未知] |
 | RTC `eRemains` 的立即数 `5` | `num_from_rtc.json` | [未知] |
-| `CMpRemains` 对应哪一个 `eMapPointKind`；`Remains.dk4` 帧是否 `remain_id` | 仅类 + 加载 | [未知] |
-| `CVillageElement+0x8` 的 8 字节如何表示 24 个发现位 | 存档只写这一处 | [未知] |
-| 村落 `u8_30` / `u8_31`、六个 ×16 的 `int32` | 静态表 `+0x10..+0x31` | [未知] |
-| `NUM_VILLAGEBLINDAREA` | 头文件 | [未知] |
-| `fn_14000bcf3` 两个 eligible 谓词与完整最近邻 | 03 篇已列 | [未知] |
-| `item 162–173 → remain_id` 整数表 | exe 无此表 | [未知] 运行时 `unlocks: []` |
+| `CMpRemains` 内 kind 9/10/11 的差异 | 首访：影响力表行不同；重访：`fn_14000eacf` 分三支仪式 | [确认]；仪式奖励细节归 town-life |
+| 村落 `u8_30` / `u8_31` | 静态表 `+0x30/+0x31` | [未知] |
+| `NUM_VILLAGEBLINDAREA` | 头文件未写；静态记录恰 2 块壳 | [推断] 2 |
+| `fn_14000bcf3` 两个 eligible 谓词与完整最近邻 | 03 篇已还原 | [确认] |
+| `item 162–173 → remains_id` 整数表 | exe 无此表 | [未知] 运行时 `target.key: null` |
 | 上表「强/中」名字对齐 | 文案 | [推断] 禁止当外键 |
 | `SItem+0x15/+0x16/+0x19` 在地点地图上恒为 `08/18/08` | 物品 hex | [未知] |
 | `+0x18` 城镇的玩法含义（购入地 / 航线锚 / 其它） | 值是合法 `eTown` 但对不上遗迹地理 | [推断] 锚点 |
@@ -593,4 +495,4 @@ world 不读背包。`item_id` 由 items 在 `UseItem` 里带上。没有 `unloc
 | `fn_140014132` 写入 `+0x288` 的 id 是否就是 `eItem` | 随后 `* 0x20` | [推断] 是道具下标 |
 | 法尔维尔 / 海克拉 的英文地名是否 Cape Farewell / Hekla | 只有中文 | 不进判定；`key` 可改 |
 
-对照：SC exe `Game/DK4HD_sc.exe` VA `0x1405b2f80`（遗迹名指针）、`0x140687b40`（村落定义）、`Docs/_data/items_world0.json`（地图 hex）、`srcdata/catalog/mesfile_sc.txt`。03 篇在抽出名字前写「name: null」；本篇表取代那一段空白，03 的职责边界仍然有效。
+对照：SC exe `Game/DK4HD_sc.exe` VA `0x1405b2f80`（遗迹名指针，`.rdata`，文件偏移 = VA − `0x140001200`）、`0x140687b40`（村落定义，`.data`，文件偏移 = VA − `0x140001600` = `0x686540`）、`Docs/_data/items_world0.json`（地图 hex）、`srcdata/catalog/mesfile_sc.txt`。

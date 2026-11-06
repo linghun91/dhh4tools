@@ -1,0 +1,27 @@
+schema: dk4.ships.rig
+version: 1
+# Ships 拥有；Ocean / Combat 只读 Ships.derived(ship).sail / crew_needed（D6，不存档）。
+# 所属：Docs/05-ships-fleet/04-remodel-guns-supplies.md（06-ocean/01 §6 草案并入此处）。F-OCN-04。
+mast_slots: 3                          # NUM_SHIPMAST=3 [推断]（投票值 100 作废）
+main_mast_index: 1
+rig_penalty_by_grade: [0, 4, 10]       # .rdata 0x140596d88；按 models.size_class
+crew_per_mast_by_grade: [3, 5, 10]     # .rdata 0x140596d98；也是必要水手基数、划桨除数
+square_main_mul: 8
+fore_main_mul: 8
+square_extra_mul: 5
+fore_extra_mul: 6
+square_rig_value: 7                    # 有桅且横帆
+fore_rig_value: 8                      # 有桅且纵帆
+square_addon_value: 3
+fore_addon_value: 4
+mast_addon_crew: { square_addon: 2, fore_addon: 1 }
+add_parts:                             # key = ships/add_parts.yaml；原版改装位 0–7
+  vanilla:add_part_0: { main_square_bonus: 2 }
+  vanilla:add_part_1: { main_fore_bonus: 3 }
+  vanilla:add_part_2: { rig_penalty: 1 }
+  vanilla:add_part_3: { rig_penalty: 1 }
+  vanilla:add_part_4: { rig_penalty: 2 }
+  vanilla:add_part_5: { rig_penalty: 2 }
+  vanilla:add_part_6: { crew_needed_add: 2 }
+  vanilla:add_part_7: { crew_needed_add: 2 }
+# 原版每桅字节的位（bit0 有桅 / bit1 横帆 / bit2 横加帆 / bit3 纵加帆）只在 legacy_codec 解包时用
