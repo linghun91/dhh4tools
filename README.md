@@ -12,6 +12,7 @@
 | `dk4save.manifest` | Common Controls 6、DPI、长路径 |
 | `mingw-endfile.specs` | gcc 链接时用的 specs，避免 WinLibs 默认 endfile 冲突 |
 | `README.md` | 本说明 |
+| `Docs/` | 大航海4 HD 重构设计文档（玩法、算法、可独立配置的表） |
 
 没有第三方库。链接的是系统自带的 `comctl32`、`comdlg32`、`gdi32`、`user32`。
 

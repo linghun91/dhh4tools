@@ -1,0 +1,25 @@
+schema: dk4.economy.trading_items
+version: 1
+# 空货格哨兵 + 一条实例。
+# 105 个合法交易品 id 为 0–104；106 不在表内，是空格。
+# id 99 出现在伦敦特产品槽 0（Docs/_data/towns_world0.json）。中文名未从 mesfile 切词，禁止编造。
+
+items:
+  - id: 106
+    key: empty
+    name: ""
+    sentinel: true
+    kind_id: -1
+
+  - id: 99
+    key: trading_item_099
+    name: ""
+    name_i18n:
+      zh-CN: ""
+    kind_id: -1          # eTradingItemKind 未还原到该行
+    base_price: null     # TRADINGITEM_DATAPRICE 未从本行抽出
+    referenced_by:
+      - town_key: london
+        special_product_slot: 0
+        supply_or_price: 4500
+        grade: 15

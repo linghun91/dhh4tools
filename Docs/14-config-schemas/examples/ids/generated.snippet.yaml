@@ -1,0 +1,50 @@
+schema: dk4.ids
+version: 1
+# 构建时从内容表收集。本文件是对照片段，不是完整注册表。
+# 所属：Docs/00-overview/04-id-registry.md
+
+invalid: -1
+
+sentinels:
+  trading_item.empty:
+    id: 106
+    key: empty
+
+towns:
+  - id: 0
+    key: london
+    name: 伦敦
+  - id: 1
+    key: bristol
+    name: 布里斯托尔
+
+persons:
+  - id: 0
+    key: raphael_castro
+    name: 拉斐尔·卡斯特罗
+
+abilities:
+  - id: 0
+    key: stamina
+    name: 体力
+  - id: 1
+    key: agility
+    name: 敏捷
+  - id: 2
+    key: charm
+    name: 魅力
+  - id: 3
+    key: intelligence
+    name: 智力
+  - id: 4
+    key: spirit
+    name: 精神
+  - id: 5
+    key: luck
+    name: 运气
+
+trading_items:
+  - id: 106
+    key: empty
+  - id: 99
+    key: trading_item_099    # 伦敦特产品槽 0；中文名未从 mesfile 切词

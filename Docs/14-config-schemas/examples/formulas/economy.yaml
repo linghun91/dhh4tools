@@ -1,0 +1,67 @@
+schema: dk4.formulas.economy
+version: 1
+# F-ECO-*  所属：Docs/13-algorithms/01-formulas.md
+# ref_* 把原版 1000/500/100 收成命名参数。
+
+npc_buy_cost:
+  ref_1000: 1000
+  rand_span: 100
+  buy_ability_clamp: 500
+  buy_skill_index: 4
+  overflow: saturate_signed
+
+item_price_factor:
+  ref_100: 100
+  ability_div: 50
+  item_skill_index: 4
+  item_price_scale: 100    # [推断] 反编译丢失除数；未核实前禁止删键
+  unverified: [item_price_scale]
+
+ledger_balance:
+  # balance = income - expense - investment
+  fields: [income, expense, investment]
+
+fashion_share_threshold:
+  fashion_threshold_factor: 1
+  hold_scan: 10
+
+fashion_share_gain:
+  share_high: 80
+  fashion_div: 6
+  fashion_gain_add: 1
+
+fashion_letter:
+  letter_lo: 10
+  letter_hi: 16
+  share_high: 80
+
+share_apply_cap:
+  share_cap: 100
+
+count_fleet_item:
+  # 船数/格数读 caps；此处只声明按件数
+  count_by: quantity
+
+add_load:
+  # max_new_slots 由 fleet_ships * hold_slots_per_ship 推导
+  derive_max_new_slots_from_holds: true
+
+same_item_market_adjust:
+  same_item_adjust_threshold: 15
+  unverified: [formula_body]
+
+local_fleet_founding_gold:
+  gold: 100000
+
+# 占位：无原版 default，禁止填假数
+investment:
+  unverified: true
+  params: []
+
+tribute:
+  unverified: true
+  params: []
+
+repair_cost:
+  unverified: true
+  params: []

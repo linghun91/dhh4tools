@@ -1,0 +1,25 @@
+schema: dk4.characters.persons
+version: 1
+# 原版内容包片段。数据：Docs/_data/persons_world0.json / persons.tsv
+# World 行步长 0x38。指针字段不进内容包（运行时解析）。
+# 技能不存：由 formulas/progression.yaml + characters/skills.yaml 派生。
+
+persons:
+  - id: 0
+    key: raphael_castro
+    given: 拉斐尔
+    family: 卡斯特罗
+    name3: ""
+    name_i18n:
+      zh-CN: 拉斐尔·卡斯特罗
+    stats:
+      stamina: 59        # 体力  eAbility 0
+      agility: 60        # 敏捷
+      charm: 70          # 魅力
+      intelligence: 62   # 智力
+      spirit: 58         # 精神
+      luck: 61           # 运气
+    # +0x18 两枚 uint32 = 100,100 语义 [未知]
+    unknown_u32_at_0x18: [100, 100]
+    # +0x26 起 18 字节，含 04 02 02 00 00 01 …
+    unknown_bytes_at_0x26: "000402020000010000000000000000000000"

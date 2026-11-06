@@ -1,0 +1,26 @@
+schema: dk4.formulas.ocean
+version: 1
+# 所属：Docs/06-ocean/01-sailing.md
+# type_*_div 原版 idiv 除数未还原，保持 null。
+
+wind:
+  calm_climate_id: 24          # 0x18
+  wind_velocity_bias: 3
+  cdf: [30, 50, 70, 80, 87, 96]
+  high_band_rand: 20
+  high_band_cuts: [4, 7, 10, 13, 16, 18]
+
+sailing_speed:
+  downwind_cone_lo: 42         # 0x2A
+  downwind_cone_hi: 214        # 0xD6
+  angle_blend: 32
+  sail_shift: 17
+  min_speed_floor: 96          # 0x60
+  speed_bias: 192              # 0xC0
+  low_stat_threshold: 50       # 0x32
+  type_a_div: null
+  type_b_div: null
+  sea_area_speed_div: null
+
+ticks_per_frame_normal: 1
+ticks_per_frame_fast: 2        # 推断：fn_140012625 为真时
