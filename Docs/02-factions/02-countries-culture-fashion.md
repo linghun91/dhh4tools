@@ -64,8 +64,8 @@
 - `[确认]` `CCulture : CSaveObject`。`CCultureElement` 构造 **21** 个（`0x15`）对象，stride **0xE8**。析构 / 存盘同样循环 `>= 0x15`。来源：`CCultureElement.cpp`。
 - `[确认]` `CCulture` 存盘遍历 `eTradingItem` 0–0x68（105）：每个 word 在 `+0x14 + i*2`。另有 1 字节 `+0x10`、循环 2 次写 `+0x11`。来源：`CCulture.cpp` `vfunc_05/06/07`。
 - `[确认]` 没有 `GetFixCultureProc`。文化块不是 World DLL 表，开局由 `vfunc_05` 从别的对象填。来源：`DllMain.cpp`、`CCulture::vfunc_05`。
-- `[确认]` 容器长度 21。大佬称这 21 个为 **文化圈**。21 个中文名未从 exe 抽出（13 词表、19 国名表都对不上 21）。
-- 港口 `region` 0–20 与 21 槽同计数；`CTown` 上无 RTC 名 `eCulture`，字段名不升格。
+- `[确认]` 容器长度 21。大佬对象码表 21 名与首都档对齐，见 [06-seven-culture-circles.md](06-seven-culture-circles.md)。SC 无连续 21 名表。
+- 港口 `region` 0–20 与 21 槽同计数；`CTown` 上无 RTC 名 `eCulture`。
 - `[确认]` 人物表从 id 98 起，`family` 字段出现 9 个脸部分组文案：**欧洲、非洲、阿拉伯、印度、东南亚、中国、韩国、日本、中南美**。广场店主把欧洲拆成「欧洲男子 / 欧洲女子」，故店主 10 人、组仍是 9。来源：`Docs/_data/persons.tsv`、`PersonID` 记录。这 9 个不是 21 文化圈。
 - `[确认]` 同 9 词还用在酒馆掌柜/客人、交易所掌柜、造船老板、码头、卫兵、国王/藩主/县令/大名/总督、宗教人士、旅馆老板娘、行会总管、属下等职能 NPC 上。来源：同上。
 - `[推断]` 9 圈是设施 NPC 换装 / 对白的粗分组，**不是** `eCulture` 的计数。`NUM_KIND=9`（`num_values.json`）可能相关，未证明。

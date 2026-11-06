@@ -28,7 +28,10 @@
 - `[确认]` `Route.h` 注释：`NUM_ROUTE / NUM_ROUTELOCATOR / SRouteArray`；RTTI 只标了 `CTownRoute`。来源：`srcdata/source/Route.h`。
 - `[确认]` `eRouteLocator`：`NUM_ROUTELOCATOR` 未恢复，`INVALID_ROUTELOCATOR = -1`。来源：`RouteLocatorID.h`。
 - `[确认]` `eJUNCTION`：`NUM_JUNCTION` 未恢复，`INVALID_JUNCTION = -1`。来源：`JunctionID.h`。`Junction.h` 基类 `CLocator`，注释 `SJunction, NUM_JUNCTION`。
-- `[确认]` 航线**不在** World DLL `GetFix*`。来源：`DllMain.cpp`。表在主 exe（`CRouteNavigator::vfunc_03` 扫 `DAT_14429ac50`）。
+- `[确认]` 航线**不在** World DLL `GetFix*`。来源：`DllMain.cpp`。
+- `[确认]` SC 文件偏移 `0x685A70` 起 **200 × 6 字节**：`leave_town`、`arrive_town`、四个途经点。空途经点填 `0xA5`（165）。来源：直接读 `DK4HD_sc.exe`；与大佬笔记（`dh4/8.png`）一致。例：第 0 条 `[0,1,3,129,130,0]`（伦敦→布里斯托尔）；第 1 条 `[0,2,4,5,97,165]` 末字节 `A5`。
+- `[确认]` SC 文件偏移 `0x681950` 起折点 **164 × 8 字节**（两个 int32：x, y）。笔记「168」与文件不符，实测 164（编号 00–A3）。第 0 点 `(19352, 4296)`。`0xA5=165 > 164`，所以航线里的 `A5` 不是合法折点下标。
+- `[确认]` `CRouteNavigator::vfunc_03` 扫运行时表（`DAT_14429ac50`）。文件里的 200×6 是静态定义。
 
 导航对象：
 

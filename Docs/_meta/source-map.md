@@ -27,6 +27,10 @@
 
 `srcdata/source/game/` 下：`combat` `event` `fleet` `item` `ocean` `person` `save` `ship` `town` `trade` `ui` `engine` `world` `game`。
 
+## 大佬表
+
+`/home/claude/data/config/dh4/*.png` 对照结果：[_meta/designer-spreadsheets.md](designer-spreadsheets.md)。
+
 ## 设计文档
 
 成品在 `Docs/`。入口 `Docs/README.md`。系统文档按九段模板，配置示例在 `Docs/14-config-schemas/examples/`。
