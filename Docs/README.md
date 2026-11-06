@@ -192,6 +192,7 @@
 
 - [_data/](_data/) — 从 World0 抽出的 JSON/TSV
 - [_meta/source-map.md](_meta/source-map.md) — 源码索引
+- [_meta/designer-spreadsheets.md](_meta/designer-spreadsheets.md) — 大佬 dh4 图 vs SC exe
 
 ## 系统依赖（允许的方向）
 

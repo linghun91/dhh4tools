@@ -25,7 +25,7 @@
 | 轴 | 计数 | 源码落点 | 已抽出的名字 |
 | --- | ---: | --- | --- |
 | **七大海域** | 7 | `CForce` 存盘循环 `s20 >= 7`，读写 `this+0x10+i*2`；RTC 局部名 **`eSeaArea` 上界 7** | exe `0x58ab4c`：北海、地中海、非洲、印度洋、东南亚、东亚、新大陆；其后一条「全世界」 |
-| **21 文化圈** | 21 | `CCultureElement` 构造 `fn_140007dce(..., stride=0xE8, count=0x15)`；析构/存盘同样 `>= 0x15` | **未抽出 21 名表** |
+| **21 文化圈** | 21 | `CCultureElement` 构造 `fn_140007dce(..., stride=0xE8, count=0x15)` | 对象码表 21 名（`dh4/2.png`）；SC 无连续 21 名表 |
 | **25 航海分区** | 25 | `SeaAreaID.h` `NUM_SEAAREA=25`；`NUM_NEXTBASETOWN=25` | 25 条显示名未抽出 |
 | **9 NPC 脸** | 9 文案 | 人物 `family`：欧洲、非洲、阿拉伯、印度、东南亚、中国、韩国、日本、中南美 | 这 9 个词 |
 
@@ -67,35 +67,36 @@ World0 势力 `+0x10` 活跃者恰好一格非 0，格号与母港所在大区�
 - `[确认]` 没有 `GetFixCultureProc`。文化块不在 World DLL。来源：`DllMain.cpp`。
 - `[确认]` 港口表 `+0x25` 取值 0–20，共 21 档；21 座 `is_capital==1` 港各占一档。来源：`Docs/_data/towns_world0.json`。
 - `[确认]` 港口情报 UI 有 `posCulture`（`fn_140005f51` RTC）。
-- **没有**从 exe 抽出 21 条「文化圈」名称表。`0x5b656c` 起 13 词（佛兰德…墨西哥）后面直接接「小麦」交易品表，**对不上 21**。`0x538e8c` 起 19 个国名（英吉利…印加）是另一串，**对不上 21**，也不要当成 `eCulture` 名。
+- `[确认]` SC exe **没有** 21 条连续的文化圈名表。`0x5b656c` 起 13 词（佛兰德、北欧、意大利、希腊、土耳其、埃及、西非、东非、印度支那、印尼、朝鲜、加勒比海、墨西哥）后面紧接交易品「小麦」。`0x538e8c` 起 19 词是国名（英吉利、法兰西、荷兰…印加），表长 19，不是 21。
+- 大佬对象码表（`/home/claude/data/config/dh4/2.png`）给出 21 个圈名，与 21 档首都一一对应。其中 13 个能在 `0x5b656c` 对上（用词「佛兰德」对表里「法兰德斯」）。「英国 / 德国 / 法兰德斯」三词 **不在** SC 连续名表里（国名表是「英吉利 / 德意志」）。圈名采用对象码表，SC 未找到的条目不升格为 exe 字符串。
 
-因此：21 个文化圈用 `culture_id` 0–20。显示名 `null`，直到抽出名字。首都港只作对照，不是圈名。
+| id | 对象码表圈名 | 首都港 | SC exe 字符串 |
+| ---: | --- | --- | --- |
+| 0 | 英国 | 伦敦 | 无连续表；国名表有「英吉利」 |
+| 1 | 法兰德斯 | 阿姆斯特丹 | `0x5b656c`「佛兰德」 |
+| 2 | 德国 | 汉堡 | 无连续表；国名表有「德意志」 |
+| 3 | 北欧 | 斯德哥尔摩 | `0x5b6574`「北欧」 |
+| 4 | 葡萄牙 | 里斯本 | 国名表 `0x538eac`「葡萄牙」 |
+| 5 | 西班牙 | 塞维利亚 | 国名表「西班牙」 |
+| 6 | 意大利 | 热那亚 | `0x5b657c`「意大利」 |
+| 7 | 希腊 | 雅典 | `0x5b6584`「希腊」 |
+| 8 | 土耳其 | 伊斯坦布尔 | `0x5b658c`「土耳其」 |
+| 9 | 埃及 | 亚历山大 | `0x5b6594`「埃及」 |
+| 10 | 西非 | 圣乔治 | `0x5b659c`「西非」 |
+| 11 | 东非 | 索法拉 | `0x5b65a4`「东非」 |
+| 12 | 阿拉伯 | 巴士拉 | 国名表「阿拉伯」 |
+| 13 | 印度 | 卡利卡特 | 国名表「印度」 |
+| 14 | 印度支那 | 马六甲 | `0x5b65b0`「印度支那」 |
+| 15 | 印尼 | 雅加达 | `0x5b65bc`「印尼」 |
+| 16 | 中国 | 杭州 | 多处「中国」 |
+| 17 | 朝鲜 | 汉城 | `0x5b65c4`「朝鲜」 |
+| 18 | 日本 | 大阪 | 国名表「日本」 |
+| 19 | 加勒比海 | 哈瓦那 | `0x5b65d0`「加勒比海」 |
+| 20 | 墨西哥 | 委拉克鲁斯 | `0x5b65dc`「墨西哥」 |
 
-| culture_id | 该档首都港（World0，`region` 字节 = 此 id） |
-| ---: | --- |
-| 0 | 伦敦 |
-| 1 | 阿姆斯特丹 |
-| 2 | 汉堡 |
-| 3 | 斯德哥尔摩 |
-| 4 | 里斯本 |
-| 5 | 塞维利亚 |
-| 6 | 热那亚 |
-| 7 | 雅典 |
-| 8 | 伊斯坦布尔 |
-| 9 | 亚历山大 |
-| 10 | 圣乔治 |
-| 11 | 索法拉 |
-| 12 | 巴士拉 |
-| 13 | 卡利卡特 |
-| 14 | 马六甲 |
-| 15 | 雅加达 |
-| 16 | 杭州 |
-| 17 | 汉城 |
-| 18 | 大阪 |
-| 19 | 哈瓦那 |
-| 20 | 委拉克鲁斯 |
+`region` 字节在 `CTown` 上没有 RTC 名 `eCulture`。同计数 + 21 槽 + 对象码表，配置 key 用 `culture_id` 0–20。
 
-`region` 字节是否在原版源码里就叫 `eCulture`：反编译 `CTown` **没有** RTC 名 `eCulture`。同计数 + `CCulture`×21 + 大佬「21 个文化圈」一致，字段名仍不升格。
+运行时 `CCulture` 对象 stride：**SC 调试版** `CCultureElement` 构造参数 `0xE8`（`CCultureElement.cpp`）。大佬 ES.exe 笔记静态表寻址 `imul …, 0xE0`、基址 `+5B6160`（`dh4/3.png`、`dh4/6.png`）。两套步长不要合成一个数。SC 文件偏移 `0x5B6160` 起按 `0xE0` 切 21 块时，只有第 0 块前 105 个 u16 像物价（4000、2200…），其余块不是干净的 105 价表。静态初值表布局 **未钉死**。
 
 ### 2.4 不要再混的几件事
 
@@ -151,9 +152,28 @@ version: 1
 # config/factions/cultures.yaml
 schema: dk4.factions.cultures
 version: 1
-# 21 行。name 未从 exe 抽出则 null。首都港只对照。
-- { id: 0, key: culture_00, name: null, capital_town_id: 0 }
-# ... id 1–20
+# 21 行。name 来自大佬对象码表（dh4/2.png）。SC 无连续 21 名表。
+- { id: 0,  key: england,     name: 英国,     capital_town_id: 0 }
+- { id: 1,  key: flanders,    name: 法兰德斯, capital_town_id: 2 }
+- { id: 2,  key: germany,     name: 德国,     capital_town_id: 5 }
+- { id: 3,  key: norse,       name: 北欧,     capital_town_id: 7 }
+- { id: 4,  key: portugal,    name: 葡萄牙,   capital_town_id: 11 }
+- { id: 5,  key: spain,       name: 西班牙,   capital_town_id: 13 }
+- { id: 6,  key: italy,       name: 意大利,   capital_town_id: 15 }
+- { id: 7,  key: greece,      name: 希腊,     capital_town_id: 19 }
+- { id: 8,  key: turkey,      name: 土耳其,   capital_town_id: 22 }
+- { id: 9,  key: egypt,       name: 埃及,     capital_town_id: 25 }
+- { id: 10, key: west_africa, name: 西非,     capital_town_id: 29 }
+- { id: 11, key: east_africa, name: 东非,     capital_town_id: 34 }
+- { id: 12, key: arabia,      name: 阿拉伯,   capital_town_id: 38 }
+- { id: 13, key: india,       name: 印度,     capital_town_id: 42 }
+- { id: 14, key: indochina,   name: 印度支那, capital_town_id: 47 }
+- { id: 15, key: indonesia,   name: 印尼,     capital_town_id: 50 }
+- { id: 16, key: china,       name: 中国,     capital_town_id: 54 }
+- { id: 17, key: korea,       name: 朝鲜,     capital_town_id: 57 }
+- { id: 18, key: japan,       name: 日本,     capital_town_id: 59 }
+- { id: 19, key: caribbean,   name: 加勒比海, capital_town_id: 61 }
+- { id: 20, key: mexico,      name: 墨西哥,   capital_town_id: 65 }
 ```
 
 势力：
@@ -189,7 +209,9 @@ Influence.get(force_id, major_sea_id) -> int
 
 | 项 | 现状 |
 | --- | --- |
-| 21 个文化圈中文名 | 未抽出 |
+| 21 圈名在 SC 的连续表 | 无；对象码表 21 名与首都档对齐；13 词在 `0x5b656c` |
+| SC `CCulture` stride `0xE8` vs ES 笔记 `0xE0` | 两套步长，未合成 |
+| `0x5B6160` 是否 21×0xE0 初值价表 | 仅第 0 块像 105 个物价 |
 | 港口 `+0x25` 的原版类型名是不是 `eCulture` | 无 RTC 名 |
 | `NUM_COUNTRY` 整数 | 未还原；不要写成 21 |
 | `NUM_SEAAREA=25` 与七大海域的从属表 | 未见 25→7 的对照数组 |
