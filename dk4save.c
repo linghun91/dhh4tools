@@ -3,18 +3,32 @@
  * and edits the protagonist plus recruited sailors: six attributes,
  * the two experience tracks (the level shown in game), and the faction mark.
  *
- * The status screen reads a 0x30 sailor object. Those bytes live here
- * (magic "DAIKOUKAI4PKW9 1"), not in the later name block:
- *   +0x20                 protagonist roster id (0 拉斐尔 … 5 亚伯拉罕)
- *   +0x70                 cached total level of the protagonist
- *   roster 0x2C00, stride 0x19, sailor id i:
- *     +0x03 faction, +0x05 six stat bytes, +0x0B and +0x0F uint32 exp
- *   protagonist body, the copy the status screen actually shows:
- *     faction 0x35AA, stats 0x35AC, exp 0x35B2 and 0x35B6
- *   name block 0x35C3, stride 0x2E9: protagonist name only
- *     (record i is sailor id i-1; names of sailors are the table below)
+ * Layout (magic "DAIKOUKAI4PKW9 1"), as the game writes it
+ * (CPerson::vfunc_06, body 0x1401cb480 in DK4HD_sc.exe):
+ *   +0x00..0xFF           header, not part of the checksum
+ *     +0x14               file size, +0x18 byte-sum checksum of the body
+ *     +0x20               protagonist person id (0 拉斐尔 … 6 蒂雅)
+ *     +0x70               cached total level of the protagonist
+ *   0x2C03                235 person records in ePerson order, no tags:
+ *     id < 87             25 bytes: +0 faction, +1 a one-way byte,
+ *                         +2 six stats, +8 and +0xC uint32 exp,
+ *                         +0x10 uint16 HP, +0x12 body, +0x13 mind,
+ *                         +0x14 five equipment bytes
+ *     id 87..234          2 bytes at 0x3482: faction and the one-way byte.
+ *                         Their stats and exp are not saved at all.
+ *   0x35AA                protagonist record, 103 bytes: the same 25 bytes,
+ *                         then three 17-byte GBK names at 0x35C3/0x35D4/0x35E5
  *   stat order: 体力 敏捷 魅力 智力 精神 运气
  *   one track's level = isqrt(exp/30), capped at 255
+ *
+ * Checksum: the game adds every body field to +0x18 as it writes it
+ * (u8/u16 zero-extended, u32 whole). A mismatch makes the game ask
+ * "所储存的进度有可能损坏了，还要继续吗？". This tool adds the change of each
+ * field it edits, so a save the game wrote stays valid.
+ *
+ * Versions before this one used a 98-row view at 0x2C00 with stride 0x19.
+ * Rows 0..86 hit the right bytes. Rows 87..97 do not exist in the save and
+ * overwrote the faction bytes of persons 88..219. See warn_short_damage().
  */
 #define _CRT_SECURE_NO_WARNINGS
 #define UNICODE
@@ -39,21 +53,25 @@
 #include <string.h>
 
 #define SAVE_MAGIC "DAIKOUKAI4PKW9 1"
-#define REC_BASE 0x35C3
-#define REC_STRIDE 0x2E9
-#define SAILOR_COUNT 98
+#define SAVE_HEADER 0x100
+#define OFF_CHECKSUM 0x18
 #define NAME_FIELD 17
 #define STAT_COUNT 6
-#define ROSTER_BASE 0x2C00
-#define ROSTER_STRIDE 0x19
-#define OFF_R_FACTION 0x03
-#define OFF_R_STAT 0x05
-#define OFF_R_EXP0 0x0B
-#define OFF_R_EXP1 0x0F
-#define HERO_FACTION 0x35AA
-#define HERO_STAT 0x35AC
-#define HERO_EXP0 0x35B2
-#define HERO_EXP1 0x35B6
+#define PERSON_COUNT 235
+#define FULL_PERSON_COUNT 87
+#define PERSON_BASE 0x2C03
+#define PERSON_STRIDE 25
+#define SHORT_BASE (PERSON_BASE + FULL_PERSON_COUNT * PERSON_STRIDE)
+#define SHORT_STRIDE 2
+#define HERO_BASE 0x35AA
+#define HERO_SIZE 103
+#define HERO_NAME (HERO_BASE + PERSON_STRIDE)
+#define OFF_P_FACTION 0x00
+#define OFF_P_STAT 0x02
+#define OFF_P_EXP0 0x08
+#define OFF_P_EXP1 0x0C
+#define OFF_P_HP 0x10
+#define FACTION_NONE 0x1A
 #define OFF_PROT_ID 0x20
 #define OFF_CACHED_LEVEL 0x70
 #define MAX_TRACK_LEVEL 255
@@ -123,7 +141,11 @@ static const wchar_t *const kStatName[STAT_COUNT] = {
     L"体力", L"敏捷", L"魅力", L"智力", L"精神", L"运气"
 };
 
-static const wchar_t *const kSailorName[SAILOR_COUNT] = {
+_Static_assert(SHORT_BASE + (PERSON_COUNT - FULL_PERSON_COUNT) * SHORT_STRIDE == HERO_BASE,
+    "person records end where the protagonist record starts");
+
+/* Persons 0..86, the ones whose stats and exp are in the save. */
+static const wchar_t *const kSailorName[FULL_PERSON_COUNT] = {
     L"拉斐尔·卡斯特罗", L"赫德拉姆·柏格斯通", L"丽璐·阿歌特", L"华梅·李",
     L"杏太郎·佐伯", L"亚伯拉罕·伍丁", L"蒂雅·恰斯卡", L"杰拿斯·帕沙",
     L"库拉乌迪·马奈乌斯", L"弗利奥·埃涅科", L"克莉丝汀娜·埃涅科", L"阿尔加迪斯·欧多西斯",
@@ -145,17 +167,15 @@ static const wchar_t *const kSailorName[SAILOR_COUNT] = {
     L"芬·布兰科", L"维路斯·格拉纳特", L"杰克斯·勃鲁姆", L"朱里安·菲米尔",
     L"尤里斯·休根", L"柏列特·佩罗", L"强·拉姆吉欧", L"伽布利厄·卡尔杜齐",
     L"雅可布·勃特朗", L"贝拉肯苏·阿基列", L"芝加诺斯·贝", L"维廉·克莱布",
-    L"鄂路南·贝利欧", L"易斯卡·雅沙尔", L"理查·回森", L"汉斯·勒茨",
-    L"米哈易尔·勒茨", L"阿科布·达迈", L"谢乌德·埃米", L"米瓦尔·根茨",
-    L"夏洛特·米列", L"桑亨·韩", L"克丽雅·波福特", L"爱斯法妮雅·梅卡德",
-    L"特欧贝尔德·梅卡德", L"宗九郎·泷田"
+    L"鄂路南·贝利欧", L"易斯卡·雅沙尔", L"理查·回森"
 };
 
-_Static_assert(sizeof kSailorName / sizeof kSailorName[0] == SAILOR_COUNT, "sailor names");
+_Static_assert(sizeof kSailorName / sizeof kSailorName[0] == FULL_PERSON_COUNT, "sailor names");
 
 typedef struct Save {
     wchar_t path[MAX_PATH];
     uint8_t *data;
+    uint8_t *orig;   /* the file as last read or written, for the checksum */
     size_t size;
     int dirty;
 } Save;
@@ -228,17 +248,17 @@ typedef struct Body {
 
 static void free_save(Save *s) {
     free(s->data);
+    free(s->orig);
     s->data = NULL;
+    s->orig = NULL;
     s->size = 0;
     s->dirty = 0;
 }
 
-static uint8_t *record_at(Save *s, int index) {
-    size_t off;
-    if (!s->data || index < 0) return NULL;
-    off = (size_t)REC_BASE + (size_t)index * (size_t)REC_STRIDE;
-    if (off + (size_t)REC_STRIDE > s->size) return NULL;
-    return s->data + off;
+/* The protagonist's three 17-byte name fields. */
+static uint8_t *hero_names(Save *s) {
+    if (!s->data || s->size < (size_t)HERO_BASE + HERO_SIZE) return NULL;
+    return s->data + HERO_NAME;
 }
 
 static unsigned level_of_exp(uint32_t xp) {
@@ -262,38 +282,43 @@ static unsigned track_level(uint32_t xp) {
     return lv;
 }
 
-static int body_roster(Save *s, int sailor, Body *b) {
-    size_t off;
-    if (!s->data || sailor < 0 || sailor >= SAILOR_COUNT) return 0;
-    off = (size_t)ROSTER_BASE + (size_t)sailor * (size_t)ROSTER_STRIDE;
-    if (off + (size_t)ROSTER_STRIDE > s->size) return 0;
-    b->faction = s->data + off + OFF_R_FACTION;
-    b->stat = s->data + off + OFF_R_STAT;
-    b->exp0 = s->data + off + OFF_R_EXP0;
-    b->exp1 = s->data + off + OFF_R_EXP1;
+static void body_from(uint8_t *rec, Body *b) {
+    b->faction = rec + OFF_P_FACTION;
+    b->stat = rec + OFF_P_STAT;
+    b->exp0 = rec + OFF_P_EXP0;
+    b->exp1 = rec + OFF_P_EXP1;
+}
+
+/* Person ids 0..86 only: the game does not save stats or exp for the rest. */
+static int body_roster(Save *s, int person, Body *b) {
+    if (!s->data || person < 0 || person >= FULL_PERSON_COUNT) return 0;
+    if (s->size < (size_t)HERO_BASE + HERO_SIZE) return 0;
+    body_from(s->data + PERSON_BASE + (size_t)person * PERSON_STRIDE, b);
     return 1;
 }
 
 static int body_hero(Save *s, Body *b) {
-    if (!s->data || s->size < (size_t)HERO_EXP1 + 4) return 0;
-    b->faction = s->data + HERO_FACTION;
-    b->stat = s->data + HERO_STAT;
-    b->exp0 = s->data + HERO_EXP0;
-    b->exp1 = s->data + HERO_EXP1;
+    if (!s->data || s->size < (size_t)HERO_BASE + HERO_SIZE) return 0;
+    body_from(s->data + HERO_BASE, b);
     return 1;
 }
 
-/* index 0 is the protagonist body. index 1..98 is roster sailor id index-1. */
+/* index 0 is the protagonist record. index 1..87 is person id index-1. */
 static int body_at(Save *s, int index, Body *b) {
     if (index == 0) return body_hero(s, b);
     return body_roster(s, index - 1, b);
+}
+
+static int person_exists(Save *s, int index) {
+    Body b;
+    return body_at(s, index, &b);
 }
 
 static int protagonist_id(Save *s) {
     uint32_t id;
     if (!s->data || s->size < (size_t)OFF_PROT_ID + 4) return -1;
     id = ru32(s->data + OFF_PROT_ID);
-    if (id >= SAILOR_COUNT) return -1;
+    if (id >= FULL_PERSON_COUNT) return -1;
     return (int)id;
 }
 
@@ -306,7 +331,7 @@ static int is_present(Save *s, int index) {
     Body b;
     int i;
     unsigned sum = 0;
-    if (index <= 0 || index > SAILOR_COUNT) return 0;
+    if (index <= 0 || index > FULL_PERSON_COUNT) return 0;
     if (!body_at(s, index, &b)) return 0;
     for (i = 0; i < STAT_COUNT; i++) sum += b.stat[i];
     return sum > 0;
@@ -414,9 +439,9 @@ static void gbk_field_to_wide(const uint8_t *src, int n, wchar_t *dst, int dstn)
 }
 
 static void person_name(Save *s, int index, wchar_t *dst, int dstn) {
-    uint8_t *rec = record_at(s, index);
+    uint8_t *rec = hero_names(s);
     wchar_t a[64], b[64], c[64];
-    if (!rec) {
+    if (!rec || !person_exists(s, index)) {
         StringCchCopyW(dst, (size_t)dstn, L"(空)");
         return;
     }
@@ -432,7 +457,7 @@ static void person_name(Save *s, int index, wchar_t *dst, int dstn) {
             StringCchPrintfW(dst, (size_t)dstn, L"%s", a[0] ? a : L"(无名)");
         return;
     }
-    if (index >= 1 && index <= SAILOR_COUNT)
+    if (index >= 1 && index <= FULL_PERSON_COUNT)
         StringCchCopyW(dst, (size_t)dstn, kSailorName[index - 1]);
     else
         StringCchPrintfW(dst, (size_t)dstn, L"记录%d", index);
@@ -532,7 +557,7 @@ static int backup_before_write(const wchar_t *path, wchar_t *made, int maden) {
 static int load_save(Save *s, const wchar_t *path, wchar_t *err, int errn) {
     FILE *fp;
     long sz;
-    uint8_t *data;
+    uint8_t *data, *orig;
     fp = _wfopen(path, L"rb");
     if (!fp) {
         if (err && errn > 0) StringCchPrintfW(err, (size_t)errn, L"打不开 %s", path);
@@ -544,7 +569,7 @@ static int load_save(Save *s, const wchar_t *path, wchar_t *err, int errn) {
         return 0;
     }
     sz = ftell(fp);
-    if (sz < (long)(REC_BASE + REC_STRIDE) || sz > 2L * 1024L * 1024L) {
+    if (sz < (long)(HERO_BASE + HERO_SIZE) || sz > 2L * 1024L * 1024L) {
         fclose(fp);
         if (err && errn > 0) StringCchCopyW(err, (size_t)errn, L"文件大小不像存档。");
         return 0;
@@ -563,11 +588,72 @@ static int load_save(Save *s, const wchar_t *path, wchar_t *err, int errn) {
         if (err && errn > 0) StringCchCopyW(err, (size_t)errn, L"文件头不是 DAIKOUKAI4PKW9 1。");
         return 0;
     }
+    orig = (uint8_t *)malloc((size_t)sz);
+    if (!orig) {
+        free(data);
+        if (err && errn > 0) StringCchCopyW(err, (size_t)errn, L"内存不足。");
+        return 0;
+    }
+    memcpy(orig, data, (size_t)sz);
     free(s->data);
+    free(s->orig);
     s->data = data;
+    s->orig = orig;
     s->size = (size_t)sz;
     s->dirty = 0;
     StringCchCopyW(s->path, MAX_PATH, path);
+    return 1;
+}
+
+/* Width of the body field that holds byte off, in the parts of the save
+ * this tool writes. 0 = not mapped. */
+static int field_at(size_t off, size_t *start) {
+    size_t rec, rel;
+    if (off >= PERSON_BASE && off < SHORT_BASE) {
+        rel = (off - PERSON_BASE) % PERSON_STRIDE;
+    } else if (off >= HERO_BASE && off < HERO_BASE + PERSON_STRIDE) {
+        rel = off - HERO_BASE;
+    } else if (off >= SHORT_BASE && off < HERO_BASE) {
+        *start = off;
+        return 1;
+    } else {
+        return 0;
+    }
+    rec = off - rel;
+    if (rel >= OFF_P_EXP0 && rel < OFF_P_EXP0 + 4) { *start = rec + OFF_P_EXP0; return 4; }
+    if (rel >= OFF_P_EXP1 && rel < OFF_P_EXP1 + 4) { *start = rec + OFF_P_EXP1; return 4; }
+    if (rel >= OFF_P_HP && rel < OFF_P_HP + 2) { *start = rec + OFF_P_HP; return 2; }
+    *start = off;
+    return 1;
+}
+
+static uint32_t field_value(const uint8_t *p, int width) {
+    if (width == 4) return ru32(p);
+    if (width == 2) return (uint32_t)p[0] | ((uint32_t)p[1] << 8);
+    return p[0];
+}
+
+/* The game sums every body field into +0x18 (u8/u16 zero-extended, u32
+ * whole, mod 2^32). Add the change of each field that differs from the file
+ * as read. 0 = a changed byte is outside the mapped fields. */
+static int checksum_delta(const Save *s, uint32_t *delta, size_t *bad) {
+    size_t i = SAVE_HEADER, start;
+    uint32_t d = 0;
+    int width;
+    while (i < s->size) {
+        if (s->data[i] == s->orig[i]) {
+            i++;
+            continue;
+        }
+        width = field_at(i, &start);
+        if (!width) {
+            *bad = i;
+            return 0;
+        }
+        d += field_value(s->data + start, width) - field_value(s->orig + start, width);
+        i = start + (size_t)width;
+    }
+    *delta = d;
     return 1;
 }
 
@@ -575,10 +661,16 @@ static int write_save(Save *s, wchar_t *msg, int msgn) {
     wchar_t bak[MAX_PATH];
     wchar_t extra[160];
     FILE *fp;
-    uint32_t stored = 0;
+    uint32_t stored = 0, delta = 0;
+    size_t bad = 0;
     int copied;
     if (!s->data) {
         StringCchCopyW(msg, (size_t)msgn, L"没有打开存档。");
+        return 0;
+    }
+    if (!checksum_delta(s, &delta, &bad)) {
+        StringCchPrintfW(msg, (size_t)msgn,
+            L"偏移 0x%X 的改动不在已知字段里，算不出校验和，没有写入。", (unsigned)bad);
         return 0;
     }
     if (s->size >= 0x18) stored = ru32(s->data + 0x14);
@@ -592,12 +684,15 @@ static int write_save(Save *s, wchar_t *msg, int msgn) {
         StringCchCopyW(msg, (size_t)msgn, L"无法写入。请先关掉游戏。");
         return 0;
     }
+    wu32(s->data + OFF_CHECKSUM, ru32(s->data + OFF_CHECKSUM) + delta);
     if (fwrite(s->data, 1, s->size, fp) != s->size) {
         fclose(fp);
+        wu32(s->data + OFF_CHECKSUM, ru32(s->data + OFF_CHECKSUM) - delta);
         StringCchCopyW(msg, (size_t)msgn, L"写入不完整。");
         return 0;
     }
     fclose(fp);
+    memcpy(s->orig, s->data, s->size);
     s->dirty = 0;
     if (copied == 1)
         StringCchPrintfW(msg, (size_t)msgn, L"已写入。原文件备份为 %s", file_part(bak));
@@ -767,7 +862,7 @@ static void sync_buttons(void) {
 
 static int want_person(int index) {
     if (!g.save.data) return 0;
-    if (index == 0) return record_at(&g.save, 0) != NULL;
+    if (index == 0) return person_exists(&g.save, 0);
     if (!is_present(&g.save, index)) return 0;
     if (g.recruited_only && !is_recruited(&g.save, index)) return 0;
     return 1;
@@ -782,7 +877,7 @@ static void show_person(int index) {
     const wchar_t *kind;
     int ok;
     g.person = index;
-    ok = g.save.data && index >= 0 && record_at(&g.save, index) && body_at(&g.save, index, &b);
+    ok = g.save.data && index >= 0 && body_at(&g.save, index, &b);
     if (!ok) {
         SetWindowTextW(g.nameLabel, L"未选择角色");
         SetWindowTextW(g.trackLabel, L"");
@@ -818,7 +913,7 @@ static void add_person_row(int row, int index) {
     wchar_t idx[16], name[160], level[16], faction[16], state[16], numbers[64];
     int stats[STAT_COUNT];
     const wchar_t *cols[6];
-    if (!record_at(&g.save, index) || !body_at(&g.save, index, &b)) return;
+    if (!body_at(&g.save, index, &b)) return;
     StringCchPrintfW(idx, 16, L"%d", index);
     person_name(&g.save, index, name, 160);
     StringCchPrintfW(level, 16, L"%u", total_level(b.exp0, b.exp1));
@@ -847,7 +942,7 @@ static void fill_people(void) {
     ListView_DeleteAllItems(g.people);
     if (g.save.data) {
         if (want_person(0)) add_person_row(row++, 0);
-        for (i = 1; i <= SAILOR_COUNT; i++) {
+        for (i = 1; i <= FULL_PERSON_COUNT; i++) {
             if (!want_person(i)) continue;
             add_person_row(row++, i);
         }
@@ -970,6 +1065,25 @@ static int confirm_discard_or_save(void) {
     return save_current();
 }
 
+/* Persons 87..234 keep only a faction byte and a one-way byte. A faction
+ * past 0x1A (none) means an old version of this tool wrote stats or exp
+ * there. Appends a warning to status and returns how many were found. */
+static int warn_short_damage(Save *s, wchar_t *status, int statusn) {
+    int id, bad = 0;
+    wchar_t extra[200];
+    if (!s->data || s->size < (size_t)HERO_BASE) return 0;
+    for (id = FULL_PERSON_COUNT; id < PERSON_COUNT; id++) {
+        uint8_t f = s->data[SHORT_BASE + (size_t)(id - FULL_PERSON_COUNT) * SHORT_STRIDE];
+        if (f > FACTION_NONE) bad++;
+    }
+    if (bad > 0) {
+        StringCchPrintfW(extra, 200,
+            L" 注意：有 %d 个配角的势力值越界，像是旧版本工具写坏的。可用同目录 .bak 里的原值恢复。", bad);
+        StringCchCatW(status, (size_t)statusn, extra);
+    }
+    return bad;
+}
+
 static int replace_save(const wchar_t *path) {
     Save next;
     wchar_t err[360];
@@ -990,6 +1104,7 @@ static int replace_save(const wchar_t *path) {
     person_name(&g.save, 0, name, 160);
     StringCchPrintfW(status, 360, L"已打开。主角 %s，等级 %u。",
         name, hero_level(&g.save));
+    warn_short_damage(&g.save, status, 360);
     set_status(status);
     return 1;
 }
@@ -1038,6 +1153,7 @@ static void on_refresh(void) {
     person_name(&g.save, 0, name, 160);
     StringCchPrintfW(status, 360, L"已从磁盘重新读取。主角 %s，等级 %u。",
         name, hero_level(&g.save));
+    warn_short_damage(&g.save, status, 360);
     set_status(status);
 }
 
@@ -1100,7 +1216,7 @@ static void on_batch(void) {
     if (!g.save.data || g.person < 0) return;
     read_form(&faction, &level, stats, &clamped);
     (void)faction;
-    for (i = 0; i <= SAILOR_COUNT; i++) {
+    for (i = 0; i <= FULL_PERSON_COUNT; i++) {
         Body probe;
         if (is_protagonist_card(&g.save, i)) continue;
         if (i != 0 && !is_recruited(&g.save, i)) continue;
@@ -1117,7 +1233,7 @@ static void on_batch(void) {
     if (MessageBoxW(g.hwnd, text, L"批量修改", MB_YESNO | MB_ICONQUESTION) != IDYES)
         return;
     n = 0;
-    for (i = 0; i <= SAILOR_COUNT; i++) {
+    for (i = 0; i <= FULL_PERSON_COUNT; i++) {
         Body probe;
         if (is_protagonist_card(&g.save, i)) continue;
         if (i != 0 && !is_recruited(&g.save, i)) continue;
