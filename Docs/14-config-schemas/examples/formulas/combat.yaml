@@ -1,0 +1,25 @@
+schema: dk4.formulas.combat
+version: 1
+# 所属：Docs/07-combat/01-naval-battle.md  02-boarding.md
+# 除数未还原的项不要填假数。
+
+naval:
+  min_cannon_range: 900
+  defeat_hull_or_crew: 30
+  heading_mod: 256
+  bow_arc_lt: 32
+  bow_arc_gt: 224
+  stern_arc_gt: 96
+  stern_arc_lt: 160
+  melee_double_ship_state: 8
+  crew_splash_sides: 6
+
+boarding:
+  ability_ref: 500
+  battle_ability_clamp: 500
+  luck_rolls: 100
+  rand_span: 70
+  duel_base: 150
+  duel_rand: 2000
+
+gun_military_unlock: [1, 1, 2000, 3500, 5000, 7000]

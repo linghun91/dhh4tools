@@ -1,0 +1,25 @@
+schema: dk4.caps
+version: 1
+# 设计上限。必须 ≤ engine_limits。原版内容包 default。
+# 所属：Docs/13-algorithms/02-caps-ranges.md
+
+level_per_track: 100
+track_count: 2
+ability_growth_cap: 100
+ability_settled_cap: 500
+buy_ability_clamp: 500
+battle_ability_clamp: 500
+skill_cap: 200
+town_develop: 9999
+cargo_stack: 1
+fleet_ships: 5
+hold_slots_per_ship: 5
+hold_scan: 10
+sailor_roster: 98
+stat_count: 6
+share_high: 80
+share_cap: 100
+letter_lo: 10
+letter_hi: 16
+same_item_adjust_threshold: 15
+local_fleet_founding_gold: 100000

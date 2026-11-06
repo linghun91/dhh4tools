@@ -1,0 +1,22 @@
+schema: dk4.engine_limits
+version: 1
+# 实现硬顶。内容包不可突破。溢出策略一律 saturate，禁止绕回 0。
+# 所属：Docs/13-algorithms/02-caps-ranges.md
+
+overflow: saturate
+
+integer:
+  uchar: 255
+  ushort: 65535
+  uint32: 4294967295
+  int32: 2147483647
+
+level_per_track: 255          # 再高原版 32 位 isqrt 变 0
+total_level: 510              # 255 * 2
+ability_growth_cap: 255       # 六维 uint8
+ability_settled_cap: 65535    # 结算路径曾用 16 位立即数
+skill_cap: 510                # 两段等级之和
+town_develop: 65535           # uint16
+cargo_stack: 255              # 件数 uint8；UI 宽度不是这条
+gold: 2147483647
+exp_per_track: 4294967295

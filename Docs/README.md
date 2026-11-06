@@ -1,0 +1,169 @@
+# DK4 重构设计文档
+
+把《大航海时代4 PK HD》的玩法、算法、数值拆成可独立配置的系统规格。
+
+原作数据在 `srcdata/` 与 `Game/`。本目录是设计层，不修改 exe。
+
+## 先读
+
+1. [_meta/writing-guide.md](_meta/writing-guide.md) — 章节模板与解耦铁律
+2. [00-overview/01-product-vision.md](00-overview/01-product-vision.md) — 重构目标
+3. [00-overview/03-decoupling-principles.md](00-overview/03-decoupling-principles.md) — 系统怎么拆
+4. [00-overview/05-config-architecture.md](00-overview/05-config-architecture.md) — `config/` 布局
+5. [00-overview/04-id-registry.md](00-overview/04-id-registry.md) — 全部 ID 与计数
+6. [00-overview/06-system-interfaces.md](00-overview/06-system-interfaces.md) — 查询 / 命令 / 事件
+7. [00-overview/07-open-unknowns.md](00-overview/07-open-unknowns.md) — 实现前必须钉死的未知项
+
+改表从 [15-catalogs](15-catalogs/README.md) 对照原版实例；改公式从 [13-algorithms/01-formulas.md](13-algorithms/01-formulas.md)。
+
+## 目录
+
+### 00 总览
+
+| 文档 | 内容 |
+| --- | --- |
+| [01-product-vision.md](00-overview/01-product-vision.md) | 要保住的体验、成功标准 |
+| [02-original-architecture.md](00-overview/02-original-architecture.md) | exe / DLL / 场景 / 类 |
+| [03-decoupling-principles.md](00-overview/03-decoupling-principles.md) | 四层、事件、修正器 |
+| [04-id-registry.md](00-overview/04-id-registry.md) | 枚举、哨兵、上限 |
+| [05-config-architecture.md](00-overview/05-config-architecture.md) | YAML 目录与加载顺序 |
+| [06-system-interfaces.md](00-overview/06-system-interfaces.md) | 跨系统查询、命令、事件 |
+| [07-open-unknowns.md](00-overview/07-open-unknowns.md) | 阻塞实现的未知项 |
+
+### 01 世界
+
+| 文档 | 配置落点 |
+| --- | --- |
+| [01-map-and-sea-areas.md](01-world/01-map-and-sea-areas.md) | `config/world/map.yaml` `sea_areas.yaml` |
+| [02-towns.md](01-world/02-towns.md) | `config/world/towns.yaml` |
+| [03-villages-discovery.md](01-world/03-villages-discovery.md) | `villages.yaml` `remains.yaml` |
+| [04-climate-weather-zodiac.md](01-world/04-climate-weather-zodiac.md) | `climate.yaml` |
+| [05-routes-navigation.md](01-world/05-routes-navigation.md) | `routes.yaml` `junctions.yaml` |
+
+### 02 势力
+
+| 文档 | 配置落点 |
+| --- | --- |
+| [01-forces.md](02-factions/01-forces.md) | `config/factions/forces.yaml` |
+| [02-countries-culture-fashion.md](02-factions/02-countries-culture-fashion.md) | `countries.yaml` `cultures.yaml` `fashion.yaml` |
+| [03-relations-influence.md](02-factions/03-relations-influence.md) | `relations.yaml` |
+
+### 03 人物
+
+| 文档 | 配置落点 |
+| --- | --- |
+| [01-person-model.md](03-characters/01-person-model.md) | `persons.yaml` |
+| [02-protagonists-scenarios.md](03-characters/02-protagonists-scenarios.md) | `protagonists.yaml` |
+| [03-abilities-skills-jobs.md](03-characters/03-abilities-skills-jobs.md) | `abilities.yaml` `skills.yaml` `jobs.yaml` `posts.yaml` |
+| [04-recruitment-crew.md](03-characters/04-recruitment-crew.md) | 招募规则 |
+
+### 04 经济
+
+| 文档 | 配置落点 |
+| --- | --- |
+| [01-trading-items.md](04-economy/01-trading-items.md) | `trading_items.yaml` `trading_item_kinds.yaml` |
+| [02-market-price.md](04-economy/02-market-price.md) | `price_curves.yaml` `formulas/economy.yaml` |
+| [03-trade-loop.md](04-economy/03-trade-loop.md) | 买卖会话、货格、堆叠 |
+| [04-special-products-investment.md](04-economy/04-special-products-investment.md) | `special_products.yaml` `investment.yaml` |
+
+### 05 船与舰队
+
+| 文档 | 配置落点 |
+| --- | --- |
+| [01-ship-model.md](05-ships-fleet/01-ship-model.md) | `ships/types.yaml` `hulls.yaml` |
+| [02-fleet-proxy.md](05-ships-fleet/02-fleet-proxy.md) | `fleets/templates.yaml` `proxy_rules.yaml` |
+| [03-cabins-crew-posts.md](05-ships-fleet/03-cabins-crew-posts.md) | `cabins.yaml` `characters/posts.yaml` |
+| [04-remodel-guns-supplies.md](05-ships-fleet/04-remodel-guns-supplies.md) | `guns.yaml` `supplies.yaml` `figureheads.yaml` |
+
+### 06 航海
+
+| 文档 | 配置落点 |
+| --- | --- |
+| [01-sailing.md](06-ocean/01-sailing.md) | `ocean/sailing.yaml` `wind.yaml` |
+| [02-search-encounters.md](06-ocean/02-search-encounters.md) | `search.yaml` `encounters.yaml` |
+| [03-gold-road.md](06-ocean/03-gold-road.md) | `gold_road.yaml` |
+
+### 07 战斗
+
+| 文档 | 配置落点 |
+| --- | --- |
+| [01-naval-battle.md](07-combat/01-naval-battle.md) | `combat/naval.yaml` |
+| [02-boarding.md](07-combat/02-boarding.md) | `boarding.yaml` |
+| [03-battle-ai.md](07-combat/03-battle-ai.md) | `ai.yaml` |
+
+### 08 港口生活
+
+| 文档 | 配置落点 |
+| --- | --- |
+| [01-facilities.md](08-town-life/01-facilities.md) | `town/facilities.yaml` |
+| [02-requests-schemes.md](08-town-life/02-requests-schemes.md) | `requests.yaml` `schemes.yaml` |
+| [03-minigames.md](08-town-life/03-minigames.md) | `minigames.yaml` |
+
+### 09 道具
+
+| 文档 | 配置落点 |
+| --- | --- |
+| [01-item-catalog.md](09-items/01-item-catalog.md) | `items/items.yaml` `kinds.yaml` |
+| [02-equipment-effects.md](09-items/02-equipment-effects.md) | `effects.yaml` |
+
+### 10 叙事
+
+| 文档 | 配置落点 |
+| --- | --- |
+| [01-scenarios.md](10-narrative/01-scenarios.md) | `narrative/scenarios.yaml` |
+| [02-event-system.md](10-narrative/02-event-system.md) | `events.yaml` `triggers.yaml` |
+
+### 11 成长
+
+| 文档 | 配置落点 |
+| --- | --- |
+| [01-level-exp-skills.md](11-progression/01-level-exp-skills.md) | `progression/level.yaml` `formulas/progression.yaml` |
+| [02-fame-titles.md](11-progression/02-fame-titles.md) | `fame.yaml` |
+
+### 12 界面与存档
+
+| 文档 | 配置落点 |
+| --- | --- |
+| [01-scenes-flow.md](12-ui-save/01-scenes-flow.md) | `ui/scenes.yaml` |
+| [02-save-session.md](12-ui-save/02-save-session.md) | 存档 schema |
+| [03-localization.md](12-ui-save/03-localization.md) | `ui/strings.*.yaml` |
+
+### 13 算法总表
+
+| 文档 | 配置落点 |
+| --- | --- |
+| [01-formulas.md](13-algorithms/01-formulas.md) | `config/formulas/*` |
+| [02-caps-ranges.md](13-algorithms/02-caps-ranges.md) | `caps.yaml` `engine_limits.yaml` |
+
+### 14 配置 schema
+
+[14-config-schemas/README.md](14-config-schemas/README.md) — 各表字段、类型、外键、默认原版包。
+
+### 15 原版内容目录
+
+从 DLL 抽出的实例表，供对照，不是运行时格式。
+
+| 文档 | 数据 |
+| --- | --- |
+| [towns.md](15-catalogs/towns.md) | 97 港 |
+| [persons.md](15-catalogs/persons.md) | 235 人 |
+| [items.md](15-catalogs/items.md) | 231 道具 |
+| [forces.md](15-catalogs/forces.md) | 25 势力 |
+| [trading-items.md](15-catalogs/trading-items.md) | 105 交易品（文案） |
+
+### 数据与规范
+
+- [_data/](_data/) — 从 World0 抽出的 JSON/TSV
+- [_meta/source-map.md](_meta/source-map.md) — 源码索引
+
+## 系统依赖（允许的方向）
+
+见 [03-decoupling-principles.md](00-overview/03-decoupling-principles.md) 原则 9。叙事可查询一切，不可被经济/战斗反向依赖。事件合同见 [06-system-interfaces.md](00-overview/06-system-interfaces.md)。
+
+## 事实等级
+
+正文用 `[确认]` / `[推断]` / `[未知]`。实现时只把确认项写进代码默认包；推断进 YAML 可改；未知保持 `null` 或 `unknown_bytes`。
+
+## 规模
+
+约 55 篇 Markdown + 10 份 YAML 示例。原版包对照：97 港、235 人、231 道具、105 交易品、25 势力。

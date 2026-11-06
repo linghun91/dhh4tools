@@ -1,0 +1,4464 @@
+[
+  {
+    "name": "伦敦",
+    "x1": 20080,
+    "y1": 4272,
+    "x2": 20136,
+    "y2": 4280,
+    "is_capital": 1,
+    "region": 0,
+    "b38": 0,
+    "b39": 0,
+    "special_products": [
+      {
+        "item_id": 99,
+        "supply_or_price": 4500,
+        "grade": 15,
+        "empty": false
+      },
+      {
+        "item_id": 47,
+        "supply_or_price": 2000,
+        "grade": 25,
+        "empty": false
+      },
+      {
+        "item_id": 51,
+        "supply_or_price": 2000,
+        "grade": 25,
+        "empty": false
+      },
+      {
+        "item_id": 90,
+        "supply_or_price": 4000,
+        "grade": 12,
+        "empty": false
+      },
+      {
+        "item_id": 91,
+        "supply_or_price": 3500,
+        "grade": 12,
+        "empty": false
+      }
+    ],
+    "rest_hex": "01007f01000004501a001a00f811301100000000000000000000000026020f000000590119000000e501190000007e040c00000060090c006a006a000c00",
+    "raw_len": 132,
+    "id": 0
+  },
+  {
+    "name": "布里斯托尔",
+    "x1": 19632,
+    "y1": 4304,
+    "x2": 19624,
+    "y2": 4312,
+    "is_capital": 0,
+    "region": 0,
+    "b38": 26,
+    "b39": 0,
+    "special_products": [
+      {
+        "item_id": 6,
+        "supply_or_price": 1000,
+        "grade": 12,
+        "empty": false
+      },
+      {
+        "item_id": 47,
+        "supply_or_price": 2000,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 51,
+        "supply_or_price": 1500,
+        "grade": 15,
+        "empty": false
+      },
+      {
+        "item_id": 92,
+        "supply_or_price": 1000,
+        "grade": 17,
+        "empty": false
+      },
+      {
+        "item_id": 96,
+        "supply_or_price": 2000,
+        "grade": 25,
+        "empty": false
+      }
+    ],
+    "rest_hex": "01009f010000043c1a001a00dc050807000000000000000000000000c2010c0000007c011400010008020f000000b801110000004c0419006a006a000c00",
+    "raw_len": 132,
+    "id": 1
+  },
+  {
+    "name": "阿姆斯特丹",
+    "x1": 20624,
+    "y1": 4112,
+    "x2": 20680,
+    "y2": 4120,
+    "is_capital": 1,
+    "region": 1,
+    "b38": 26,
+    "b39": 0,
+    "special_products": [
+      {
+        "item_id": 8,
+        "supply_or_price": 3000,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 42,
+        "supply_or_price": 3000,
+        "grade": 17,
+        "empty": false
+      },
+      {
+        "item_id": 43,
+        "supply_or_price": 4500,
+        "grade": 12,
+        "empty": false
+      },
+      {
+        "item_id": 51,
+        "supply_or_price": 4000,
+        "grade": 15,
+        "empty": false
+      },
+      {
+        "item_id": 106,
+        "supply_or_price": 0,
+        "grade": 0,
+        "empty": true
+      }
+    ],
+    "rest_hex": "01007f010000013c1a001a006810f00a000000000000000000000000c20114000000fd0211000000540b0c00000008020f000000000000006a006a000c00",
+    "raw_len": 132,
+    "id": 2
+  },
+  {
+    "name": "布鲁日",
+    "x1": 20224,
+    "y1": 4320,
+    "x2": 20248,
+    "y2": 4312,
+    "is_capital": 0,
+    "region": 1,
+    "b38": 26,
+    "b39": 0,
+    "special_products": [
+      {
+        "item_id": 99,
+        "supply_or_price": 2500,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 0,
+        "supply_or_price": 1500,
+        "grade": 25,
+        "empty": false
+      },
+      {
+        "item_id": 50,
+        "supply_or_price": 2000,
+        "grade": 25,
+        "empty": false
+      },
+      {
+        "item_id": 54,
+        "supply_or_price": 2500,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 90,
+        "supply_or_price": 4000,
+        "grade": 12,
+        "empty": false
+      }
+    ],
+    "rest_hex": "01009b01000001141a001a00fc086c07000000000000000000000000260214000000680119000000590119000000c201140000007e040c006a006a000c00",
+    "raw_len": 132,
+    "id": 3
+  },
+  {
+    "name": "南特",
+    "x1": 19872,
+    "y1": 4912,
+    "x2": 19864,
+    "y2": 4936,
+    "is_capital": 0,
+    "region": 1,
+    "b38": 26,
+    "b39": 0,
+    "special_products": [
+      {
+        "item_id": 8,
+        "supply_or_price": 1000,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 13,
+        "supply_or_price": 1000,
+        "grade": 25,
+        "empty": false
+      },
+      {
+        "item_id": 19,
+        "supply_or_price": 2000,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 35,
+        "supply_or_price": 1000,
+        "grade": 25,
+        "empty": false
+      },
+      {
+        "item_id": 106,
+        "supply_or_price": 0,
+        "grade": 0,
+        "empty": true
+      }
+    ],
+    "rest_hex": "01009b0100001a001a001a009808d007000000000000000000000000c20114000000bd0119000000960014000000d10119000000000000006a006a000c00",
+    "raw_len": 132,
+    "id": 4
+  },
+  {
+    "name": "汉堡",
+    "x1": 20976,
+    "y1": 4064,
+    "x2": 21016,
+    "y2": 4056,
+    "is_capital": 1,
+    "region": 2,
+    "b38": 2,
+    "b39": 0,
+    "special_products": [
+      {
+        "item_id": 5,
+        "supply_or_price": 2000,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 6,
+        "supply_or_price": 3000,
+        "grade": 12,
+        "empty": false
+      },
+      {
+        "item_id": 7,
+        "supply_or_price": 3200,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 36,
+        "supply_or_price": 3000,
+        "grade": 23,
+        "empty": false
+      },
+      {
+        "item_id": 94,
+        "supply_or_price": 3000,
+        "grade": 17,
+        "empty": false
+      }
+    ],
+    "rest_hex": "01007f01000005461a001a00d80eb80b000000000000000000000000f00014000000c2010c000100f40114000000580217000000380411006a006a000c00",
+    "raw_len": 132,
+    "id": 5
+  },
+  {
+    "name": "吕贝克",
+    "x1": 21216,
+    "y1": 4000,
+    "x2": 21240,
+    "y2": 3992,
+    "is_capital": 0,
+    "region": 2,
+    "b38": 26,
+    "b39": 0,
+    "special_products": [
+      {
+        "item_id": 0,
+        "supply_or_price": 3000,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 6,
+        "supply_or_price": 3000,
+        "grade": 12,
+        "empty": false
+      },
+      {
+        "item_id": 36,
+        "supply_or_price": 3000,
+        "grade": 23,
+        "empty": false
+      },
+      {
+        "item_id": 94,
+        "supply_or_price": 3000,
+        "grade": 25,
+        "empty": false
+      },
+      {
+        "item_id": 40,
+        "supply_or_price": 4000,
+        "grade": 5,
+        "empty": false
+      }
+    ],
+    "rest_hex": "01009f010000051e1a001a00ac0df00a0000000000000000000000007c0114000000c2010c0000004e0217000000100419000000800c05006a006a000c00",
+    "raw_len": 132,
+    "id": 6
+  },
+  {
+    "name": "斯德哥尔摩",
+    "x1": 22032,
+    "y1": 3376,
+    "x2": 22072,
+    "y2": 3432,
+    "is_capital": 1,
+    "region": 3,
+    "b38": 3,
+    "b39": 0,
+    "special_products": [
+      {
+        "item_id": 5,
+        "supply_or_price": 2500,
+        "grade": 25,
+        "empty": false
+      },
+      {
+        "item_id": 100,
+        "supply_or_price": 2500,
+        "grade": 15,
+        "empty": false
+      },
+      {
+        "item_id": 92,
+        "supply_or_price": 1500,
+        "grade": 17,
+        "empty": false
+      },
+      {
+        "item_id": 95,
+        "supply_or_price": 2000,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 106,
+        "supply_or_price": 0,
+        "grade": 0,
+        "empty": true
+      }
+    ],
+    "rest_hex": "01007f01000002461a001a008c0ac409000000000000000000000000dc0019000000ee020f000000c201110000004c0414000000000000006a006a000c00",
+    "raw_len": 132,
+    "id": 7
+  },
+  {
+    "name": "奥斯陆",
+    "x1": 21152,
+    "y1": 3376,
+    "x2": 21176,
+    "y2": 3416,
+    "is_capital": 0,
+    "region": 3,
+    "b38": 26,
+    "b39": 0,
+    "special_products": [
+      {
+        "item_id": 5,
+        "supply_or_price": 2500,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 93,
+        "supply_or_price": 2000,
+        "grade": 22,
+        "empty": false
+      },
+      {
+        "item_id": 100,
+        "supply_or_price": 1500,
+        "grade": 25,
+        "empty": false
+      },
+      {
+        "item_id": 106,
+        "supply_or_price": 0,
+        "grade": 0,
+        "empty": true
+      },
+      {
+        "item_id": 106,
+        "supply_or_price": 0,
+        "grade": 0,
+        "empty": true
+      }
+    ],
+    "rest_hex": "01005b01000005141a001a00f00a6009000000000000000000000000f00014000000d10116000000da0219000000000000000000000000006a006a000c00",
+    "raw_len": 132,
+    "id": 8
+  },
+  {
+    "name": "哥本哈根",
+    "x1": 21360,
+    "y1": 3856,
+    "x2": 21400,
+    "y2": 3880,
+    "is_capital": 0,
+    "region": 3,
+    "b38": 26,
+    "b39": 0,
+    "special_products": [
+      {
+        "item_id": 6,
+        "supply_or_price": 3000,
+        "grade": 12,
+        "empty": false
+      },
+      {
+        "item_id": 42,
+        "supply_or_price": 3000,
+        "grade": 17,
+        "empty": false
+      },
+      {
+        "item_id": 91,
+        "supply_or_price": 3000,
+        "grade": 17,
+        "empty": false
+      },
+      {
+        "item_id": 106,
+        "supply_or_price": 0,
+        "grade": 0,
+        "empty": true
+      },
+      {
+        "item_id": 106,
+        "supply_or_price": 0,
+        "grade": 0,
+        "empty": true
+      }
+    ],
+    "rest_hex": "01005f0100001a001a001a00480d8c0a000000000000000000000000c2010c000000020311000000600911000000000000000000000000006a006a000c00",
+    "raw_len": 132,
+    "id": 9
+  },
+  {
+    "name": "里加",
+    "x1": 22656,
+    "y1": 3648,
+    "x2": 22648,
+    "y2": 3656,
+    "is_capital": 0,
+    "region": 3,
+    "b38": 26,
+    "b39": 0,
+    "special_products": [
+      {
+        "item_id": 0,
+        "supply_or_price": 2000,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 3,
+        "supply_or_price": 3500,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 59,
+        "supply_or_price": 2000,
+        "grade": 23,
+        "empty": false
+      },
+      {
+        "item_id": 70,
+        "supply_or_price": 2700,
+        "grade": 15,
+        "empty": false
+      },
+      {
+        "item_id": 102,
+        "supply_or_price": 2500,
+        "grade": 25,
+        "empty": false
+      }
+    ],
+    "rest_hex": "01005b01000002141a001a00280a98080000000000000000000000007201140000005e01140000002805170000004c040f0000002c0119006a006a000c00",
+    "raw_len": 132,
+    "id": 10
+  },
+  {
+    "name": "里斯本",
+    "x1": 19024,
+    "y1": 5712,
+    "x2": 19016,
+    "y2": 5752,
+    "is_capital": 1,
+    "region": 4,
+    "b38": 26,
+    "b39": 0,
+    "special_products": [
+      {
+        "item_id": 13,
+        "supply_or_price": 4000,
+        "grade": 12,
+        "empty": false
+      },
+      {
+        "item_id": 14,
+        "supply_or_price": 4000,
+        "grade": 12,
+        "empty": false
+      },
+      {
+        "item_id": 28,
+        "supply_or_price": 5500,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 82,
+        "supply_or_price": 6000,
+        "grade": 17,
+        "empty": false
+      },
+      {
+        "item_id": 90,
+        "supply_or_price": 4000,
+        "grade": 12,
+        "empty": false
+      }
+    ],
+    "rest_hex": "01007f010000063200141a007017681000000000000000000000000008020c0000007c010c0000009803140000002003110000007e040c006a006a000c00",
+    "raw_len": 132,
+    "id": 11
+  },
+  {
+    "name": "休达",
+    "x1": 19376,
+    "y1": 6048,
+    "x2": 19384,
+    "y2": 6040,
+    "is_capital": 0,
+    "region": 4,
+    "b38": 26,
+    "b39": 0,
+    "special_products": [
+      {
+        "item_id": 15,
+        "supply_or_price": 600,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 64,
+        "supply_or_price": 2000,
+        "grade": 12,
+        "empty": false
+      },
+      {
+        "item_id": 67,
+        "supply_or_price": 2500,
+        "grade": 8,
+        "empty": false
+      },
+      {
+        "item_id": 101,
+        "supply_or_price": 700,
+        "grade": 25,
+        "empty": false
+      },
+      {
+        "item_id": 106,
+        "supply_or_price": 0,
+        "grade": 0,
+        "empty": true
+      }
+    ],
+    "rest_hex": "01009b010000061900141a00bc027805000000000000000000000000130114000000aa050c000000b80b08000000bc0219000000000000006a006a000c00",
+    "raw_len": 132,
+    "id": 12
+  },
+  {
+    "name": "塞维利亚",
+    "x1": 19312,
+    "y1": 5936,
+    "x2": 19304,
+    "y2": 5976,
+    "is_capital": 1,
+    "region": 5,
+    "b38": 5,
+    "b39": 0,
+    "special_products": [
+      {
+        "item_id": 12,
+        "supply_or_price": 4500,
+        "grade": 12,
+        "empty": false
+      },
+      {
+        "item_id": 57,
+        "supply_or_price": 5000,
+        "grade": 12,
+        "empty": false
+      },
+      {
+        "item_id": 52,
+        "supply_or_price": 4000,
+        "grade": 25,
+        "empty": false
+      },
+      {
+        "item_id": 90,
+        "supply_or_price": 4000,
+        "grade": 12,
+        "empty": false
+      },
+      {
+        "item_id": 93,
+        "supply_or_price": 4000,
+        "grade": 15,
+        "empty": false
+      }
+    ],
+    "rest_hex": "01007f01000007501a001a0050144416000000000000000000000100da020c00000052030c000000e001190000007e040c000000e0010f006a006a000c00",
+    "raw_len": 132,
+    "id": 13
+  },
+  {
+    "name": "瓦伦西亚",
+    "x1": 19952,
+    "y1": 5648,
+    "x2": 19992,
+    "y2": 5672,
+    "is_capital": 0,
+    "region": 5,
+    "b38": 26,
+    "b39": 0,
+    "special_products": [
+      {
+        "item_id": 13,
+        "supply_or_price": 1500,
+        "grade": 12,
+        "empty": false
+      },
+      {
+        "item_id": 43,
+        "supply_or_price": 3000,
+        "grade": 15,
+        "empty": false
+      },
+      {
+        "item_id": 47,
+        "supply_or_price": 2000,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 51,
+        "supply_or_price": 1600,
+        "grade": 15,
+        "empty": false
+      },
+      {
+        "item_id": 82,
+        "supply_or_price": 2200,
+        "grade": 17,
+        "empty": false
+      }
+    ],
+    "rest_hex": "01009b01000007321a001a009808540b00000000000000000000000008020c000000540b0f0000007c011400010008020f000000200311006a006a000c00",
+    "raw_len": 132,
+    "id": 14
+  },
+  {
+    "name": "热那亚",
+    "x1": 20992,
+    "y1": 5040,
+    "x2": 21016,
+    "y2": 5096,
+    "is_capital": 1,
+    "region": 6,
+    "b38": 6,
+    "b39": 0,
+    "special_products": [
+      {
+        "item_id": 8,
+        "supply_or_price": 1500,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 49,
+        "supply_or_price": 3800,
+        "grade": 12,
+        "empty": false
+      },
+      {
+        "item_id": 51,
+        "supply_or_price": 2000,
+        "grade": 15,
+        "empty": false
+      },
+      {
+        "item_id": 53,
+        "supply_or_price": 4000,
+        "grade": 7,
+        "empty": false
+      },
+      {
+        "item_id": 93,
+        "supply_or_price": 4000,
+        "grade": 15,
+        "empty": false
+      }
+    ],
+    "rest_hex": "01007f01000008461a001a00a00fac0d000000000000000000000000c2011400010008020c00000008020f000100e40c07000000e0010f006a006a000c00",
+    "raw_len": 132,
+    "id": 15
+  },
+  {
+    "name": "马赛",
+    "x1": 20512,
+    "y1": 5152,
+    "x2": 20536,
+    "y2": 5192,
+    "is_capital": 0,
+    "region": 6,
+    "b38": 26,
+    "b39": 0,
+    "special_products": [
+      {
+        "item_id": 8,
+        "supply_or_price": 1500,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 12,
+        "supply_or_price": 2500,
+        "grade": 12,
+        "empty": false
+      },
+      {
+        "item_id": 13,
+        "supply_or_price": 1500,
+        "grade": 12,
+        "empty": false
+      },
+      {
+        "item_id": 28,
+        "supply_or_price": 3000,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 45,
+        "supply_or_price": 2000,
+        "grade": 25,
+        "empty": false
+      }
+    ],
+    "rest_hex": "01009b010000080a070a1a00c409c409000000000000000000000000c20114000100d0020c000000fe010c000000980314000000a20319006a006a000c00",
+    "raw_len": 132,
+    "id": 16
+  },
+  {
+    "name": "锡拉库萨",
+    "x1": 21664,
+    "y1": 5856,
+    "x2": 21704,
+    "y2": 5880,
+    "is_capital": 0,
+    "region": 6,
+    "b38": 26,
+    "b39": 0,
+    "special_products": [
+      {
+        "item_id": 0,
+        "supply_or_price": 2000,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 35,
+        "supply_or_price": 1000,
+        "grade": 23,
+        "empty": false
+      },
+      {
+        "item_id": 14,
+        "supply_or_price": 1500,
+        "grade": 25,
+        "empty": false
+      },
+      {
+        "item_id": 19,
+        "supply_or_price": 2500,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 106,
+        "supply_or_price": 0,
+        "grade": 0,
+        "empty": true
+      }
+    ],
+    "rest_hex": "01005f010000081407141a00f00a9e070000000000000000000000007c0114000000f40117000000540119000000960014000000000000006a006a000c00",
+    "raw_len": 132,
+    "id": 17
+  },
+  {
+    "name": "威尼斯",
+    "x1": 21376,
+    "y1": 4912,
+    "x2": 21400,
+    "y2": 4952,
+    "is_capital": 0,
+    "region": 6,
+    "b38": 26,
+    "b39": 0,
+    "special_products": [
+      {
+        "item_id": 35,
+        "supply_or_price": 2000,
+        "grade": 25,
+        "empty": false
+      },
+      {
+        "item_id": 57,
+        "supply_or_price": 3300,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 61,
+        "supply_or_price": 2000,
+        "grade": 8,
+        "empty": false
+      },
+      {
+        "item_id": 42,
+        "supply_or_price": 2000,
+        "grade": 25,
+        "empty": false
+      },
+      {
+        "item_id": 71,
+        "supply_or_price": 4000,
+        "grade": 15,
+        "empty": false
+      }
+    ],
+    "rest_hex": "01009f010000081e1a001a00cc10e40c000000000000000000000000b80119000000200314000000260c080000009402190000007e040f006a006a000c00",
+    "raw_len": 132,
+    "id": 18
+  },
+  {
+    "name": "雅典",
+    "x1": 22576,
+    "y1": 5744,
+    "x2": 22600,
+    "y2": 5800,
+    "is_capital": 1,
+    "region": 7,
+    "b38": 7,
+    "b39": 0,
+    "special_products": [
+      {
+        "item_id": 9,
+        "supply_or_price": 2000,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 14,
+        "supply_or_price": 1000,
+        "grade": 12,
+        "empty": false
+      },
+      {
+        "item_id": 19,
+        "supply_or_price": 1500,
+        "grade": 25,
+        "empty": false
+      },
+      {
+        "item_id": 60,
+        "supply_or_price": 2200,
+        "grade": 8,
+        "empty": false
+      },
+      {
+        "item_id": 61,
+        "supply_or_price": 2200,
+        "grade": 8,
+        "empty": false
+      }
+    ],
+    "rest_hex": "01007f01000009141a001a009808d0070000000000000000000001007c01140000007c010c0000008700190000004e0c08000000800c08006a006a000c00",
+    "raw_len": 132,
+    "id": 19
+  },
+  {
+    "name": "克里特",
+    "x1": 22800,
+    "y1": 6064,
+    "x2": 22808,
+    "y2": 6056,
+    "is_capital": 0,
+    "region": 7,
+    "b38": 26,
+    "b39": 0,
+    "special_products": [
+      {
+        "item_id": 35,
+        "supply_or_price": 1000,
+        "grade": 23,
+        "empty": false
+      },
+      {
+        "item_id": 9,
+        "supply_or_price": 1600,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 14,
+        "supply_or_price": 1500,
+        "grade": 12,
+        "empty": false
+      },
+      {
+        "item_id": 34,
+        "supply_or_price": 1600,
+        "grade": 17,
+        "empty": false
+      },
+      {
+        "item_id": 106,
+        "supply_or_price": 0,
+        "grade": 0,
+        "empty": true
+      }
+    ],
+    "rest_hex": "01009b010000080a09051a0040060807000000000000000000000000f401170001007c011400000077010c000100100411000000000000006a006a000c00",
+    "raw_len": 132,
+    "id": 20
+  },
+  {
+    "name": "塞浦路斯",
+    "x1": 23696,
+    "y1": 6064,
+    "x2": 23720,
+    "y2": 6056,
+    "is_capital": 0,
+    "region": 7,
+    "b38": 26,
+    "b39": 0,
+    "special_products": [
+      {
+        "item_id": 0,
+        "supply_or_price": 1000,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 14,
+        "supply_or_price": 1000,
+        "grade": 12,
+        "empty": false
+      },
+      {
+        "item_id": 34,
+        "supply_or_price": 1200,
+        "grade": 17,
+        "empty": false
+      },
+      {
+        "item_id": 82,
+        "supply_or_price": 1500,
+        "grade": 25,
+        "empty": false
+      },
+      {
+        "item_id": 106,
+        "supply_or_price": 0,
+        "grade": 0,
+        "empty": true
+      }
+    ],
+    "rest_hex": "01005b01000009141a001a00b004dc050000000000000000000000007c011400000077010c000100100411000000d00219000000000000006a006a000c00",
+    "raw_len": 132,
+    "id": 21
+  },
+  {
+    "name": "伊斯坦布尔",
+    "x1": 23184,
+    "y1": 5408,
+    "x2": 23192,
+    "y2": 5464,
+    "is_capital": 1,
+    "region": 8,
+    "b38": 8,
+    "b39": 0,
+    "special_products": [
+      {
+        "item_id": 20,
+        "supply_or_price": 4500,
+        "grade": 22,
+        "empty": false
+      },
+      {
+        "item_id": 23,
+        "supply_or_price": 5000,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 98,
+        "supply_or_price": 4500,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 55,
+        "supply_or_price": 1900,
+        "grade": 10,
+        "empty": false
+      },
+      {
+        "item_id": 58,
+        "supply_or_price": 4300,
+        "grade": 17,
+        "empty": false
+      }
+    ],
+    "rest_hex": "01007f01000009501a001a0088137017000000000000000000000100c20116000100cc1014000000580214000000fc080a0000004e0c11006a006a000c00",
+    "raw_len": 132,
+    "id": 22
+  },
+  {
+    "name": "拉古札",
+    "x1": 21872,
+    "y1": 5184,
+    "x2": 21880,
+    "y2": 5224,
+    "is_capital": 0,
+    "region": 8,
+    "b38": 26,
+    "b39": 0,
+    "special_products": [
+      {
+        "item_id": 4,
+        "supply_or_price": 1500,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 9,
+        "supply_or_price": 1500,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 14,
+        "supply_or_price": 1500,
+        "grade": 12,
+        "empty": false
+      },
+      {
+        "item_id": 34,
+        "supply_or_price": 1500,
+        "grade": 17,
+        "empty": false
+      },
+      {
+        "item_id": 88,
+        "supply_or_price": 1000,
+        "grade": 23,
+        "empty": false
+      }
+    ],
+    "rest_hex": "01009b010000091408141a00dc05e8030000000000000000000000005e01140001007c011400000072010c000100100411000000580217006a006a000c00",
+    "raw_len": 132,
+    "id": 23
+  },
+  {
+    "name": "贝鲁特",
+    "x1": 23984,
+    "y1": 6112,
+    "x2": 23976,
+    "y2": 6120,
+    "is_capital": 0,
+    "region": 8,
+    "b38": 4,
+    "b39": 0,
+    "special_products": [
+      {
+        "item_id": 25,
+        "supply_or_price": 1900,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 34,
+        "supply_or_price": 1900,
+        "grade": 17,
+        "empty": false
+      },
+      {
+        "item_id": 42,
+        "supply_or_price": 2000,
+        "grade": 17,
+        "empty": false
+      },
+      {
+        "item_id": 100,
+        "supply_or_price": 2000,
+        "grade": 15,
+        "empty": false
+      },
+      {
+        "item_id": 55,
+        "supply_or_price": 1900,
+        "grade": 15,
+        "empty": false
+      }
+    ],
+    "rest_hex": "01008b010000091e1a001a006c073408000000000000000000000100041014000100660311000000d50211000000ee020f000000ca080f006a006a000c00",
+    "raw_len": 132,
+    "id": 24
+  },
+  {
+    "name": "亚历山大",
+    "x1": 23424,
+    "y1": 6480,
+    "x2": 23448,
+    "y2": 6472,
+    "is_capital": 1,
+    "region": 9,
+    "b38": 9,
+    "b39": 0,
+    "special_products": [
+      {
+        "item_id": 15,
+        "supply_or_price": 2000,
+        "grade": 12,
+        "empty": false
+      },
+      {
+        "item_id": 22,
+        "supply_or_price": 4000,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 48,
+        "supply_or_price": 3000,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 50,
+        "supply_or_price": 3000,
+        "grade": 25,
+        "empty": false
+      },
+      {
+        "item_id": 58,
+        "supply_or_price": 3000,
+        "grade": 5,
+        "empty": false
+      }
+    ],
+    "rest_hex": "01007f010000090a0a1e1a00a00f800c00000000000000000000000018010c0001006810140000008601140000004f01190000003a0c05006a006a000c00",
+    "raw_len": 132,
+    "id": 25
+  },
+  {
+    "name": "的黎波里",
+    "x1": 21472,
+    "y1": 6336,
+    "x2": 21496,
+    "y2": 6328,
+    "is_capital": 0,
+    "region": 9,
+    "b38": 26,
+    "b39": 0,
+    "special_products": [
+      {
+        "item_id": 48,
+        "supply_or_price": 1500,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 50,
+        "supply_or_price": 1500,
+        "grade": 25,
+        "empty": false
+      },
+      {
+        "item_id": 52,
+        "supply_or_price": 1600,
+        "grade": 15,
+        "empty": false
+      },
+      {
+        "item_id": 39,
+        "supply_or_price": 2500,
+        "grade": 5,
+        "empty": false
+      },
+      {
+        "item_id": 46,
+        "supply_or_price": 2000,
+        "grade": 12,
+        "empty": false
+      }
+    ],
+    "rest_hex": "01005b0100000a1e1a001a00a40608070000000000000000000000008b011400000059011900010026020f000000c81905000000b0040c006a006a000c00",
+    "raw_len": 132,
+    "id": 26
+  },
+  {
+    "name": "阿尔及尔",
+    "x1": 20320,
+    "y1": 5904,
+    "x2": 20328,
+    "y2": 5896,
+    "is_capital": 0,
+    "region": 9,
+    "b38": 26,
+    "b39": 0,
+    "special_products": [
+      {
+        "item_id": 14,
+        "supply_or_price": 2000,
+        "grade": 12,
+        "empty": false
+      },
+      {
+        "item_id": 37,
+        "supply_or_price": 1500,
+        "grade": 23,
+        "empty": false
+      },
+      {
+        "item_id": 82,
+        "supply_or_price": 2000,
+        "grade": 17,
+        "empty": false
+      },
+      {
+        "item_id": 67,
+        "supply_or_price": 3200,
+        "grade": 6,
+        "empty": false
+      },
+      {
+        "item_id": 46,
+        "supply_or_price": 2700,
+        "grade": 8,
+        "empty": false
+      }
+    ],
+    "rest_hex": "01005f0100000a461a001a00c409f00a0000000000000000000000007c010c000000e00117000000160311000000b80b06000000140508006a006a000c00",
+    "raw_len": 132,
+    "id": 27
+  },
+  {
+    "name": "突尼斯",
+    "x1": 21104,
+    "y1": 5872,
+    "x2": 21144,
+    "y2": 5880,
+    "is_capital": 0,
+    "region": 9,
+    "b38": 26,
+    "b39": 0,
+    "special_products": [
+      {
+        "item_id": 94,
+        "supply_or_price": 3000,
+        "grade": 17,
+        "empty": false
+      },
+      {
+        "item_id": 50,
+        "supply_or_price": 2000,
+        "grade": 25,
+        "empty": false
+      },
+      {
+        "item_id": 54,
+        "supply_or_price": 2000,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 79,
+        "supply_or_price": 3000,
+        "grade": 17,
+        "empty": false
+      },
+      {
+        "item_id": 106,
+        "supply_or_price": 0,
+        "grade": 0,
+        "empty": true
+      }
+    ],
+    "rest_hex": "01005f0100000a28070a1a00b80b8c0a0000000000000000000000003804110000004a0119000100b80114000000600911000000000000006a006a000c00",
+    "raw_len": 132,
+    "id": 28
+  },
+  {
+    "name": "圣乔治",
+    "x1": 20416,
+    "y1": 9248,
+    "x2": 20440,
+    "y2": 9304,
+    "is_capital": 1,
+    "region": 10,
+    "b38": 10,
+    "b39": 0,
+    "special_products": [
+      {
+        "item_id": 31,
+        "supply_or_price": 1900,
+        "grade": 12,
+        "empty": false
+      },
+      {
+        "item_id": 33,
+        "supply_or_price": 1900,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 39,
+        "supply_or_price": 900,
+        "grade": 8,
+        "empty": false
+      },
+      {
+        "item_id": 48,
+        "supply_or_price": 1800,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 67,
+        "supply_or_price": 2600,
+        "grade": 8,
+        "empty": false
+      }
+    ],
+    "rest_hex": "0100bf0100000b3c1a001a006c070807000000000000000000000100f8020c000100940214000000ec1308000000270114000000400608006a006a000c00",
+    "raw_len": 132,
+    "id": 29
+  },
+  {
+    "name": "马德拉",
+    "x1": 18112,
+    "y1": 6352,
+    "x2": 18152,
+    "y2": 6376,
+    "is_capital": 0,
+    "region": 4,
+    "b38": 26,
+    "b39": 0,
+    "special_products": [
+      {
+        "item_id": 11,
+        "supply_or_price": 500,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 15,
+        "supply_or_price": 600,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 19,
+        "supply_or_price": 700,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 35,
+        "supply_or_price": 900,
+        "grade": 17,
+        "empty": false
+      },
+      {
+        "item_id": 106,
+        "supply_or_price": 0,
+        "grade": 0,
+        "empty": true
+      }
+    ],
+    "rest_hex": "01009b010000060a1a001a00bc0290010000000000000000000000006c02140000000e0114000000a00014000000e00111000000000000006a006a000c00",
+    "raw_len": 132,
+    "id": 30
+  },
+  {
+    "name": "拉斯帕马斯",
+    "x1": 18144,
+    "y1": 6832,
+    "x2": 18152,
+    "y2": 6824,
+    "is_capital": 0,
+    "region": 5,
+    "b38": 26,
+    "b39": 0,
+    "special_products": [
+      {
+        "item_id": 5,
+        "supply_or_price": 600,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 9,
+        "supply_or_price": 500,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 15,
+        "supply_or_price": 500,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 106,
+        "supply_or_price": 0,
+        "grade": 0,
+        "empty": true
+      },
+      {
+        "item_id": 106,
+        "supply_or_price": 0,
+        "grade": 0,
+        "empty": true
+      }
+    ],
+    "rest_hex": "01009b01000007051a001a00f4015802000000000000000000000000c800140001007c01140000000e0114000000000000000000000000006a006a000c00",
+    "raw_len": 132,
+    "id": 31
+  },
+  {
+    "name": "绿角",
+    "x1": 18064,
+    "y1": 8352,
+    "x2": 18056,
+    "y2": 8376,
+    "is_capital": 0,
+    "region": 10,
+    "b38": 26,
+    "b39": 0,
+    "special_products": [
+      {
+        "item_id": 10,
+        "supply_or_price": 250,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 13,
+        "supply_or_price": 500,
+        "grade": 12,
+        "empty": false
+      },
+      {
+        "item_id": 27,
+        "supply_or_price": 1000,
+        "grade": 25,
+        "empty": false
+      },
+      {
+        "item_id": 48,
+        "supply_or_price": 250,
+        "grade": 17,
+        "empty": false
+      },
+      {
+        "item_id": 95,
+        "supply_or_price": 250,
+        "grade": 20,
+        "empty": false
+      }
+    ],
+    "rest_hex": "01009b0100000b0a1a001a00fa005e010000000000000000000001005e011400000003020c000000640519000000900111000000600414006a006a000c00",
+    "raw_len": 132,
+    "id": 32
+  },
+  {
+    "name": "罗安达",
+    "x1": 21456,
+    "y1": 11040,
+    "x2": 21448,
+    "y2": 11064,
+    "is_capital": 0,
+    "region": 10,
+    "b38": 26,
+    "b39": 0,
+    "special_products": [
+      {
+        "item_id": 31,
+        "supply_or_price": 300,
+        "grade": 12,
+        "empty": false
+      },
+      {
+        "item_id": 41,
+        "supply_or_price": 200,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 68,
+        "supply_or_price": 500,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 70,
+        "supply_or_price": 800,
+        "grade": 17,
+        "empty": false
+      },
+      {
+        "item_id": 74,
+        "supply_or_price": 1200,
+        "grade": 5,
+        "empty": false
+      }
+    ],
+    "rest_hex": "01009b0100000b141a001a002c01c800000000000000000000000100ee020c000100a00f14000000520314000000d40311000000ba1305006a006a000c00",
+    "raw_len": 132,
+    "id": 33
+  },
+  {
+    "name": "索法拉",
+    "x1": 23872,
+    "y1": 12688,
+    "x2": 23896,
+    "y2": 12744,
+    "is_capital": 1,
+    "region": 11,
+    "b38": 11,
+    "b39": 0,
+    "special_products": [
+      {
+        "item_id": 63,
+        "supply_or_price": 2400,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 31,
+        "supply_or_price": 2100,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 34,
+        "supply_or_price": 2100,
+        "grade": 17,
+        "empty": false
+      },
+      {
+        "item_id": 41,
+        "supply_or_price": 2100,
+        "grade": 17,
+        "empty": false
+      },
+      {
+        "item_id": 67,
+        "supply_or_price": 1900,
+        "grade": 25,
+        "empty": false
+      }
+    ],
+    "rest_hex": "0100bf0100000c461a001a009808f00a000000000000000000000000a60414000000d50214000100e40211000100a00f11000000780519006a006a000c00",
+    "raw_len": 132,
+    "id": 34
+  },
+  {
+    "name": "开普敦",
+    "x1": 22080,
+    "y1": 13792,
+    "x2": 22088,
+    "y2": 13832,
+    "is_capital": 0,
+    "region": 11,
+    "b38": 26,
+    "b39": 0,
+    "special_products": [
+      {
+        "item_id": 10,
+        "supply_or_price": 150,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 39,
+        "supply_or_price": 900,
+        "grade": 5,
+        "empty": false
+      },
+      {
+        "item_id": 74,
+        "supply_or_price": 1200,
+        "grade": 5,
+        "empty": false
+      },
+      {
+        "item_id": 94,
+        "supply_or_price": 500,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 101,
+        "supply_or_price": 150,
+        "grade": 25,
+        "empty": false
+      }
+    ],
+    "rest_hex": "01009b0100000c321a001a00fa002003000000000000000000000100400114000000f811050000002a12050000002e04140000003a0219006a006a000c00",
+    "raw_len": 132,
+    "id": 35
+  },
+  {
+    "name": "莫桑比克",
+    "x1": 24512,
+    "y1": 11616,
+    "x2": 24552,
+    "y2": 11640,
+    "is_capital": 0,
+    "region": 11,
+    "b38": 26,
+    "b39": 0,
+    "special_products": [
+      {
+        "item_id": 31,
+        "supply_or_price": 1200,
+        "grade": 25,
+        "empty": false
+      },
+      {
+        "item_id": 42,
+        "supply_or_price": 1200,
+        "grade": 17,
+        "empty": false
+      },
+      {
+        "item_id": 67,
+        "supply_or_price": 1200,
+        "grade": 8,
+        "empty": false
+      },
+      {
+        "item_id": 68,
+        "supply_or_price": 1000,
+        "grade": 25,
+        "empty": false
+      },
+      {
+        "item_id": 76,
+        "supply_or_price": 1500,
+        "grade": 7,
+        "empty": false
+      }
+    ],
+    "rest_hex": "01009f0100000c281a001a00dc05d007000000000000000000000000c60219000100c00311000000dc0508000000200319000000041007006a006a000c00",
+    "raw_len": 132,
+    "id": 36
+  },
+  {
+    "name": "摩加迪沙",
+    "x1": 24992,
+    "y1": 9760,
+    "x2": 25016,
+    "y2": 9800,
+    "is_capital": 0,
+    "region": 11,
+    "b38": 26,
+    "b39": 0,
+    "special_products": [
+      {
+        "item_id": 32,
+        "supply_or_price": 1000,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 39,
+        "supply_or_price": 900,
+        "grade": 8,
+        "empty": false
+      },
+      {
+        "item_id": 63,
+        "supply_or_price": 1000,
+        "grade": 12,
+        "empty": false
+      },
+      {
+        "item_id": 77,
+        "supply_or_price": 2000,
+        "grade": 10,
+        "empty": false
+      },
+      {
+        "item_id": 95,
+        "supply_or_price": 900,
+        "grade": 25,
+        "empty": false
+      }
+    ],
+    "rest_hex": "01009b0100000c141a001a00780540060000000000000000000001008f0214000000a816080000009c040c00000062110a0000002e0419006a006a000c00",
+    "raw_len": 132,
+    "id": 37
+  },
+  {
+    "name": "巴士拉",
+    "x1": 25328,
+    "y1": 6656,
+    "x2": 25368,
+    "y2": 6712,
+    "is_capital": 1,
+    "region": 12,
+    "b38": 12,
+    "b39": 0,
+    "special_products": [
+      {
+        "item_id": 6,
+        "supply_or_price": 5000,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 8,
+        "supply_or_price": 3000,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 15,
+        "supply_or_price": 2500,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 97,
+        "supply_or_price": 2800,
+        "grade": 23,
+        "empty": false
+      },
+      {
+        "item_id": 55,
+        "supply_or_price": 1900,
+        "grade": 23,
+        "empty": false
+      }
+    ],
+    "rest_hex": "01007f0100000d461a001a00ac0d100e000000000000000000000000db0114000000b80114000000090114000000d00217000000140517006a006a000c00",
+    "raw_len": 132,
+    "id": 38
+  },
+  {
+    "name": "亚丁",
+    "x1": 25104,
+    "y1": 8480,
+    "x2": 25128,
+    "y2": 8520,
+    "is_capital": 0,
+    "region": 12,
+    "b38": 26,
+    "b39": 0,
+    "special_products": [
+      {
+        "item_id": 0,
+        "supply_or_price": 2500,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 15,
+        "supply_or_price": 2000,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 31,
+        "supply_or_price": 2800,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 70,
+        "supply_or_price": 2000,
+        "grade": 15,
+        "empty": false
+      },
+      {
+        "item_id": 58,
+        "supply_or_price": 3000,
+        "grade": 5,
+        "empty": false
+      }
+    ],
+    "rest_hex": "01004f0100000d231a001a00f00a540b0000000000000000000000007c01140000000401140000003403140000004c040f000000340805006a006a000c00",
+    "raw_len": 132,
+    "id": 39
+  },
+  {
+    "name": "马斯喀特",
+    "x1": 26496,
+    "y1": 7376,
+    "x2": 26520,
+    "y2": 7368,
+    "is_capital": 0,
+    "region": 12,
+    "b38": 26,
+    "b39": 0,
+    "special_products": [
+      {
+        "item_id": 5,
+        "supply_or_price": 2000,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 15,
+        "supply_or_price": 2000,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 54,
+        "supply_or_price": 2300,
+        "grade": 8,
+        "empty": false
+      },
+      {
+        "item_id": 12,
+        "supply_or_price": 2500,
+        "grade": 15,
+        "empty": false
+      },
+      {
+        "item_id": 106,
+        "supply_or_price": 0,
+        "grade": 0,
+        "empty": true
+      }
+    ],
+    "rest_hex": "01004f0100000d281a001a00fc086009000000000000000000000000f00014000000040114000000b80108000000bc020f000000000000006a006a000c00",
+    "raw_len": 132,
+    "id": 40
+  },
+  {
+    "name": "霍尔木兹",
+    "x1": 26240,
+    "y1": 6960,
+    "x2": 26264,
+    "y2": 7000,
+    "is_capital": 0,
+    "region": 12,
+    "b38": 26,
+    "b39": 0,
+    "special_products": [
+      {
+        "item_id": 15,
+        "supply_or_price": 1800,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 48,
+        "supply_or_price": 1500,
+        "grade": 17,
+        "empty": false
+      },
+      {
+        "item_id": 98,
+        "supply_or_price": 2000,
+        "grade": 23,
+        "empty": false
+      },
+      {
+        "item_id": 62,
+        "supply_or_price": 2400,
+        "grade": 15,
+        "empty": false
+      },
+      {
+        "item_id": 55,
+        "supply_or_price": 1900,
+        "grade": 15,
+        "empty": false
+      }
+    ],
+    "rest_hex": "01005b0100000d2d1a001a00d007c4090000000000000000000000000e01140000008b01110000004e021700000014050f00000078050f006a006a000c00",
+    "raw_len": 132,
+    "id": 41
+  },
+  {
+    "name": "卡利卡特",
+    "x1": 28448,
+    "y1": 8816,
+    "x2": 28440,
+    "y2": 8856,
+    "is_capital": 1,
+    "region": 13,
+    "b38": 13,
+    "b39": 0,
+    "special_products": [
+      {
+        "item_id": 24,
+        "supply_or_price": 3000,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 48,
+        "supply_or_price": 3800,
+        "grade": 17,
+        "empty": false
+      },
+      {
+        "item_id": 56,
+        "supply_or_price": 3000,
+        "grade": 25,
+        "empty": false
+      },
+      {
+        "item_id": 72,
+        "supply_or_price": 2500,
+        "grade": 23,
+        "empty": false
+      },
+      {
+        "item_id": 106,
+        "supply_or_price": 0,
+        "grade": 0,
+        "empty": true
+      }
+    ],
+    "rest_hex": "01007f0100000e461a001a00a00f8c0a000000000000000000000000bc02140000008601110000002003190000009c0417000000000000006a006a000c00",
+    "raw_len": 132,
+    "id": 42
+  },
+  {
+    "name": "果阿",
+    "x1": 28256,
+    "y1": 8400,
+    "x2": 28248,
+    "y2": 8424,
+    "is_capital": 0,
+    "region": 13,
+    "b38": 26,
+    "b39": 0,
+    "special_products": [
+      {
+        "item_id": 22,
+        "supply_or_price": 1500,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 48,
+        "supply_or_price": 2000,
+        "grade": 17,
+        "empty": false
+      },
+      {
+        "item_id": 52,
+        "supply_or_price": 2500,
+        "grade": 23,
+        "empty": false
+      },
+      {
+        "item_id": 56,
+        "supply_or_price": 3000,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 78,
+        "supply_or_price": 2600,
+        "grade": 15,
+        "empty": false
+      }
+    ],
+    "rest_hex": "01009f0100000e1e1a001a00800cf00a0000000000000000000000004c04140000008601110000002602170000003e031400000072060f006a006a000c00",
+    "raw_len": 132,
+    "id": 43
+  },
+  {
+    "name": "锡兰",
+    "x1": 28864,
+    "y1": 9232,
+    "x2": 28856,
+    "y2": 9256,
+    "is_capital": 0,
+    "region": 13,
+    "b38": 26,
+    "b39": 0,
+    "special_products": [
+      {
+        "item_id": 25,
+        "supply_or_price": 1500,
+        "grade": 25,
+        "empty": false
+      },
+      {
+        "item_id": 29,
+        "supply_or_price": 2300,
+        "grade": 25,
+        "empty": false
+      },
+      {
+        "item_id": 32,
+        "supply_or_price": 1300,
+        "grade": 23,
+        "empty": false
+      },
+      {
+        "item_id": 75,
+        "supply_or_price": 2000,
+        "grade": 8,
+        "empty": false
+      },
+      {
+        "item_id": 77,
+        "supply_or_price": 2000,
+        "grade": 8,
+        "empty": false
+      }
+    ],
+    "rest_hex": "01005f0100000e1e1a001a00c409fc08000000000000000000000000d40319000000c20119000000c00317000000c61108000000941108006a006a000c00",
+    "raw_len": 132,
+    "id": 44
+  },
+  {
+    "name": "加尔各答",
+    "x1": 29760,
+    "y1": 7552,
+    "x2": 29768,
+    "y2": 7592,
+    "is_capital": 0,
+    "region": 13,
+    "b38": 23,
+    "b39": 0,
+    "special_products": [
+      {
+        "item_id": 1,
+        "supply_or_price": 800,
+        "grade": 25,
+        "empty": false
+      },
+      {
+        "item_id": 56,
+        "supply_or_price": 1000,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 72,
+        "supply_or_price": 1300,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 32,
+        "supply_or_price": 2000,
+        "grade": 25,
+        "empty": false
+      },
+      {
+        "item_id": 94,
+        "supply_or_price": 1300,
+        "grade": 17,
+        "empty": false
+      }
+    ],
+    "rest_hex": "01005b0100001a001a001a00080778050000000000000000000000005901190000003e0314000000a10414000100e402190000002e0411006a006a000c00",
+    "raw_len": 132,
+    "id": 45
+  },
+  {
+    "name": "安曼",
+    "x1": 30704,
+    "y1": 8144,
+    "x2": 30712,
+    "y2": 8184,
+    "is_capital": 0,
+    "region": 13,
+    "b38": 26,
+    "b39": 0,
+    "special_products": [
+      {
+        "item_id": 17,
+        "supply_or_price": 2000,
+        "grade": 22,
+        "empty": false
+      },
+      {
+        "item_id": 69,
+        "supply_or_price": 2000,
+        "grade": 12,
+        "empty": false
+      },
+      {
+        "item_id": 71,
+        "supply_or_price": 1000,
+        "grade": 15,
+        "empty": false
+      },
+      {
+        "item_id": 66,
+        "supply_or_price": 2000,
+        "grade": 10,
+        "empty": false
+      },
+      {
+        "item_id": 100,
+        "supply_or_price": 800,
+        "grade": 25,
+        "empty": false
+      }
+    ],
+    "rest_hex": "01005b0100001a001a001a00b0044c04000000000000000000000000f00016000000b6030c00000066030f000000ce090a0000006c0219006a006a000c00",
+    "raw_len": 132,
+    "id": 46
+  },
+  {
+    "name": "马六甲",
+    "x1": 31328,
+    "y1": 9696,
+    "x2": 31320,
+    "y2": 9736,
+    "is_capital": 1,
+    "region": 14,
+    "b38": 14,
+    "b39": 0,
+    "special_products": [
+      {
+        "item_id": 25,
+        "supply_or_price": 1500,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 16,
+        "supply_or_price": 2000,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 89,
+        "supply_or_price": 3000,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 87,
+        "supply_or_price": 1000,
+        "grade": 15,
+        "empty": false
+      },
+      {
+        "item_id": 103,
+        "supply_or_price": 2000,
+        "grade": 20,
+        "empty": false
+      }
+    ],
+    "rest_hex": "0100bf0100000f461a001a00b80bf00a00000000000000000000000072011400000040011400010009011400000086010f000000dc0014006a006a000c00",
+    "raw_len": 132,
+    "id": 47
+  },
+  {
+    "name": "文莱",
+    "x1": 32432,
+    "y1": 9664,
+    "x2": 32440,
+    "y2": 9656,
+    "is_capital": 0,
+    "region": 14,
+    "b38": 26,
+    "b39": 0,
+    "special_products": [
+      {
+        "item_id": 22,
+        "supply_or_price": 500,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 23,
+        "supply_or_price": 500,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 24,
+        "supply_or_price": 500,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 89,
+        "supply_or_price": 500,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 103,
+        "supply_or_price": 800,
+        "grade": 25,
+        "empty": false
+      }
+    ],
+    "rest_hex": "01009b0100000f0a1a001a00f40190010000000000000000000001005e01140001009001140000005401140001000e0114000000dc0019006a006a000c00",
+    "raw_len": 132,
+    "id": 48
+  },
+  {
+    "name": "马尼拉",
+    "x1": 33424,
+    "y1": 8368,
+    "x2": 33416,
+    "y2": 8392,
+    "is_capital": 0,
+    "region": 14,
+    "b38": 26,
+    "b39": 0,
+    "special_products": [
+      {
+        "item_id": 1,
+        "supply_or_price": 200,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 22,
+        "supply_or_price": 200,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 23,
+        "supply_or_price": 200,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 24,
+        "supply_or_price": 200,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 39,
+        "supply_or_price": 900,
+        "grade": 5,
+        "empty": false
+      }
+    ],
+    "rest_hex": "01009b0100001a001a001a00c8002c010000000000000000000000007c01140001008601140001009001140000007c0114000000441605006a006a000c00",
+    "raw_len": 132,
+    "id": 49
+  },
+  {
+    "name": "雅加达",
+    "x1": 31936,
+    "y1": 10688,
+    "x2": 31960,
+    "y2": 10680,
+    "is_capital": 1,
+    "region": 15,
+    "b38": 15,
+    "b39": 0,
+    "special_products": [
+      {
+        "item_id": 1,
+        "supply_or_price": 2500,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 3,
+        "supply_or_price": 3400,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 81,
+        "supply_or_price": 2500,
+        "grade": 25,
+        "empty": false
+      },
+      {
+        "item_id": 85,
+        "supply_or_price": 2400,
+        "grade": 10,
+        "empty": false
+      },
+      {
+        "item_id": 84,
+        "supply_or_price": 2000,
+        "grade": 15,
+        "empty": false
+      }
+    ],
+    "rest_hex": "0100bf01000010461a001a00540bac0d0000000000000000000000007c01140001002c0114000000e8031900000058020a00000072010f006a006a000c00",
+    "raw_len": 132,
+    "id": 50
+  },
+  {
+    "name": "巴邻旁",
+    "x1": 31584,
+    "y1": 10160,
+    "x2": 31608,
+    "y2": 10152,
+    "is_capital": 0,
+    "region": 15,
+    "b38": 26,
+    "b39": 0,
+    "special_products": [
+      {
+        "item_id": 31,
+        "supply_or_price": 2200,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 87,
+        "supply_or_price": 2000,
+        "grade": 15,
+        "empty": false
+      },
+      {
+        "item_id": 65,
+        "supply_or_price": 2400,
+        "grade": 17,
+        "empty": false
+      },
+      {
+        "item_id": 100,
+        "supply_or_price": 1800,
+        "grade": 25,
+        "empty": false
+      },
+      {
+        "item_id": 103,
+        "supply_or_price": 2000,
+        "grade": 20,
+        "empty": false
+      }
+    ],
+    "rest_hex": "01009b010000101e1a001a00c409280a000000000000000000000100da0214000000a4010f000000f40111000000580219000000e60014006a006a000c00",
+    "raw_len": 132,
+    "id": 51
+  },
+  {
+    "name": "德尔纳特",
+    "x1": 34160,
+    "y1": 9824,
+    "x2": 34152,
+    "y2": 9848,
+    "is_capital": 0,
+    "region": 15,
+    "b38": 26,
+    "b39": 0,
+    "special_products": [
+      {
+        "item_id": 10,
+        "supply_or_price": 2500,
+        "grade": 25,
+        "empty": false
+      },
+      {
+        "item_id": 22,
+        "supply_or_price": 1900,
+        "grade": 25,
+        "empty": false
+      },
+      {
+        "item_id": 23,
+        "supply_or_price": 2600,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 24,
+        "supply_or_price": 2500,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 106,
+        "supply_or_price": 0,
+        "grade": 0,
+        "empty": true
+      }
+    ],
+    "rest_hex": "01005f01000010141a001a00280a08070000000000000000000000009001190000006801190001007201140000004a0114000000000000006a006a000c00",
+    "raw_len": 132,
+    "id": 52
+  },
+  {
+    "name": "安波那",
+    "x1": 34208,
+    "y1": 10400,
+    "x2": 34200,
+    "y2": 10424,
+    "is_capital": 0,
+    "region": 15,
+    "b38": 26,
+    "b39": 0,
+    "special_products": [
+      {
+        "item_id": 22,
+        "supply_or_price": 2400,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 23,
+        "supply_or_price": 2000,
+        "grade": 25,
+        "empty": false
+      },
+      {
+        "item_id": 24,
+        "supply_or_price": 2500,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 25,
+        "supply_or_price": 2000,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 84,
+        "supply_or_price": 2000,
+        "grade": 10,
+        "empty": false
+      }
+    ],
+    "rest_hex": "01009b010000101e1a001a006009dc050000000000000000000001005e01140000006801190000004a01140000005e011400000072010a006a006a000c00",
+    "raw_len": 132,
+    "id": 53
+  },
+  {
+    "name": "杭州",
+    "x1": 33440,
+    "y1": 6640,
+    "x2": 33480,
+    "y2": 6632,
+    "is_capital": 1,
+    "region": 16,
+    "b38": 16,
+    "b39": 0,
+    "special_products": [
+      {
+        "item_id": 43,
+        "supply_or_price": 1000,
+        "grade": 25,
+        "empty": false
+      },
+      {
+        "item_id": 53,
+        "supply_or_price": 2000,
+        "grade": 25,
+        "empty": false
+      },
+      {
+        "item_id": 62,
+        "supply_or_price": 4000,
+        "grade": 12,
+        "empty": false
+      },
+      {
+        "item_id": 66,
+        "supply_or_price": 3500,
+        "grade": 12,
+        "empty": false
+      },
+      {
+        "item_id": 83,
+        "supply_or_price": 3600,
+        "grade": 8,
+        "empty": false
+      }
+    ],
+    "rest_hex": "01007f01000003461a001a00100ea00f000000000000000000000000520319000000ee02190000004c040c000000dc0a0c000100fc0808006a006a000c00",
+    "raw_len": 132,
+    "id": 54
+  },
+  {
+    "name": "泉州",
+    "x1": 33280,
+    "y1": 7152,
+    "x2": 33320,
+    "y2": 7176,
+    "is_capital": 0,
+    "region": 16,
+    "b38": 26,
+    "b39": 0,
+    "special_products": [
+      {
+        "item_id": 21,
+        "supply_or_price": 2000,
+        "grade": 22,
+        "empty": false
+      },
+      {
+        "item_id": 32,
+        "supply_or_price": 2000,
+        "grade": 25,
+        "empty": false
+      },
+      {
+        "item_id": 49,
+        "supply_or_price": 1500,
+        "grade": 25,
+        "empty": false
+      },
+      {
+        "item_id": 73,
+        "supply_or_price": 2800,
+        "grade": 12,
+        "empty": false
+      },
+      {
+        "item_id": 88,
+        "supply_or_price": 2500,
+        "grade": 25,
+        "empty": false
+      }
+    ],
+    "rest_hex": "01005b010000031e1a001a00f00ac409000000000000000000000100c2011600000026021900000090011900010086060c000000ae0119006a006a000c00",
+    "raw_len": 132,
+    "id": 55
+  },
+  {
+    "name": "澳门",
+    "x1": 32656,
+    "y1": 7504,
+    "x2": 32680,
+    "y2": 7544,
+    "is_capital": 0,
+    "region": 16,
+    "b38": 26,
+    "b39": 0,
+    "special_products": [
+      {
+        "item_id": 7,
+        "supply_or_price": 3000,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 17,
+        "supply_or_price": 3000,
+        "grade": 23,
+        "empty": false
+      },
+      {
+        "item_id": 32,
+        "supply_or_price": 2800,
+        "grade": 17,
+        "empty": false
+      },
+      {
+        "item_id": 43,
+        "supply_or_price": 3200,
+        "grade": 15,
+        "empty": false
+      },
+      {
+        "item_id": 49,
+        "supply_or_price": 2400,
+        "grade": 8,
+        "empty": false
+      }
+    ],
+    "rest_hex": "01009f0100001a001a001a00800cb80b000000000000000000000100c20114000000e60017000000e0011100000034030f000100fe0108006a006a000c00",
+    "raw_len": 132,
+    "id": 56
+  },
+  {
+    "name": "汉城",
+    "x1": 34064,
+    "y1": 5984,
+    "x2": 34056,
+    "y2": 6008,
+    "is_capital": 1,
+    "region": 17,
+    "b38": 17,
+    "b39": 0,
+    "special_products": [
+      {
+        "item_id": 18,
+        "supply_or_price": 1500,
+        "grade": 25,
+        "empty": false
+      },
+      {
+        "item_id": 43,
+        "supply_or_price": 2400,
+        "grade": 15,
+        "empty": false
+      },
+      {
+        "item_id": 49,
+        "supply_or_price": 2000,
+        "grade": 8,
+        "empty": false
+      },
+      {
+        "item_id": 53,
+        "supply_or_price": 2000,
+        "grade": 7,
+        "empty": false
+      },
+      {
+        "item_id": 80,
+        "supply_or_price": 2400,
+        "grade": 20,
+        "empty": false
+      }
+    ],
+    "rest_hex": "01007f0100001a001a001a006009f00a00000000000000000000000068011900000020030f000000f40108000000ee02070000008c0a14006a006a000c00",
+    "raw_len": 132,
+    "id": 57
+  },
+  {
+    "name": "长崎",
+    "x1": 34384,
+    "y1": 6272,
+    "x2": 34376,
+    "y2": 6280,
+    "is_capital": 0,
+    "region": 18,
+    "b38": 26,
+    "b39": 0,
+    "special_products": [
+      {
+        "item_id": 40,
+        "supply_or_price": 2000,
+        "grade": 15,
+        "empty": false
+      },
+      {
+        "item_id": 42,
+        "supply_or_price": 3000,
+        "grade": 17,
+        "empty": false
+      },
+      {
+        "item_id": 52,
+        "supply_or_price": 2000,
+        "grade": 15,
+        "empty": false
+      },
+      {
+        "item_id": 60,
+        "supply_or_price": 3000,
+        "grade": 8,
+        "empty": false
+      },
+      {
+        "item_id": 69,
+        "supply_or_price": 2000,
+        "grade": 20,
+        "empty": false
+      }
+    ],
+    "rest_hex": "01005f010000112d1a001a008c0a08070000000000000000000000003a070f0001007e041100000026020f0000000e0608000000240414006a006a000c00",
+    "raw_len": 132,
+    "id": 58
+  },
+  {
+    "name": "大阪",
+    "x1": 35040,
+    "y1": 6144,
+    "x2": 35032,
+    "y2": 6168,
+    "is_capital": 1,
+    "region": 18,
+    "b38": 18,
+    "b39": 0,
+    "special_products": [
+      {
+        "item_id": 38,
+        "supply_or_price": 2000,
+        "grade": 25,
+        "empty": false
+      },
+      {
+        "item_id": 44,
+        "supply_or_price": 1800,
+        "grade": 25,
+        "empty": false
+      },
+      {
+        "item_id": 45,
+        "supply_or_price": 3000,
+        "grade": 25,
+        "empty": false
+      },
+      {
+        "item_id": 49,
+        "supply_or_price": 2500,
+        "grade": 25,
+        "empty": false
+      },
+      {
+        "item_id": 73,
+        "supply_or_price": 3000,
+        "grade": 12,
+        "empty": false
+      }
+    ],
+    "rest_hex": "01007f01000011281a001a00280a9808000000000000000000000000080219000000c60219000000d50219000100e0011900010086060c006a006a000c00",
+    "raw_len": 132,
+    "id": 59
+  },
+  {
+    "name": "那霸",
+    "x1": 34208,
+    "y1": 7024,
+    "x2": 34200,
+    "y2": 7048,
+    "is_capital": 0,
+    "region": 18,
+    "b38": 26,
+    "b39": 0,
+    "special_products": [
+      {
+        "item_id": 1,
+        "supply_or_price": 1250,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 11,
+        "supply_or_price": 1250,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 10,
+        "supply_or_price": 1250,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 106,
+        "supply_or_price": 0,
+        "grade": 0,
+        "empty": true
+      },
+      {
+        "item_id": 106,
+        "supply_or_price": 0,
+        "grade": 0,
+        "empty": true
+      }
+    ],
+    "rest_hex": "01005f0100001a001a001a00e204dc05000000000000000000000000720114000000580214000100680114000000000000000000000000006a006a000c00",
+    "raw_len": 132,
+    "id": 60
+  },
+  {
+    "name": "哈瓦那",
+    "x1": 10832,
+    "y1": 7424,
+    "x2": 10856,
+    "y2": 7416,
+    "is_capital": 1,
+    "region": 19,
+    "b38": 19,
+    "b39": 0,
+    "special_products": [
+      {
+        "item_id": 11,
+        "supply_or_price": 500,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 31,
+        "supply_or_price": 800,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 34,
+        "supply_or_price": 800,
+        "grade": 25,
+        "empty": false
+      },
+      {
+        "item_id": 37,
+        "supply_or_price": 500,
+        "grade": 17,
+        "empty": false
+      },
+      {
+        "item_id": 95,
+        "supply_or_price": 900,
+        "grade": 20,
+        "empty": false
+      }
+    ],
+    "rest_hex": "0100bf010000123c1a001a001405e803000000000000000000000000d60114000100a80214000000da0219000000e00111000000740414006a006a000c00",
+    "raw_len": 132,
+    "id": 61
+  },
+  {
+    "name": "圣多明尼各",
+    "x1": 12272,
+    "y1": 7936,
+    "x2": 12296,
+    "y2": 7976,
+    "is_capital": 0,
+    "region": 19,
+    "b38": 26,
+    "b39": 0,
+    "special_products": [
+      {
+        "item_id": 9,
+        "supply_or_price": 600,
+        "grade": 25,
+        "empty": false
+      },
+      {
+        "item_id": 10,
+        "supply_or_price": 2500,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 11,
+        "supply_or_price": 500,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 33,
+        "supply_or_price": 800,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 34,
+        "supply_or_price": 500,
+        "grade": 25,
+        "empty": false
+      }
+    ],
+    "rest_hex": "01009f01000012321a001a00e803bc02000000000000000000000000540119000000680114000000c20114000000b80114000000d00219006a006a000c00",
+    "raw_len": 132,
+    "id": 62
+  },
+  {
+    "name": "圣约翰",
+    "x1": 12640,
+    "y1": 7936,
+    "x2": 12664,
+    "y2": 7928,
+    "is_capital": 0,
+    "region": 19,
+    "b38": 26,
+    "b39": 0,
+    "special_products": [
+      {
+        "item_id": 10,
+        "supply_or_price": 600,
+        "grade": 21,
+        "empty": false
+      },
+      {
+        "item_id": 11,
+        "supply_or_price": 500,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 31,
+        "supply_or_price": 500,
+        "grade": 25,
+        "empty": false
+      },
+      {
+        "item_id": 37,
+        "supply_or_price": 500,
+        "grade": 17,
+        "empty": false
+      },
+      {
+        "item_id": 68,
+        "supply_or_price": 1000,
+        "grade": 8,
+        "empty": false
+      }
+    ],
+    "rest_hex": "01009f010000121e1a001a00bc022003000000000000000000000100900115000000d60114000100080219000000e00111000000700308006a006a000c00",
+    "raw_len": 132,
+    "id": 63
+  },
+  {
+    "name": "牙买加",
+    "x1": 11456,
+    "y1": 7984,
+    "x2": 11480,
+    "y2": 8024,
+    "is_capital": 0,
+    "region": 19,
+    "b38": 26,
+    "b39": 0,
+    "special_products": [
+      {
+        "item_id": 5,
+        "supply_or_price": 600,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 11,
+        "supply_or_price": 500,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 31,
+        "supply_or_price": 500,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 33,
+        "supply_or_price": 600,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 37,
+        "supply_or_price": 1000,
+        "grade": 23,
+        "empty": false
+      }
+    ],
+    "rest_hex": "01009b010000121e13141a002003f401000000000000000000000000eb0014000000d60114000100f40114000000b80114000000e00117006a006a000c00",
+    "raw_len": 132,
+    "id": 64
+  },
+  {
+    "name": "委拉克鲁斯",
+    "x1": 9248,
+    "y1": 7808,
+    "x2": 9304,
+    "y2": 7832,
+    "is_capital": 1,
+    "region": 20,
+    "b38": 20,
+    "b39": 0,
+    "special_products": [
+      {
+        "item_id": 2,
+        "supply_or_price": 1000,
+        "grade": 25,
+        "empty": false
+      },
+      {
+        "item_id": 26,
+        "supply_or_price": 1800,
+        "grade": 25,
+        "empty": false
+      },
+      {
+        "item_id": 29,
+        "supply_or_price": 1300,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 39,
+        "supply_or_price": 900,
+        "grade": 8,
+        "empty": false
+      },
+      {
+        "item_id": 40,
+        "supply_or_price": 2000,
+        "grade": 17,
+        "empty": false
+      }
+    ],
+    "rest_hex": "0100bf01000013461a001a006009280a0000000000000000000000007201190000002602190000002602140000007c1508000000340811006a006a000c00",
+    "raw_len": 132,
+    "id": 65
+  },
+  {
+    "name": "梅里达",
+    "x1": 10064,
+    "y1": 7616,
+    "x2": 10072,
+    "y2": 7608,
+    "is_capital": 0,
+    "region": 20,
+    "b38": 22,
+    "b39": 0,
+    "special_products": [
+      {
+        "item_id": 7,
+        "supply_or_price": 1000,
+        "grade": 17,
+        "empty": false
+      },
+      {
+        "item_id": 9,
+        "supply_or_price": 800,
+        "grade": 25,
+        "empty": false
+      },
+      {
+        "item_id": 30,
+        "supply_or_price": 500,
+        "grade": 25,
+        "empty": false
+      },
+      {
+        "item_id": 66,
+        "supply_or_price": 800,
+        "grade": 10,
+        "empty": false
+      },
+      {
+        "item_id": 103,
+        "supply_or_price": 1000,
+        "grade": 20,
+        "empty": false
+      }
+    ],
+    "rest_hex": "01009b01000013281a001a0078058403000000000000000000000000c20111000000540119000000ea0119000000f6090a000000e60014006a006a000c00",
+    "raw_len": 132,
+    "id": 66
+  },
+  {
+    "name": "波托韦洛",
+    "x1": 11104,
+    "y1": 8960,
+    "x2": 11112,
+    "y2": 8952,
+    "is_capital": 0,
+    "region": 20,
+    "b38": 21,
+    "b39": 0,
+    "special_products": [
+      {
+        "item_id": 2,
+        "supply_or_price": 500,
+        "grade": 25,
+        "empty": false
+      },
+      {
+        "item_id": 10,
+        "supply_or_price": 100,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 3,
+        "supply_or_price": 900,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 33,
+        "supply_or_price": 100,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 104,
+        "supply_or_price": 500,
+        "grade": 25,
+        "empty": false
+      }
+    ],
+    "rest_hex": "01009f010000130a1a001a006400c8000000000000000000000000007201190001005e0114000000dc0014000000900114000000c80019006a006a000c00",
+    "raw_len": 132,
+    "id": 67
+  },
+  {
+    "name": "马拉开波",
+    "x1": 12048,
+    "y1": 8768,
+    "x2": 12072,
+    "y2": 8760,
+    "is_capital": 0,
+    "region": 20,
+    "b38": 26,
+    "b39": 0,
+    "special_products": [
+      {
+        "item_id": 7,
+        "supply_or_price": 500,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 31,
+        "supply_or_price": 500,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 73,
+        "supply_or_price": 800,
+        "grade": 12,
+        "empty": false
+      },
+      {
+        "item_id": 76,
+        "supply_or_price": 1500,
+        "grade": 10,
+        "empty": false
+      },
+      {
+        "item_id": 6,
+        "supply_or_price": 2500,
+        "grade": 23,
+        "empty": false
+      }
+    ],
+    "rest_hex": "01009b010000130a1a001a00e803bc02000000000000000000000000b80114000100cc0114000100280a0c000000fe100a000000f40117006a006a000c00",
+    "raw_len": 132,
+    "id": 68
+  },
+  {
+    "name": "伯南布哥",
+    "x1": 16112,
+    "y1": 10864,
+    "x2": 16152,
+    "y2": 10872,
+    "is_capital": 0,
+    "region": 20,
+    "b38": 26,
+    "b39": 0,
+    "special_products": [
+      {
+        "item_id": 2,
+        "supply_or_price": 700,
+        "grade": 25,
+        "empty": false
+      },
+      {
+        "item_id": 31,
+        "supply_or_price": 150,
+        "grade": 25,
+        "empty": false
+      },
+      {
+        "item_id": 39,
+        "supply_or_price": 900,
+        "grade": 8,
+        "empty": false
+      },
+      {
+        "item_id": 100,
+        "supply_or_price": 700,
+        "grade": 25,
+        "empty": false
+      },
+      {
+        "item_id": 101,
+        "supply_or_price": 150,
+        "grade": 25,
+        "empty": false
+      }
+    ],
+    "rest_hex": "01009f0100001a001a001a00bc024c04000000000000000000000000540119000100d60119000000e614080000004e0219000000800219006a006a000c00",
+    "raw_len": 132,
+    "id": 69
+  },
+  {
+    "name": "特鲁希略",
+    "x1": 10448,
+    "y1": 8224,
+    "x2": 10472,
+    "y2": 8216,
+    "is_capital": 0,
+    "region": 20,
+    "b38": 26,
+    "b39": 0,
+    "special_products": [
+      {
+        "item_id": 2,
+        "supply_or_price": 400,
+        "grade": 25,
+        "empty": false
+      },
+      {
+        "item_id": 26,
+        "supply_or_price": 550,
+        "grade": 25,
+        "empty": false
+      },
+      {
+        "item_id": 34,
+        "supply_or_price": 600,
+        "grade": 25,
+        "empty": false
+      },
+      {
+        "item_id": 68,
+        "supply_or_price": 650,
+        "grade": 10,
+        "empty": false
+      },
+      {
+        "item_id": 86,
+        "supply_or_price": 800,
+        "grade": 23,
+        "empty": false
+      }
+    ],
+    "rest_hex": "01009b010000131e1a001a0090012c01000000000000000000000000540119000100260219000000d0021900000002030a000000440217006a006a000c00",
+    "raw_len": 132,
+    "id": 70
+  },
+  {
+    "name": "卡宴",
+    "x1": 14080,
+    "y1": 9392,
+    "x2": 14104,
+    "y2": 9384,
+    "is_capital": 0,
+    "region": 20,
+    "b38": 26,
+    "b39": 0,
+    "special_products": [
+      {
+        "item_id": 9,
+        "supply_or_price": 300,
+        "grade": 25,
+        "empty": false
+      },
+      {
+        "item_id": 30,
+        "supply_or_price": 1500,
+        "grade": 25,
+        "empty": false
+      },
+      {
+        "item_id": 33,
+        "supply_or_price": 550,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 29,
+        "supply_or_price": 700,
+        "grade": 15,
+        "empty": false
+      },
+      {
+        "item_id": 40,
+        "supply_or_price": 1200,
+        "grade": 15,
+        "empty": false
+      }
+    ],
+    "rest_hex": "01009b0100001a001a001a002c01c800000000000000000000000000540119000000ea01190000009a0114000000f4010f0000003a070f006a006a000c00",
+    "raw_len": 132,
+    "id": 71
+  },
+  {
+    "name": "塞拉利昂",
+    "x1": 18480,
+    "y1": 8928,
+    "x2": 18488,
+    "y2": 8968,
+    "is_capital": 0,
+    "region": 10,
+    "b38": 26,
+    "b39": 0,
+    "special_products": [
+      {
+        "item_id": 13,
+        "supply_or_price": 450,
+        "grade": 12,
+        "empty": false
+      },
+      {
+        "item_id": 39,
+        "supply_or_price": 1000,
+        "grade": 5,
+        "empty": false
+      },
+      {
+        "item_id": 101,
+        "supply_or_price": 1200,
+        "grade": 15,
+        "empty": false
+      },
+      {
+        "item_id": 106,
+        "supply_or_price": 0,
+        "grade": 0,
+        "empty": true
+      },
+      {
+        "item_id": 106,
+        "supply_or_price": 0,
+        "grade": 0,
+        "empty": true
+      }
+    ],
+    "rest_hex": "01009b0100000b1e1a001a00c2012c0100000000000000000000000003020c000000da16050000008a020f000000000000000000000000006a006a000c00",
+    "raw_len": 132,
+    "id": 72
+  },
+  {
+    "name": "圣多美",
+    "x1": 20704,
+    "y1": 9968,
+    "x2": 20744,
+    "y2": 9976,
+    "is_capital": 0,
+    "region": 10,
+    "b38": 26,
+    "b39": 0,
+    "special_products": [
+      {
+        "item_id": 11,
+        "supply_or_price": 300,
+        "grade": 10,
+        "empty": false
+      },
+      {
+        "item_id": 67,
+        "supply_or_price": 900,
+        "grade": 10,
+        "empty": false
+      },
+      {
+        "item_id": 59,
+        "supply_or_price": 1000,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 106,
+        "supply_or_price": 0,
+        "grade": 0,
+        "empty": true
+      },
+      {
+        "item_id": 106,
+        "supply_or_price": 0,
+        "grade": 0,
+        "empty": true
+      }
+    ],
+    "rest_hex": "01009b0100000b1e1a001a002c01640000000000000000000000000062020a000000dc050a000000200314000000000000000000000000006a006a000c00",
+    "raw_len": 132,
+    "id": 73
+  },
+  {
+    "name": "马达加斯加",
+    "x1": 25040,
+    "y1": 11760,
+    "x2": 25048,
+    "y2": 11752,
+    "is_capital": 0,
+    "region": 11,
+    "b38": 26,
+    "b39": 0,
+    "special_products": [
+      {
+        "item_id": 59,
+        "supply_or_price": 300,
+        "grade": 10,
+        "empty": false
+      },
+      {
+        "item_id": 100,
+        "supply_or_price": 500,
+        "grade": 25,
+        "empty": false
+      },
+      {
+        "item_id": 27,
+        "supply_or_price": 800,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 106,
+        "supply_or_price": 0,
+        "grade": 0,
+        "empty": true
+      },
+      {
+        "item_id": 106,
+        "supply_or_price": 0,
+        "grade": 0,
+        "empty": true
+      }
+    ],
+    "rest_hex": "01009b0100001a001a001a00c800640000000000000000000000000020030a000000580219000000ca0314000000000000000000000000006a006a000c00",
+    "raw_len": 132,
+    "id": 74
+  },
+  {
+    "name": "蒙巴萨",
+    "x1": 24384,
+    "y1": 10432,
+    "x2": 24424,
+    "y2": 10456,
+    "is_capital": 0,
+    "region": 11,
+    "b38": 26,
+    "b39": 0,
+    "special_products": [
+      {
+        "item_id": 79,
+        "supply_or_price": 700,
+        "grade": 10,
+        "empty": false
+      },
+      {
+        "item_id": 63,
+        "supply_or_price": 800,
+        "grade": 15,
+        "empty": false
+      },
+      {
+        "item_id": 68,
+        "supply_or_price": 700,
+        "grade": 10,
+        "empty": false
+      },
+      {
+        "item_id": 26,
+        "supply_or_price": 700,
+        "grade": 10,
+        "empty": false
+      },
+      {
+        "item_id": 106,
+        "supply_or_price": 0,
+        "grade": 0,
+        "empty": true
+      }
+    ],
+    "rest_hex": "01009b0100000c141a001a00bc02bc0200000000000000000000000072060a000000b0040f00000016030a00010052030a000000000000006a006a000c00",
+    "raw_len": 132,
+    "id": 75
+  },
+  {
+    "name": "索哥德拉",
+    "x1": 26000,
+    "y1": 8592,
+    "x2": 26024,
+    "y2": 8584,
+    "is_capital": 0,
+    "region": 12,
+    "b38": 26,
+    "b39": 0,
+    "special_products": [
+      {
+        "item_id": 15,
+        "supply_or_price": 500,
+        "grade": 10,
+        "empty": false
+      },
+      {
+        "item_id": 5,
+        "supply_or_price": 500,
+        "grade": 15,
+        "empty": false
+      },
+      {
+        "item_id": 64,
+        "supply_or_price": 1500,
+        "grade": 5,
+        "empty": false
+      },
+      {
+        "item_id": 106,
+        "supply_or_price": 0,
+        "grade": 0,
+        "empty": true
+      },
+      {
+        "item_id": 106,
+        "supply_or_price": 0,
+        "grade": 0,
+        "empty": true
+      }
+    ],
+    "rest_hex": "01008b0100000d0a1a001a00f401f4010000000000000000000000000e010a000000f0000f0000004c0405000000000000000000000000006a006a000c00",
+    "raw_len": 132,
+    "id": 76
+  },
+  {
+    "name": "卡拉奇",
+    "x1": 27872,
+    "y1": 7664,
+    "x2": 27880,
+    "y2": 7704,
+    "is_capital": 0,
+    "region": 13,
+    "b38": 26,
+    "b39": 0,
+    "special_products": [
+      {
+        "item_id": 1,
+        "supply_or_price": 1000,
+        "grade": 25,
+        "empty": false
+      },
+      {
+        "item_id": 5,
+        "supply_or_price": 900,
+        "grade": 25,
+        "empty": false
+      },
+      {
+        "item_id": 11,
+        "supply_or_price": 1200,
+        "grade": 25,
+        "empty": false
+      },
+      {
+        "item_id": 64,
+        "supply_or_price": 1500,
+        "grade": 8,
+        "empty": false
+      },
+      {
+        "item_id": 53,
+        "supply_or_price": 1600,
+        "grade": 10,
+        "empty": false
+      }
+    ],
+    "rest_hex": "01009b0100000e0a1a001a00b004e8030000000000000000000000006d0119000000f00019000000580219000000e8030800000008070a006a006a000c00",
+    "raw_len": 132,
+    "id": 77
+  },
+  {
+    "name": "马德拉斯",
+    "x1": 28896,
+    "y1": 8480,
+    "x2": 28936,
+    "y2": 8504,
+    "is_capital": 0,
+    "region": 13,
+    "b38": 26,
+    "b39": 0,
+    "special_products": [
+      {
+        "item_id": 48,
+        "supply_or_price": 1100,
+        "grade": 25,
+        "empty": false
+      },
+      {
+        "item_id": 74,
+        "supply_or_price": 2000,
+        "grade": 5,
+        "empty": false
+      },
+      {
+        "item_id": 75,
+        "supply_or_price": 2000,
+        "grade": 8,
+        "empty": false
+      },
+      {
+        "item_id": 85,
+        "supply_or_price": 1500,
+        "grade": 10,
+        "empty": false
+      },
+      {
+        "item_id": 25,
+        "supply_or_price": 1400,
+        "grade": 10,
+        "empty": false
+      }
+    ],
+    "rest_hex": "01009b0100000e0f1a001a004c042003000000000000000000000000860119000000e01505000000f811080000006c020a0000004c040a006a006a000c00",
+    "raw_len": 132,
+    "id": 78
+  },
+  {
+    "name": "马斯利巴丹",
+    "x1": 29120,
+    "y1": 8112,
+    "x2": 29160,
+    "y2": 8136,
+    "is_capital": 0,
+    "region": 13,
+    "b38": 26,
+    "b39": 0,
+    "special_products": [
+      {
+        "item_id": 56,
+        "supply_or_price": 900,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 78,
+        "supply_or_price": 1200,
+        "grade": 8,
+        "empty": false
+      },
+      {
+        "item_id": 87,
+        "supply_or_price": 1000,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 97,
+        "supply_or_price": 1200,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 106,
+        "supply_or_price": 0,
+        "grade": 0,
+        "empty": true
+      }
+    ],
+    "rest_hex": "01009b0100000e141a001a008403bc02000000000000000000000000340314000000a005080000009a0114000000580214000000000000006a006a000c00",
+    "raw_len": 132,
+    "id": 79
+  },
+  {
+    "name": "亚齐",
+    "x1": 30784,
+    "y1": 9408,
+    "x2": 30792,
+    "y2": 9400,
+    "is_capital": 0,
+    "region": 15,
+    "b38": 26,
+    "b39": 0,
+    "special_products": [
+      {
+        "item_id": 31,
+        "supply_or_price": 1000,
+        "grade": 15,
+        "empty": false
+      },
+      {
+        "item_id": 24,
+        "supply_or_price": 1000,
+        "grade": 10,
+        "empty": false
+      },
+      {
+        "item_id": 27,
+        "supply_or_price": 1500,
+        "grade": 15,
+        "empty": false
+      },
+      {
+        "item_id": 106,
+        "supply_or_price": 0,
+        "grade": 0,
+        "empty": true
+      },
+      {
+        "item_id": 106,
+        "supply_or_price": 0,
+        "grade": 0,
+        "empty": true
+      }
+    ],
+    "rest_hex": "01009b0100000f141a001a00e803e803000000000000000000000100b2020f0000004a010a00000018010f000000000000000000000000006a006a000c00",
+    "raw_len": 132,
+    "id": 80
+  },
+  {
+    "name": "吉阿丁",
+    "x1": 31904,
+    "y1": 8816,
+    "x2": 31944,
+    "y2": 8840,
+    "is_capital": 0,
+    "region": 14,
+    "b38": 24,
+    "b39": 0,
+    "special_products": [
+      {
+        "item_id": 1,
+        "supply_or_price": 400,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 68,
+        "supply_or_price": 500,
+        "grade": 10,
+        "empty": false
+      },
+      {
+        "item_id": 73,
+        "supply_or_price": 800,
+        "grade": 8,
+        "empty": false
+      },
+      {
+        "item_id": 96,
+        "supply_or_price": 850,
+        "grade": 15,
+        "empty": false
+      },
+      {
+        "item_id": 7,
+        "supply_or_price": 1500,
+        "grade": 15,
+        "empty": false
+      }
+    ],
+    "rest_hex": "01009b0100000f0a1a001a0090012c01000000000000000000000000680114000000bc020a000000c4090800000020030f000000f4010f006a006a000c00",
+    "raw_len": 132,
+    "id": 81
+  },
+  {
+    "name": "班贾尔马辛",
+    "x1": 32688,
+    "y1": 10352,
+    "x2": 32696,
+    "y2": 10392,
+    "is_capital": 0,
+    "region": 15,
+    "b38": 26,
+    "b39": 0,
+    "special_products": [
+      {
+        "item_id": 96,
+        "supply_or_price": 400,
+        "grade": 10,
+        "empty": false
+      },
+      {
+        "item_id": 89,
+        "supply_or_price": 500,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 10,
+        "supply_or_price": 500,
+        "grade": 25,
+        "empty": false
+      },
+      {
+        "item_id": 106,
+        "supply_or_price": 0,
+        "grade": 0,
+        "empty": true
+      },
+      {
+        "item_id": 106,
+        "supply_or_price": 0,
+        "grade": 0,
+        "empty": true
+      }
+    ],
+    "rest_hex": "01009b0100001a001a001a009001c80000000000000000000000000020030a0001000e0114000000900119000000000000000000000000006a006a000c00",
+    "raw_len": 132,
+    "id": 82
+  },
+  {
+    "name": "望加锡",
+    "x1": 33264,
+    "y1": 10544,
+    "x2": 33256,
+    "y2": 10552,
+    "is_capital": 0,
+    "region": 15,
+    "b38": 26,
+    "b39": 0,
+    "special_products": [
+      {
+        "item_id": 10,
+        "supply_or_price": 300,
+        "grade": 25,
+        "empty": false
+      },
+      {
+        "item_id": 68,
+        "supply_or_price": 600,
+        "grade": 8,
+        "empty": false
+      },
+      {
+        "item_id": 84,
+        "supply_or_price": 500,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 106,
+        "supply_or_price": 0,
+        "grade": 0,
+        "empty": true
+      },
+      {
+        "item_id": 106,
+        "supply_or_price": 0,
+        "grade": 0,
+        "empty": true
+      }
+    ],
+    "rest_hex": "01009b010000100a1a001a002c012c01000000000000000000000000900119000000bc02080000006d0114000000000000000000000000006a006a000c00",
+    "raw_len": 132,
+    "id": 83
+  },
+  {
+    "name": "泗水",
+    "x1": 32512,
+    "y1": 10816,
+    "x2": 32552,
+    "y2": 10840,
+    "is_capital": 0,
+    "region": 15,
+    "b38": 26,
+    "b39": 0,
+    "special_products": [
+      {
+        "item_id": 21,
+        "supply_or_price": 500,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 88,
+        "supply_or_price": 500,
+        "grade": 10,
+        "empty": false
+      },
+      {
+        "item_id": 5,
+        "supply_or_price": 400,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 106,
+        "supply_or_price": 0,
+        "grade": 0,
+        "empty": true
+      },
+      {
+        "item_id": 106,
+        "supply_or_price": 0,
+        "grade": 0,
+        "empty": true
+      }
+    ],
+    "rest_hex": "01009b010000101e1a001a00f4019001000000000000000000000100680114000000a4010a000000f00014000000000000000000000000006a006a000c00",
+    "raw_len": 132,
+    "id": 84
+  },
+  {
+    "name": "沂州",
+    "x1": 33280,
+    "y1": 6160,
+    "x2": 33304,
+    "y2": 6152,
+    "is_capital": 0,
+    "region": 16,
+    "b38": 26,
+    "b39": 0,
+    "special_products": [
+      {
+        "item_id": 4,
+        "supply_or_price": 1000,
+        "grade": 25,
+        "empty": false
+      },
+      {
+        "item_id": 94,
+        "supply_or_price": 1500,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 49,
+        "supply_or_price": 1600,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 13,
+        "supply_or_price": 2000,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 106,
+        "supply_or_price": 0,
+        "grade": 0,
+        "empty": true
+      }
+    ],
+    "rest_hex": "01009b01000003051a001a00e803b0040000000000000000000000004a0119000000240414000000900114000000bc0214000000000000006a006a000c00",
+    "raw_len": 132,
+    "id": 85
+  },
+  {
+    "name": "朋沙科拉",
+    "x1": 10304,
+    "y1": 6608,
+    "x2": 10312,
+    "y2": 6648,
+    "is_capital": 0,
+    "region": 19,
+    "b38": 26,
+    "b39": 0,
+    "special_products": [
+      {
+        "item_id": 2,
+        "supply_or_price": 500,
+        "grade": 5,
+        "empty": false
+      },
+      {
+        "item_id": 4,
+        "supply_or_price": 1000,
+        "grade": 15,
+        "empty": false
+      },
+      {
+        "item_id": 0,
+        "supply_or_price": 2000,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 48,
+        "supply_or_price": 3000,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 34,
+        "supply_or_price": 3500,
+        "grade": 15,
+        "empty": false
+      }
+    ],
+    "rest_hex": "0000180000001a001a001a00c800c8000000000000000000000000005e010500000054010f0000005e0114000000680114000100bc020f006a006a000c00",
+    "raw_len": 132,
+    "id": 86
+  },
+  {
+    "name": "阿布哈兹",
+    "x1": 24280,
+    "y1": 5344,
+    "x2": 24280,
+    "y2": 5384,
+    "is_capital": 0,
+    "region": 8,
+    "b38": 26,
+    "b39": 0,
+    "special_products": [
+      {
+        "item_id": 0,
+        "supply_or_price": 500,
+        "grade": 25,
+        "empty": false
+      },
+      {
+        "item_id": 34,
+        "supply_or_price": 2500,
+        "grade": 10,
+        "empty": false
+      },
+      {
+        "item_id": 11,
+        "supply_or_price": 2000,
+        "grade": 15,
+        "empty": false
+      },
+      {
+        "item_id": 32,
+        "supply_or_price": 1500,
+        "grade": 10,
+        "empty": false
+      },
+      {
+        "item_id": 102,
+        "supply_or_price": 3500,
+        "grade": 20,
+        "empty": false
+      }
+    ],
+    "rest_hex": "0000080000001a001a001a00c800c8000000000000000000000000005e01190001001a040a0000008a020f0001009e070a0001005e0114006a006a000c00",
+    "raw_len": 132,
+    "id": 87
+  },
+  {
+    "name": "雷利史塔特",
+    "x1": 20720,
+    "y1": 4128,
+    "x2": 20712,
+    "y2": 4120,
+    "is_capital": 0,
+    "region": 1,
+    "b38": 26,
+    "b39": 0,
+    "special_products": [
+      {
+        "item_id": 54,
+        "supply_or_price": 500,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 51,
+        "supply_or_price": 1500,
+        "grade": 15,
+        "empty": false
+      },
+      {
+        "item_id": 52,
+        "supply_or_price": 2500,
+        "grade": 25,
+        "empty": false
+      },
+      {
+        "item_id": 53,
+        "supply_or_price": 4000,
+        "grade": 10,
+        "empty": false
+      },
+      {
+        "item_id": 7,
+        "supply_or_price": 3000,
+        "grade": 15,
+        "empty": false
+      }
+    ],
+    "rest_hex": "000008000000010a1a001a00c800c800000000000000000000000000540114000000f4010f0000007c0119000100e40c0a000100f4010f006a006a000c00",
+    "raw_len": 132,
+    "id": 88
+  },
+  {
+    "name": "淡水",
+    "x1": 33424,
+    "y1": 7232,
+    "x2": 33416,
+    "y2": 7224,
+    "is_capital": 0,
+    "region": 16,
+    "b38": 26,
+    "b39": 0,
+    "special_products": [
+      {
+        "item_id": 10,
+        "supply_or_price": 500,
+        "grade": 15,
+        "empty": false
+      },
+      {
+        "item_id": 32,
+        "supply_or_price": 1500,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 52,
+        "supply_or_price": 2500,
+        "grade": 15,
+        "empty": false
+      },
+      {
+        "item_id": 49,
+        "supply_or_price": 3000,
+        "grade": 15,
+        "empty": false
+      },
+      {
+        "item_id": 1,
+        "supply_or_price": 2000,
+        "grade": 15,
+        "empty": false
+      }
+    ],
+    "rest_hex": "000008000000030a1a001a00c800c8000000000000000000000001007c010f000000c20114000100f4010f00010090010f0000005e010f006a006a000c00",
+    "raw_len": 132,
+    "id": 89
+  },
+  {
+    "name": "圣马罗",
+    "x1": 19712,
+    "y1": 4592,
+    "x2": 19720,
+    "y2": 4574,
+    "is_capital": 0,
+    "region": 1,
+    "b38": 26,
+    "b39": 0,
+    "special_products": [
+      {
+        "item_id": 35,
+        "supply_or_price": 1000,
+        "grade": 10,
+        "empty": false
+      },
+      {
+        "item_id": 0,
+        "supply_or_price": 500,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 94,
+        "supply_or_price": 800,
+        "grade": 12,
+        "empty": false
+      },
+      {
+        "item_id": 106,
+        "supply_or_price": 0,
+        "grade": 0,
+        "empty": true
+      },
+      {
+        "item_id": 106,
+        "supply_or_price": 0,
+        "grade": 0,
+        "empty": true
+      }
+    ],
+    "rest_hex": "0000880000001a001a001a0020035802000000000000000000000000c2010a0000005e01140000001a040c000000000000000000000000006a006a000c00",
+    "raw_len": 132,
+    "id": 90
+  },
+  {
+    "name": "拿坡里",
+    "x1": 21616,
+    "y1": 5456,
+    "x2": 21624,
+    "y2": 5496,
+    "is_capital": 0,
+    "region": 6,
+    "b38": 26,
+    "b39": 0,
+    "special_products": [
+      {
+        "item_id": 42,
+        "supply_or_price": 2500,
+        "grade": 10,
+        "empty": false
+      },
+      {
+        "item_id": 58,
+        "supply_or_price": 3000,
+        "grade": 5,
+        "empty": false
+      },
+      {
+        "item_id": 14,
+        "supply_or_price": 1500,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 35,
+        "supply_or_price": 2000,
+        "grade": 18,
+        "empty": false
+      },
+      {
+        "item_id": 0,
+        "supply_or_price": 1800,
+        "grade": 15,
+        "empty": false
+      }
+    ],
+    "rest_hex": "01005b0100000805070f1a009808600900000000000000000000000016030a000000800c05000000680114000000c201120000005e010f006a006a000c00",
+    "raw_len": 132,
+    "id": 91
+  },
+  {
+    "name": "班加西",
+    "x1": 22400,
+    "y1": 6336,
+    "x2": 22408,
+    "y2": 6320,
+    "is_capital": 0,
+    "region": 9,
+    "b38": 26,
+    "b39": 0,
+    "special_products": [
+      {
+        "item_id": 12,
+        "supply_or_price": 2000,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 47,
+        "supply_or_price": 1000,
+        "grade": 15,
+        "empty": false
+      },
+      {
+        "item_id": 15,
+        "supply_or_price": 500,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 106,
+        "supply_or_price": 0,
+        "grade": 0,
+        "empty": true
+      },
+      {
+        "item_id": 106,
+        "supply_or_price": 0,
+        "grade": 0,
+        "empty": true
+      }
+    ],
+    "rest_hex": "0000880000001a001a001a009001f401000000000000000000000100da02140000007c010f000000fa0014000000000000000000000000006a006a000c00",
+    "raw_len": 132,
+    "id": 92
+  },
+  {
+    "name": "马纳多",
+    "x1": 33872,
+    "y1": 9808,
+    "x2": 33888,
+    "y2": 9808,
+    "is_capital": 0,
+    "region": 15,
+    "b38": 26,
+    "b39": 0,
+    "special_products": [
+      {
+        "item_id": 89,
+        "supply_or_price": 1500,
+        "grade": 15,
+        "empty": false
+      },
+      {
+        "item_id": 21,
+        "supply_or_price": 1000,
+        "grade": 10,
+        "empty": false
+      },
+      {
+        "item_id": 5,
+        "supply_or_price": 300,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 1,
+        "supply_or_price": 600,
+        "grade": 10,
+        "empty": false
+      },
+      {
+        "item_id": 15,
+        "supply_or_price": 500,
+        "grade": 20,
+        "empty": false
+      }
+    ],
+    "rest_hex": "01009b01000010051a001a00c800c8000000000000000000000000000e010f00010090010a000000dc0014000000f0000a000000dc0014006a006a000c00",
+    "raw_len": 132,
+    "id": 93
+  },
+  {
+    "name": "釜山",
+    "x1": 34272,
+    "y1": 6112,
+    "x2": 34272,
+    "y2": 6160,
+    "is_capital": 0,
+    "region": 17,
+    "b38": 26,
+    "b39": 0,
+    "special_products": [
+      {
+        "item_id": 80,
+        "supply_or_price": 1000,
+        "grade": 5,
+        "empty": false
+      },
+      {
+        "item_id": 58,
+        "supply_or_price": 2000,
+        "grade": 5,
+        "empty": false
+      },
+      {
+        "item_id": 5,
+        "supply_or_price": 500,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 1,
+        "supply_or_price": 800,
+        "grade": 15,
+        "empty": false
+      },
+      {
+        "item_id": 106,
+        "supply_or_price": 0,
+        "grade": 0,
+        "empty": true
+      }
+    ],
+    "rest_hex": "0000880000001a001a001a00e80390010000000000000000000000005a0a05000000f00a05000000fa00140000005e010f000000000000006a006a000c00",
+    "raw_len": 132,
+    "id": 94
+  },
+  {
+    "name": "江户",
+    "x1": 35520,
+    "y1": 6048,
+    "x2": 35536,
+    "y2": 6096,
+    "is_capital": 0,
+    "region": 18,
+    "b38": 26,
+    "b39": 0,
+    "special_products": [
+      {
+        "item_id": 92,
+        "supply_or_price": 1000,
+        "grade": 10,
+        "empty": false
+      },
+      {
+        "item_id": 93,
+        "supply_or_price": 2000,
+        "grade": 10,
+        "empty": false
+      },
+      {
+        "item_id": 44,
+        "supply_or_price": 1500,
+        "grade": 15,
+        "empty": false
+      },
+      {
+        "item_id": 1,
+        "supply_or_price": 800,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 106,
+        "supply_or_price": 0,
+        "grade": 0,
+        "empty": true
+      }
+    ],
+    "rest_hex": "0000480000001a001a001a0020032003000000000000000000000000e0010a000000c2010a000000b2020f0000005e0114000000000000006a006a000c00",
+    "raw_len": 132,
+    "id": 95
+  },
+  {
+    "name": "卡拉卡斯",
+    "x1": 12624,
+    "y1": 8816,
+    "x2": 12636,
+    "y2": 8808,
+    "is_capital": 0,
+    "region": 20,
+    "b38": 26,
+    "b39": 0,
+    "special_products": [
+      {
+        "item_id": 40,
+        "supply_or_price": 1800,
+        "grade": 10,
+        "empty": false
+      },
+      {
+        "item_id": 86,
+        "supply_or_price": 1000,
+        "grade": 10,
+        "empty": false
+      },
+      {
+        "item_id": 3,
+        "supply_or_price": 500,
+        "grade": 20,
+        "empty": false
+      },
+      {
+        "item_id": 1,
+        "supply_or_price": 2200,
+        "grade": 10,
+        "empty": false
+      },
+      {
+        "item_id": 94,
+        "supply_or_price": 1500,
+        "grade": 10,
+        "empty": false
+      }
+    ],
+    "rest_hex": "0000880000001a001a001a00c800c80000000000000000000000000008070a0000003a020a000000c8001400000068010a000000b6030a006a006a000c00",
+    "raw_len": 132,
+    "id": 96
+  }
+]
