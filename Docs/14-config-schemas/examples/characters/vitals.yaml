@@ -1,0 +1,53 @@
+schema: dk4.characters.vitals
+version: 2
+# 片段。所属：Docs/03-characters/07-fatigue-health-mood.md。
+# 乘子是修正器贡献（D2）：身体态 → skill.* 的 mul 阶段；精神态 → ability.* 的 mul 阶段。键用 key，不用下标。
+
+physical_states:
+  - { key: vanilla:healthy,     vanilla_index: 0 }
+  - key: vanilla:fatigued
+    vanilla_index: 1
+    effects: [{ key: "skill.*", stage: mul, value: { num: 19, den: 20 } }]
+    recover: { to: vanilla:healthy, hp_above: { num: 95, den: 100 } }
+  - key: vanilla:light_wound
+    vanilla_index: 2
+    effects: [{ key: "skill.*", stage: mul, value: { num: 19, den: 20 } }]
+  - key: vanilla:heavy_wound
+    vanilla_index: 3
+    effects: [{ key: "skill.*", stage: mul, value: { num: 1, den: 2 } }]
+  - key: vanilla:dying
+    vanilla_index: 4
+    effects: [{ key: "skill.*", stage: mul, value: { num: 1, den: 10 } }]
+  - key: vanilla:disease
+    vanilla_index: 5
+    effects: [{ key: "skill.*", stage: mul, value: { num: 3, den: 5 } }]
+  - { key: vanilla:dead,        vanilla_index: 6, terminal: true }
+physical_initial: vanilla:healthy
+
+mental_states:
+  - key: vanilla:elated
+    vanilla_index: 0
+    effects:
+      - { key: ability.stamina,      stage: mul, value: { num: 11,  den: 10 } }
+      - { key: ability.agility,      stage: mul, value: { num: 105, den: 100 } }
+      - { key: ability.intelligence, stage: mul, value: { num: 95,  den: 100 } }
+      - { key: ability.spirit,       stage: mul, value: { num: 105, den: 100 } }
+  - key: vanilla:spirited
+    vanilla_index: 1
+    effects:
+      - { key: ability.stamina, stage: mul, value: { num: 105, den: 100 } }
+      - { key: ability.spirit,  stage: mul, value: { num: 105, den: 100 } }
+  - key: vanilla:relaxed
+    vanilla_index: 2
+    effects: [{ key: ability.intelligence, stage: mul, value: { num: 105, den: 100 } }]
+  - { key: vanilla:normal, vanilla_index: 3 }
+  - key: vanilla:unhappy
+    vanilla_index: 4
+    effects: [{ key: ability.spirit, stage: mul, value: { num: 95, den: 100 } }]
+  - key: vanilla:confused
+    vanilla_index: 5
+    effects:
+      - { key: ability.stamina,      stage: mul, value: { num: 95, den: 100 } }
+      - { key: ability.intelligence, stage: mul, value: { num: 9,  den: 10 } }
+mental_initial: vanilla:normal
+# 日转移 / 事件转移表见所属文档；表内用 state key，「不变」写 null（原版 7）。

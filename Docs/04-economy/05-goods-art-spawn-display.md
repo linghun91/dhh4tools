@@ -11,7 +11,7 @@
 - 105 件交易品的**图标集 / 图标下标**（与 `trading_item_id` 对齐）
 - 某港买货栏**何时出现**某件货（特产品槽 ∩ 发现位 ∩ 发展门槛）
 - 运行时等级 `TRADINGITEMGRADE`（1 最好 … 5 最差，6 = 未上架）及舱位/买货栏怎么画
-- **星品**：年结从 1 级品牌里抽出的那一件，舱位画 `★`（不是 mesfile 里的「品牌商品」文案本身）
+- **星品**：年初从 1 级品牌里抽出的那一件，舱位画 `★`（不是 mesfile 里的「品牌商品」文案本身）
 - 到货周期文案（每月 / 奇偶月 / 季月）作为买货栏旁的只读投影
 
 不管：
@@ -41,9 +41,9 @@
 
 因此原版包：`icon_index == trading_item_id`，合法 0–104。没有第二套重排表。
 
-### 2.2 目录二进制（exe `.rdata`，不是 World DLL）
+### 2.2 目录二进制（exe `.data`，不是 World DLL）
 
-`Game/DK4HD_sc.exe` 文件偏移 `0x686b90`（VA `0x140688190`）起 105 条、步长 16：
+`Game/DK4HD_sc.exe` 文件偏移 `0x686b90`（VA `0x140688190`，落在 `.data` 段 `0x140682000`–`0x140694400`）起 105 条、步长 16：
 
 | 偏移 | 宽 | 观察 | 标记 |
 | --- | --- | --- | --- |
@@ -73,13 +73,13 @@ if bit0(runtime_slot_byte): return 0    # town+slot*6+0x2c，edx=0 → mask=1
 return 1
 ```
 
-`[确认]` 反汇编如上。`WORD(rec+2)` 即 JSON `supply_or_price`（100–6000），`04` 按 `TRADINGITEM_DATAPRICE` 解释同一列。本篇出现条件把它和商业发展度（夹到 9999）比较：门槛未到则不上架。
+`[确认]` 反汇编如上。`WORD(rec+2)` 即旧 JSON `supply_or_price`（100–6000），规范名 `listing_threshold`（`04` §2.1，`_data` 已改）。它只当商业门槛用，没有一处当价格读；槽底价另在城镇记录 `+0x62+slot*6`。bit0 是待种锁（`04` §2.9）。
 
 买一件还要供给 `fn_140010cda > 0`（`BuyOne`）。等级函数 `fn_140015168` 在 `0101e5==0` 时返回 **6**，买货栏/卖价路径 `>=6` 跳过。
 
 `CPriceInformationView` 另有一条「物价情报」：扫 105 件，只要求已发现且 `kind_id` 对上。那不是这座城的买货栏。
 
-### 2.4 等级：1 最好，不是 JSON `grade` 5–25
+### 2.4 等级：1 最好，不是 `supply_base` 5–25（旧 JSON `grade`）
 
 `fn_140015168`（`0x140261c00`）：
 
@@ -93,11 +93,11 @@ return clamp(rank, 1, 5)                  # fn_1400103d4(1, rank, 5)
 
 `[确认]`。`BuyOne` 把返回值写进货格 `hold+1`（`fn_140014d80` 的第三参）。拷贝 `110b8` 带 `+1`，所以船上记住的是**买入当时**的等级。
 
-JSON 第三列 `grade` 观察 5–25（伦敦 12/15/25）**不是**这套 1–5，也不是 mesfile「１级品牌」。`04` 已写；`13-algorithms/02-caps-ranges.md` 把 12–25 填进 `TRADINGITEMGRADE` 是样本误植，以本篇公式为准。
+槽字段 `supply_base`（旧 JSON 第三列 `grade`）观察 5–25（伦敦 12/15/25）**不是**这套 1–5，也不是 mesfile「１级品牌」。`04` 已写；`13-algorithms/02-caps-ranges.md` 把 12–25 填进 `TRADINGITEMGRADE` 是样本误植，以本篇公式为准。
 
 品牌（`04`）：`share>=100` 且 `grade_rank==1`。投资不直接改等级，只把发展度抬过门槛、再抬 `5*step` 才能到 1 级。
 
-### 2.5 星品是年结抽中的那一件 1 级品牌，显示为 ★
+### 2.5 星品是年初抽中的那一件 1 级品牌，显示为 ★
 
 mesfile **没有**「星品」一词。exe `.rdata` 紧挨交易所按钮：
 
@@ -111,11 +111,11 @@ mesfile **没有**「星品」一词。exe `.rdata` 紧挨交易所按钮：
 0x1405a9928  等级表示
 ```
 
-`CTradingItemElement::vfunc_04` 年结：
+`CTradingItemElement::vfunc_04`（body `0x1402912c0`）年初结算。世界 tick 只在 `fn_140014dd0` 为真时调它：`SCalendar+0x1c==0` 且 `month % 12 == 0`，即**每年 0 月月初第一拍** `[确认]` `0x1402aaf1c`。
 
-1. 扫 97 港，`share>=100` 且 `015168==1` 的特产品，去重进候选
-2. 有候选：随机抽一件；写入 `element+0x1a48`；已是同一件则消息 `0x84`（「继续得到了市场的认可」），否则 `0x82`（「得到了市场的认可」）
-3. 无候选：消息 `0x83`（「没有得到市场认可的品牌商品」），写 `0x6A`
+1. 扫 97 港（上界 `0x61` 写死），**玩家势力**份额 `fn_1400088f0 >= 100` 的港；5 槽里 `item != 0x6A` 且 `015168==1` 的，去重进候选
+2. 有候选：`rand(n)` 抽一件；写入 `element+0x1a48`；与旧值相同消息 `0x84`（「继续得到了市场的认可」），否则 `0x82`（「得到了市场的认可」）
+3. 无候选：**仅当旧值 != `0x6A`** 才发 `0x83`（「没有得到市场认可的品牌商品」）；然后写 `0x6A`。连续两年没有不会重复播报
 
 舱位 `★` 谓词 `fn_14000bf00`：
 
@@ -145,6 +145,8 @@ RTC 名：`rcGrade` / `posGrade`（左）、`rcPrice` / `posPrice`（右）。`C
 
 开局 `+0x16=0` 的 12 件（目录 +14 = 0）：蜂蜜、鱼子酱、鱼翅、罗望子、白金、黄金艺品、麝香、龙涎香、金刚石、冬虫夏草、山竹果、鸟粪石。发展度跨过该槽 `WORD+2` 时 `fn_140009ae8` 调 `fn_14000513c` 置发现位。
 
+`[确认]` `fn_140009ae8` 每月初对 97 港都跑（不论有无投资，见 `07` §4.4），条件与上架谓词同形：`item!=0x6A`、未发现、`WORD+2 <= 商业`、运行时 bit0 未置。所以「解锁」= 任何一座港的商业发展度够了，该货**全局**变为已发现，之后所有有此槽且达门槛的港同时上架。
+
 目录 +11 ≠ `0xE8` 时是 `eItem` 0–19（`09-items` 种类 `plant_discovery`，恰好 20 件）。对照：
 
 | eItem | 发现物 | 解锁的 eTradingItem |
@@ -163,11 +165,13 @@ RTC 名：`rcGrade` / `posGrade`（左）、`rcPrice` / `posPrice`（右）。`C
 | 18 | 中医宝典 | 83 冬虫夏草 |
 | 19 | 山竹果种子 | 89 山竹果 |
 
-宫殿文案「如果有那%s，%s会成为这个城市的特产品」（mesfile `0x7737`）。写发现位的具体命令在 `09-items` / 叙事；经济只收「此 `trading_item_id` 已发现」。
+种植 `[确认]`：交易所入口 `fn_1400085d0`（不是宫殿）对玩家持有的发现物逐件找「本港某槽的货的目录 +11 == 该发现物、该槽待种锁 bit0 置位、商业 ≥ 门槛」的组合，随机挑一个问「如果有那%s，%s会成为这个城市的特产品」（代码消息 `0x374`；与 mesfile `0x7737` 的对应 `[推断]`）；同意则置发现位、清该槽待种锁、发现物交出。细节与接口归 `04` §2.9（命令 `PlantSpecialProduct`）。一件发现物可对应多件货（蜜蜂窝 → 蜂蜜、蜡），查询 `Economy.plant_items_of(item)` 返回列表。
+
+注意两条解锁路径互斥：发展度解锁（`fn_140009ae8`）**跳过**有待种锁的槽，种植路径**只看**有待种锁的槽。
 
 投资：不读本篇表。投资抬发展度 → `009ae8` / `0101e5` / `015168` 自然变化。
 
-文化：`CCulture` 每块 105 个 word，**不上** `0101e5`。流行 2 格只改卖出份额（`03`）。都不是买货栏出现条件。
+文化：`CCulture` 每块 105 个 word 是卖出底价（`02` §2.6），**不上** `0101e5`。流行 2 格影响报价与份额（`02` / `03`）。都不是买货栏出现条件。
 
 ### 2.8 到货周期（种类 → 四句文案）
 
@@ -180,33 +184,54 @@ RTC 名：`rcGrade` / `posGrade`（左）、`rcPrice` / `posPrice`（右）。`C
 | 2 | `0x1405a9990` 偶数月到货 | 7 工艺品、9 纺织品、12 装饰品、15 染料、16 武器、18 杂货 |
 | 3 | `0x1405a99a0` ３、６、９、１２月到货 | 6 贵金属、10 奢侈品、13 宝石 |
 
-`kind>18` 返回 4（空指针）。这是买货栏旁的说明；补货加减仍见 `04` 的 `restock_calendar: unverified`（日历 tick 未钉到供给函数）。
+`kind>18` 返回 4（空指针）。
+
+**补货已钉** `[确认]`（规格归 `04` §2.5 / §4.4，这里只留与文案的对照）：`CTownElement::vfunc_04` 月初第一拍（`fn_14000e9da`）建一张 19 格种类掩码，然后对每座活港先 `fn_140009ae8`（投资转化）再 `fn_140010d7a(town, mask)`（`0x140267781`–`0x1402679f8`）：
+
+```
+m = month + 1                         # 1-based；SCalendar+0xc 是 0–11
+mask = {0,1,5,8,17}                   # 每月
+mask |= m odd ? {2,3,4,11,14} : {7,9,12,15,16,18}
+if m % 3 == 0: mask |= {6,10,13}
+for slot in 0..4:                     # fn_140010d7a
+    item = fn_140009101(town, slot, 1)  # 第三参 1：未上架（未发现 / 未达门槛 / 待种锁）返回 0x6A
+    if item != 0x6A and mask[kind(item)]:
+        fn_140008aee(town, slot)      # RTC nSupply
+fn_140008aee:
+    supply = base * (commerce/50 + 100) / 100      # fn_140012da0，两次有符号 idiv
+    CTown+0x30+slot*6 = (u8)supply                 # 截低字节，不夹
+    CTown+0x31+slot*6 = 0                          # month_bought 清零（玩家势力本月已购，04 §2.1）
+```
+
+`base` = 静态城镇记录定义段 `+0x28+slot*6+4`（`fn_140012da0` 写成 `rec+0x2c+slot*6`）的字节 = 槽字段 `supply_base`（5–25；旧 JSON 第三列 `grade`）`[确认]`。补货是**重置**为公式值，不是累加；非到货月不动。原版上限 25×(9999/50+100)/100 = 74，`u8` 放得下。
+
+到货月谓词另有一份 `fn_140004eee(elem, kind)`（RTC `nTime,nDay,nMonth`，同样 `month+1`），唯一调用者是黄金航路奖金 `fn_1400108fc`，与补货不共用代码。`restock_calendar` 只有一份，归 `04`（`config/economy/restock_calendar.yaml`）；本篇的四句文案与黄金航路都按 key 引用它。
 
 ## 3. 实体与 ID
 
 | 实体 | 键 | 范围 | 空 |
 | --- | --- | --- | --- |
-| 交易品 | `trading_item_id` | 原版包 0–104 | `106` |
+| 交易品 | `trading_item` key | 原版包 105 件 | `null`（原版 `106`，只在 `legacy_codec`） |
 | 图标下标 | 同 `trading_item_id` | 与 `TItem24/48` 帧数同长 | 无图 |
-| 特产品槽 | `(town_id, slot 0–4)` | 每港 5 | `item=empty` |
+| 特产品槽 | `(town_id, slot 0–4)` | 每港 5 | `item = null` |
 | 发现位 | `trading_item_id` | 0/1 | 0 = 未发现 |
 | 等级 | `trading_item_grade` | 观察 1–5；6 = 未上架 | 6 不进买货栏 |
-| 星品 | 全局一个 `trading_item_id` | 年结写入 | `empty` |
-| 发现物外键 | `item_id`（`eItem`） | 0–19 或哨兵 232 | 232 = 无植物/秘方 |
+| 星品 | 全局一个 `trading_item_id` | 年初写入 | `null` |
+| 发现物外键 | `unlock_item`（`eItem` key） | 原版 20 件 | `null`（原版哨兵 232） |
 
 货格：`hold+0` 货，`hold+1` 买入时等级，`hold+4` 买入价（0 = 战利品）。
 
 ## 4. 算法 / 公式
 
-参数进 `config/formulas/economy.yaml` 的 `grade` / `star` 段。代码禁止写死 1、5、6、100、`0x6A`。
+参数进 `config/formulas/economy.yaml` 的 `grade` / `star` 段。代码禁止写死 1、5、6、100、`0x6A`；空值一律 `null`。
 
 ### 4.1 发现
 
 ```
-discovered(item_id) = catalog[item_id].discovered     # 存档覆盖开局 initial_discovered
+discovered(item) = state.discovered[item]             # 存档按 key 存；开局取 01 的 initially_discovered
 ```
 
-置位：发展跨门槛（`fn_14000513c`）或发现物事件。只加不减（年结不清发现位）。
+置位：发展跨门槛（`fn_140009ae8` → `fn_14000513c`）或种植（`04` §2.9）。只加不减（年初不清发现位）。
 
 ### 4.2 买货栏上架 `market_visible`
 
@@ -216,10 +241,10 @@ market_visible(town_id, slot) =
     and item != empty
     and discovered(item)
     and slot_threshold(town_id, slot) <= commerce_develop(town_id)   # vanilla WORD+2 vs +0x1e
-    and not slot_hidden_bit(town_id, slot)                           # vanilla bit0 @ +0x2c+slot*6
+    and not plant_lock(town_id, slot)                                # vanilla bit0 @ CTown+0x2c+slot*6，04 §2.9
 ```
 
-这是 `fn_1400101e5` / `grade_rank!=unavailable`。画 5 张特产品卡用它。`BuyOne` 另外要求 `supply>=1`（`04.can_buy`），0 供给仍可能占着槽位。
+这是 `fn_1400101e5` / `grade_rank!=unavailable`。画 5 张特产品卡用它。`BuyOne` 另外要求会话卡可买数 ≥1（`04` `Economy.buy_cap`），0 供给仍可能占着槽位。
 
 `spawn_rules` 是这组谓词的数据化，不是第二套 if。
 
@@ -257,12 +282,12 @@ is_star_cargo(hold) =
     and hold.buy_price != 0
 ```
 
-`star_item` 年结从 `04.list_brands(force)` 随机抽一件；空则 `empty`。
+`star_item` 年初从 `Economy.list_brands(force)` 随机抽一件；空则 `null`。
 
 ### 4.5 到货文案
 
 ```
-arrival_label(kind_id) = restock_calendar[kind_id]   # 四选一；缺省 null
+arrival_label(kind) = restock_calendar.period_of(kind).label_key   # 04 拥有的表；未列种类 null
 ```
 
 不在本函数里加减供给。
@@ -274,8 +299,8 @@ arrival_label(kind_id) = restock_calendar[kind_id]   # 四选一；缺省 null
 - 图标文件名、帧下标、`eTradingItem` 焊在一起
 - 上架读城镇 6 字节槽 + 发展度 + 交易品对象 `+0x16`
 - 等级公式读同一槽 `WORD+2` 和目录步长
-- 星品字节挂在 `CTradingItemElement+0x1a48`，年结扫份额（factions）
-- 发现物 0–19 与交易品 +11 交叉；宫殿对话在叙事
+- 星品字节挂在 `CTradingItemElement+0x1a48`，年初扫份额（factions）
+- 发现物 0–19 与交易品 +11 交叉；种植对话在交易所入口（`fn_1400085d0`）
 
 重构：
 
@@ -283,7 +308,7 @@ arrival_label(kind_id) = restock_calendar[kind_id]   # 四选一；缺省 null
 config/economy/trading_items.yaml     # 图、步长、发现初值、植物外键、spawn_rules
 config/economy/special_products.yaml  # 04：每港 5 槽 item / 门槛列 / 供给
 config/formulas/economy.yaml          # grade_* / star
-config/items/items.yaml               # plant_item_id 指向这里，本篇不拥有 eItem
+config/items/items.yaml               # unlock_item 指向那里，本篇不拥有 eItem
 config/ui/strings.*.yaml              # %s等级、★、战利品、到货四句
 ```
 
@@ -292,10 +317,9 @@ World1 换包只换槽里的 `item_id` 与门槛，不换 1–5 公式、不换 
 ## 6. 解耦后的配置
 
 ```yaml
-# config/economy/trading_items.yaml  （在 01 的字段上追加）
+# config/economy/trading_items.yaml  （01 拥有该表；本篇只在同一行追加 icon / spawn 字段）
 schema: dk4.economy.trading_items
 version: 1
-empty_id: 106
 icon_sets:
   titem24:
     resource: TItem24.dk4
@@ -308,7 +332,7 @@ icon_sets:
 grade_scale:
   best: 1
   worst: 5
-  unavailable: 6
+  unavailable: 6              # 原版返回值；运行时也可用 null 表示未上架
   format_key: ui.trade.grade          # "{rank}等级"
 star_display:
   glyph_key: ui.trade.star            # ★
@@ -316,73 +340,54 @@ star_display:
   dash_key: ui.trade.dash             # —
   requires_grade_best: true
   exclude_loot: true
-restock_calendar:                     # kind_id → 文案 key；原版包
-  monthly: [0, 1, 5, 8, 17]
-  odd_months: [2, 3, 4, 11, 14]
-  even_months: [7, 9, 12, 15, 16, 18]
-  quarterly_3_6_9_12: [6, 10, 13]
+# 到货周期表不在这里：见 04 的 restock_calendar.yaml（唯一一份）
 items:
-  - id: 0
-    key: wheat
-    name: 小麦
-    kind_id: 0
-    data_price: 1100
+  - key: vanilla:wheat                # 01 的字段（vanilla_index / kind / data_price / grade_step / initially_discovered / unlock_item）略
     icon_set: titem48                 # 大图；小图同 index 取 titem24
-    icon_index: 0                     # == id；校验器拒绝错位
-    grade_step: 500
-    initial_discovered: true
-    plant_item_id: 232                # 无；caps.item_empty_slot
+    icon_index: 0                     # 原版包 == vanilla_index；校验器拒绝错位
     spawn_rules:
       - when: special_slot
       - when: development_gte
-        params: { source: slot_threshold }   # 原版 WORD+2
-  - id: 7
-    key: pumpkin
-    name: 南瓜
-    kind_id: 0
-    data_price: 1300
+        params: { source: slot_threshold }   # 原版 WORD+2 = listing_threshold
+  - key: vanilla:pumpkin              # 01：unlock_item: vanilla:pumpkin_seed（eItem 0）
     icon_set: titem48
     icon_index: 7
-    grade_step: 500
-    initial_discovered: true
-    plant_item_id: 0                  # 南瓜种子
     spawn_rules:
       - when: special_slot
       - when: development_gte
         params: { source: slot_threshold }
-      - when: event_unlock
-        params: { plant_item_id: 0 }
-  - id: 12
-    key: honey
-    name: 蜂蜜
-    kind_id: 1
-    data_price: 1800
+      - when: planted                 # 待种锁的槽要先种植（04 §2.9）
+  - key: vanilla:honey                # 01：initially_discovered: false；unlock_item: vanilla:beehive（eItem 3）
     icon_set: titem48
     icon_index: 12
-    grade_step: 1000
-    initial_discovered: false         # 原版 12 件之一
-    plant_item_id: 3                  # 蜜蜂窝
     spawn_rules:
       - when: special_slot
       - when: development_gte
         params: { source: slot_threshold }
-      - when: event_unlock
-        params: { plant_item_id: 3 }
+      - when: planted
 ```
 
-`when: always` 留给模组「不占特产品槽也上架」。原版买货栏没有这条；物价情报是 `discovered && kind_id==选中`，不要用 `always` 冒充原版市场。
+`when: always` 留给模组「不占特产品槽也上架」。原版买货栏没有这条；物价情报是 `discovered && kind==选中`，不要用 `always` 冒充原版市场。发现物 key 名以 `09-items` 为准。
 
 ```yaml
 # config/formulas/economy.yaml  （本篇段）
-grade:
-  best: 1
-  worst: 5
-  unavailable: 6
+grade:                         # grade_rank，fn_140015168（§4.3）；不可见 / step<=0 分支在 impl
+  impl: vanilla.grade_rank
+  params:
+    best: 1
+    worst: 5
+    unavailable: 6
   # rank = clamp(unavailable - (develop - threshold)/step, best, worst)
 star:
-  pick: random_from_brands     # 04.list_brands
-  persist: one_item
+  impl: vanilla.star
+  schedule: year_start         # 订阅 YearStarted；原版 fn_140014dd0 = 0 月月初第一拍
+  params:
+    pick: random_from_brands   # 04 Economy.list_brands（玩家势力 share >= 100 的港）
+    persist: one_item
+    announce_none_only_on_change: true   # 旧值非空才发 0x83
 ```
+
+`restock_calendar` 不只是文案：它同时是 `04` 月初补货的种类掩码与黄金航路奖金的到货判定（§2.8）。表与补货公式都归 `04`；本篇只按 `label_key` 取文案。
 
 ```yaml
 # config/ui/strings.zh-CN.yaml  （本篇用到的 key，文本不进逻辑表）
@@ -398,14 +403,14 @@ ui.trade.arrival.even_months: "偶数月到货"
 ui.trade.arrival.quarterly_3_6_9_12: "３、６、９、１２月到货"
 ```
 
-`special_products.yaml` 仍由 `04` 拥有槽位 `item_id` / `data_price`（门槛列）/ 供给。本篇不复制 97×5。
+`special_products.yaml` 由 `04` 拥有槽位 `trading_item` / `listing_threshold`（门槛）/ `supply_base` / `data_price`（槽底价）/ 供给。本篇不复制 97×5。
 
 ## 7. 独立旋钮
 
 - 换 `TItem24/48`、加帧：只改 `icon_sets` + 表长；`icon_index` 仍等于该行 `id` 除非模组显式重映射
 - `grade_step`、`grade_scale.best/worst`：改 1 级有多难，不改报价公式
-- `initial_discovered` / `plant_item_id`：改开局锁与发现物，不改宫殿剧本文本
-- `restock_calendar`：改到货说明；真补货仍走 `04`
+- `initially_discovered` / `unlock_item`（`01`）：改开局锁与发现物，不改种植对白
+- `restock_calendar`（`04` 拥有）：改到货周期——同时改文案、补货掩码、黄金航路判定（原版三处共用一张语义表）
 - `star_display.exclude_loot`：战利品是否允许 ★
 - `when: always`：模组才能让非特产品进买货栏
 
@@ -420,10 +425,11 @@ Economy.icon(trading_item_id, size) -> IconRef
 Economy.market_list(town_id) -> [SpecialSlot]     # 已滤上架；SpecialSlot 见 04
 Economy.grade_rank(town_id, slot) -> int          # 1–5 或 unavailable
 Economy.cargo_left_text(hold, mode) -> string_key + args
-Economy.star_item() -> trading_item_id            # empty 若今年无品牌
-Economy.arrival_label(kind_id) -> string_key
+Economy.star_item() -> trading_item_id | null     # null 若今年无品牌
+Economy.arrival_label(kind_id) -> string_key | null   # 读 04 的 restock_calendar
 Economy.discovered(trading_item_id) -> bool
-Economy.set_discovered(trading_item_id, true)     # 只接受 true；发现物/发展回调
+Economy.set_discovered(trading_item_id, true)     # 只接受 true；发展转化 / 种植回调
+Economy.plant_items_of(item_id) -> [trading_item_id]   # 发现物 → 可种的货（一对多）
 ```
 
 只传 ID 与整数。不传 `CTradingItem*`、G1T 句柄、`CTown*`。
@@ -431,27 +437,27 @@ Economy.set_discovered(trading_item_id, true)     # 只接受 true；发现物/�
 事件：
 
 ```
-StarItemChanged { old_id, new_id }               # 年结；new 可为 empty
+StarItemChanged { old_id, new_id }               # 年初；new 可为 null
 TradingItemDiscovered { item_id }
 ```
 
-`BrandRecognized` 仍由 `04` 在扫描命中时发。本篇年结抽星品在同一扫描之后，UI 订 `StarItemChanged` 刷新 ★。
+`BrandRecognized` 仍由 `04` 在扫描命中时发。本篇年初抽星品在同一扫描之后，UI 订 `StarItemChanged` 刷新 ★。
 
-查询：`Factions.share`、`World.town` 发展度、`Items.owned(plant_item_id)`（发现物是否在袋，本篇不读背包，由叙事/items 发 `set_discovered`）。
+查询：`Share.of`、`Towns.develop(town_id, commerce)`。发现物是否在袋由 `04` 种植流程向 items 查询；本篇不读背包。
 
 ## 9. 未核实字段
 
 | 项 | 现状 |
 | --- | --- |
-| JSON 第三列 `grade` 5–25 | 不是 1–5 等级，不是品牌；可能是初始供给（`SPECIALPRODUCT_SUPPLY` 是 `UCHAR`） |
-| `WORD(rec+2)` 是否同时是 quote 底价 | 出现条件当发展门槛 `[确认]`；`04` 当 `DATAPRICE` `[推断]`。未在 `quote` 里逐指令钉死同一加载 |
-| 运行时 `town+slot*6+0x2c` 的 bit0 谁置位 | `0101e5` 为 1 则不上架；写入点未扫完 |
+| ~~JSON 第三列 `grade` 5–25~~ | 已钉：基础供给 `supply_base`，`fn_140012da0` 读 `rec+4`（§2.8） |
+| ~~`WORD(rec+2)` 是否同时是 quote 底价~~ | 已钉：只当门槛；槽底价是 `CTown+0x2e`（初值段 +0x62），`04` §2.1 |
+| 运行时 `town+slot*6+0x2c` 的 bit0 | 已钉为待种锁：开局初值置、种植清（`04` §2.9）；运行时其它置位点未扫 |
 | `TRADINGITEMGRADE_MIN/MAX` 头文件整数 | 只有符号；观察返回值 1–6 |
-| `hold+2` | `014d80` 写了；清空写 `0x62`（`03`）；与等级无关 |
-| 消息 `0x82/0x83/0x84` 与 mesfile 块的精确切片 | 三句都在 `0xfa7`/`0x1027` 连写里，按年结分支选用 `[推断]` |
-| 发现物交给城市：是置 `discovered` 还是改某港槽 `item_id` | 文案像「成为这个城市的特产品」；`009ae8` 只置发现位。槽内容是否被改写 `[未知]` |
+| ~~`hold+2`~~ | 已钉：买入港 `town_id`，清空写 `0x62`（`03` §2.2） |
+| 消息 `0x82/0x83/0x84` 与 mesfile 块的精确切片 | 三句都在 `0xfa7`/`0x1027` 连写里，按年初分支选用 `[推断]` |
+| ~~发现物交给城市：是置 `discovered` 还是改某港槽 `item_id`~~ | 已钉：置发现位 + 清该槽待种锁，不改 `item_id`（`04` §2.9） |
 | 物价情报列表是否显示未上架但已发现的货 | 扫 105 件只看发现 + 种类，是 |
-| `CCulture` 105 word 是否间接改门槛 | 不上 `0101e5`；当价格/需求 `[推断]`，本篇当非出现条件 |
+| ~~`CCulture` 105 word 是否间接改门槛~~ | 已钉：是卖出底价（`02` §2.6），不上 `0101e5` |
 | World1 目录 16 字节表是否同一份 | 未对照 `DK4HD` 其它语言以外的 World1 |
 | `TradeWin.dk4` 5 帧各自用途 | 构造里下标 1/2/3/4，铬；不进 `icon_index` |
 | G1T 压缩格式 | 每帧 payload 等长（TItem24=1180，TItem48=4636），导入器再解 |

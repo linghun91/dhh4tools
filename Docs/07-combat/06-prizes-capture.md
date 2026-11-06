@@ -19,11 +19,11 @@
 - 船态何时变成「可擒」（炮击溃败、接舷投降，见 `01` / `02`）
 - 金库、市价、品牌判定（`economy`）
 - 货格持久化、船坞容量（`ships/`；坞的内部见计划中的 `05-ships-fleet/07-dock-warehouse.md`）
-- 98 槽名册怎么招人（`characters`；本系统最多发 `CrewCaptured`）
+- 航海士怎么招人（`characters`；本系统最多发 `CrewCaptured`）
 - 「战利品 / ★ / %s等级」怎么排版（`ui/`；本篇只规定**何时**用哪条 key）
 - 占港（只把 `town_id` 放进载荷，势力自己写）
 
-禁止：combat → `Economy.quote`；combat 直接 `Person.ability +=`；把俘虏写成自动招满 98 人。
+禁止：combat → `Economy.quote`；combat 直接 `Person.ability +=`；把俘虏写成自动招为航海士。
 
 ## 2. 原版事实
 
@@ -56,17 +56,34 @@
 
 ### 2.3 金币不在 `fn_140005fb0`
 
-`fn_140006b95`（`0x14023e4c0`，RTC `eShipCabin`）扫 31 个舱室，数「种类 == 第二参」的格数。贸易把它叫 `CountHolds`：第二参 `0xA=10` 是货舱。来源：`trade_stack.md`、`Constants.h` `NUM_HOLD_SCAN=10`、`Cabin` 循环 `>= 0x1F`。
+`fn_140006b95`（`0x14023e4c0`，RTC `eShipCabin`）扫 31 个舱位（循环 `>= 0x1F`），数「`vfunc+0x38(i)` == 第二参」的间数。第二参是**舱室种类**：10 = 货物仓库、9 = 物资仓库（`05-ships-fleet/03` `cabins.yaml`，role `cargo_room` / `supply_room`）。`Constants.h` 的 `NUM_HOLD_SCAN=10` 是把这个参数误读成「扫 10 格」（`13-algorithms` 已标删除）。重构查询 `Ships.cabin_count(ship, role)`。
 
 因此：
 
 | 调用 | 第二参 | 含义 |
 | --- | --- | --- |
 | `fn_140005fb0` 里 `6b95(ship, 10)` | 10 | 货舱数，累加到 `s30`，用来决定要不要开分货窗 |
-| `fn_14000a817` 里 `6b95(ship, 9)` | 9 | 另一舱种的间数，累加到 `s3C`，用来发水粮 |
+| `fn_14000a817` 里 `6b95(ship, 9)` | 9 | 物资仓库间数，累加到 `s3C`，用来发水粮 |
 | `fn_1400034ae` 里 `6b95(tow_ship, 10)` | 10 | 拖船货舱数，作为拷货循环上界 |
 
-金币在 `fn_14000a817` 后半：对船态 4 累加 `(fn_1400084db(ship, 9) - vfunc+0x50)` 到 `s40`（`vfunc+0x50` 是船体耐久，见 `01`），再乘一个脏寄存器因子，走 `fn_14001117b` → `fn_140002cb6(-amount)` 入账。`fn_14001117b` 把数量取负再调同一加减函数 `[确认]` `fn_1400a1140.cpp`。
+金币在 `fn_14000a817` 后半 `[确认]`（原始指令 `0x1401c4fe9`–`0x1401c53fd`）：
+
+```
+for ship in enemy 5 slots (vfunc8 有效):
+    st = ship.state(+0x2a)
+    if st == 4:                                   # 被擒
+        n9  += count_cabins(ship, 9)
+        gap += fn_1400084db(ship) - hull(ship)    # 单参，最大耐久 − 当前耐久
+        *out_crew += crew(ship)                   # 第 3 参输出：俘获水手总数
+    if st in (4, 5) and fn_140004a1b(DAT_144296500) == 1:   # eScenario == 1（赫德拉姆剧本）
+        s44 += ship.vfunc_20()
+gold = gap * 100                                  # imul 0x64
+if 敌提督船存在 且 状态 4 且 战斗归属 == 玩家 (fn_1401aba20 == fn_14000e3c2):
+    gold += enemy_fleet.money(+0xc) / (fn_140012b75(敌舰队) ? 50 : 20)   # 无符号除
+if gold > 0: 消息 0x13c；enemy_fleet.money -= gold（fn_14001117b）；player += gold（fn_140002cb6）
+```
+
+`fn_1400084db` 只有一个参数（旧文的 `, 9` 是寄存器残留）。`fn_14001117b` 把数量取负再调同一加减函数 `[确认]`。
 
 文案（`mesfile_sc.txt`）：
 
@@ -77,18 +94,18 @@
 
 这些是 UI key，不是 `6b95` 的返回值。`fn_14000a817` 实际 `fn_14000fb14` 的类型号是 `0x13c`（船体差那笔）和 `0x141`（`s44 > 10` 的另一笔）。`eMessageType` 下标与 mesfile 偏移不是同一套数 `[确认]` `12-ui-save/03-localization.md`。
 
-`s44`：船态 5 且 `fn_140004a1b(DAT_144296500)==1` 时累加 `vfunc+0x20(ship)`，大于 10 再 `idiv`（除数丢失）。不要写成「船体差公式的第三档」。
+`s44`：船态 4 或 5 且 `fn_140004a1b(DAT_144296500)==1` 时累加 `vfunc+0x20(ship)`；`s44 > 10` 则 `s44 /= 10`，消息 `0x141`，玩家 `+= s44` `[确认]`。`fn_140004a1b(DAT_144296500)` = `CDk4Game+0x7c` = **剧本号 eScenario** `[确认]`（`04-economy/07` §2.1、`10-narrative/01`），1 = 赫德拉姆（瑞典海军提督）剧本。`vfunc+0x20` 是船价 `[推断]`，即「赫德拉姆剧本里每擒获 / 降服一船另得船价 1/10 奖金」。按 D5，重构不比较剧本号：这是剧本包旗标 `scenario.flags.prize_ship_value_bounty`，战斗读 `Scenario.flag("prize_ship_value_bounty")`（布尔开关，非修正器；§4.3）。
 
 ### 2.4 水粮
 
-`fn_14000a817` 在 `s3C > 0` 时算出两个整数 `sA0`、`sA4`（各加一次 `fn_140005272(0xA)` = `rand(10)` `[推断]`，与邻近 `fn_140005fc4` 的 `fn_140005272(5)` 同形），然后：
+`fn_14000a817` 在 `s3C > 0` 时算出 `sA0 = s3C*20 + rand(10)`、`sA4 = s3C*20 + rand(10)` `[确认]`（`imul 0x14`，`fn_140005272` = `rand`），然后：
 
-- `fn_14000fb14(0x13e, …)` 两个数
-- `fn_1400044f8`（`0x1400fed50`，RTC `eFleetShip`）按玩家五船把数量写进舱种 **9** 和舱种 **1**
+- `fn_14000fb14(0x13e, sA0, sA4)` 两个数
+- `fn_1400044f8(fleet, sA0, sA4, 1)`（`0x1400fed50`，RTC `eFleetShip`）按玩家五船写**补给槽 0 / 1**（`fn_14000f033(ship, 0|1, qty)`；`fn_140013e1c(ship, 0|1)` 读现量）——第二参是补给下标（`NUM_SHIPSUPPLY=2`），**不是**舱室种类。旧稿「写进舱种 9 和舱种 1」作废
 
-文案：`从俘获的船上得到%s桶水，%s桶粮食`（`0x33ab`）。两个数对两句 `%s`，舱种 9/1 谁是水谁是粮 `[未知]`。
+文案：`从俘获的船上得到%s桶水，%s桶粮食`（`0x33ab`），参数顺序 sA0、sA4 → 补给 0 = 水、1 = 粮 `[推断，强]`。
 
-`fn_1400044f8` 先按 `n = CountCabins(ship, 9)` 算每船容量 `n²` 与份额 `n * per`，再 `fn_14000f033(ship, kind, qty)` 写入。满了就溢到下一艘。这是补给，不是交易品。
+`fn_1400044f8` 每船：`n = cabin_count(ship, 物资仓库)`，容量 `n*100`（`imul 0x64`），水份额 `n*per`、粮 `n*100 − n*per`（`per` 来自局部 `+0x20`，`[未知]`）；装得下就写入，否则填满溢到下一艘。这是补给，不是交易品。
 
 ### 2.5 `fn_140005fb0`：拖船 + 分货窗
 
@@ -107,7 +124,7 @@
 7. 拷船体（`vfunc+0x88`、`fn_140006e92(..., 0x62)`、`fn_14000b7f8`、`vfunc+0x50`）
 8. `apInTowShip[s34] = sA0`；`s34++`
 
-`0x62=98` 与名册长度同数，也是空货记录 `+2`、`CShip+0x54` 初值。克隆路径里它是拷贝宽度还是哨兵 `[未知]`，禁止写成「这里把俘虏写入 98 名册」。
+`0x62=98` 与 dk4save 常数 `SAVE_SAILOR_COUNT` 同数（原版无 98 名册，见 §2.9），也是空货记录 `+2`、`CShip+0x54` 初值。克隆路径里它是拷贝宽度还是哨兵 `[未知]`，禁止写成「这里把俘虏写入名册」。
 
 `s30 > 0` 才考虑开窗：`fn_140007266(fleet, &asShipLoad)` 把敌舰队货倒进 200 字节栈缓冲。倒出来的件数 `<= 0` 时，若 `fn_14000d599(fleet) != 0x1A` 则不开窗。`0x1A` 在 `CBattleResult::vfunc_04` 里当空结果哨兵，这里是否同一枚举 `[未知]`。
 
@@ -170,7 +187,7 @@ array[count] = token                  # 每槽 4 字节
 count++                               # 写在 +0x14
 ```
 
-24 字节布局：5 个 `u32` + `+0x14` 计数 `[确认 尺寸]`。`+100` 与 `NUM_SHIP=100` 同数，像「目录 id 偏移」或「实例池下标」——语义 `[未知]`，不要写成 `ship_id+100` 定论。
+24 字节布局：5 个 `u32` + `+0x14` 计数 `[确认 尺寸]`。`vfunc+0x18` 是船模 id（`02` §2.2），`船模 + 100` 落在船实例池的静态定义段 100–206（`05-ships-fleet/01`）——即原版隐含区间「model+100 = 该船模的模板船槽」`[推断]`。D1：重构改成船模表显式字段 `template_hull`，token 存船模 key，不做 `+100` 算术。
 
 文案：
 
@@ -183,11 +200,13 @@ count++                               # 写在 +0x14
 
 入坞菜单：`fn_140004cb4`（`0x140172f30`，RTC `cDock` 16 B、`asShipLoad` 200 B）选项 0–3；选项 1 调 `fn_140154110(&cDock)`。`fn_140010eb0`（`0x140177570`，RTC `cDock` / `sMenuOption`）是船坞选项窗，本任务 cpp 反编译失败，内部表 `[未知]`。战斗只负责把 token / 拖船指针交出去。
 
-### 2.9 98 名册与俘虏
+### 2.9 人物记录与俘虏
 
-`[确认]` `SAVE_SAILOR_COUNT=98`，存档 `+0x2C00` 步长 `0x19`，槽 `i` = `person_id i`（0–97）。来源：`Constants.h`、`save_format.md`、`03-characters/04-recruitment-crew.md`。
+`[确认]` 原版没有独立的「98 名册」数组。存档人物段从 `+0x2C03` 起按 `person_id` 0–234 共 235 条 `CPerson` 记录：id < 87（`0x57`）每条 25 字节（隶属、六维、经验、HP、身心、装备），其余每条 2 字节（隶属 + `+0x22`），再接主角 `CPlayerPerson`。来源：`CPerson::vfunc_06/07`（body `0x1401cb480` / `0x1401caf70`，`cmp eax,0x57`）、`03-characters/04`、`03-characters/01`。
 
-`[确认]` `person_id >= 98` 的职能 NPC 不进这 98 槽（人物文档）。
+`SAVE_SAILOR_COUNT=98`、「`+0x2C00` 步长 `0x19`」是 dk4save 工具常数（`Constants.h`、`save_format.md`）：起点差 3 字节，ids 0–86 字段偏移相抵；行 87–97 是错读，会写坏 2 字节区。不是引擎常数，不进 caps。
+
+`[推断]` 可招募航海士在 `person_id` 0–97 内（人物文档）；引擎侧未找到显式 98 上限检查。
 
 `[确认]` `fn_14000ec6e` 有局部 `iCaptureCrew`，初值 0，地址传给 `fn_14000a817`，**值**传给 `fn_140007aea`。`007aea` 用它做「还留在船上的水手人数」累加器，水手是 `vfunc+0x58`（headcount），不是 `person_id`。
 
@@ -195,7 +214,7 @@ count++                               # 写在 +0x14
 
 `fn_1400141ff`：若 `person+0x20 > 0` 且第二参 `<= 0`，则 `fn_14000ab0f(person, 4)`、`fn_1400026d5(person, 0x190)`，再写 `+0x20`。`0x190=400`。这不像入册，倒像改一个人物状态字。
 
-结论：本批代码**没有**「把敌方航海士写进 98 名册」的确认路径。`02` 已标 `[未知]`。重构仍发 `CrewCaptured { person_id }`，人物系统可以 no-op。无名水手人数走 `Ships.crew`，不要塞进名册。
+结论：本批代码**没有**「把敌方航海士招入玩家舰队」的确认路径。`02` 已标 `[未知]`。重构仍发 `CrewCaptured { person_id }`，人物系统可以 no-op。无名水手人数走 `Ships.crew`，不要塞进名册。
 
 ### 2.10 舱位左列：战利品 / ★ / `%s等级`
 
@@ -248,21 +267,20 @@ is_star(slot) =
 | --- | --- | --- | --- |
 | 战后会话 | `capture_session_id` | 运行时 | |
 | 擒获槽 | `capture_ship_slot` | 5（`eCaputureShip`） | 与 `fleet_ship_id` 同宽 |
-| 拖船 | `tow_ship_id` | 5 指针 | `ship_instance.empty`（`0xD0`） |
-| 分货按钮 | `prize_hold_slot` | 25 | `trading_item.empty`（`0x6A`） |
+| 拖船 | `tow_ship_id` | 5 指针 | `null`（原版 `0xD0`） |
+| 分货按钮 | `prize_hold_slot` | 25 | 货 `null`（原版 `0x6A`） |
 | 入坞 token | `dock_token` | 5×u32 + count | count=0 |
-| 战果 | `battle_result_id` | 5 | `INVALID_BATTLERESULT=-1` |
-| 货记录 | `HoldRecord` | 8 B | item=106 |
-| 名册槽 | `person_id` | 98 | 不由本系统分配 |
+| 货记录 | `HoldRecord` | 8 B | `null`（原版 item=106） |
+| 人物 | `person_id` | characters 拥有 | 不由本系统分配 |
 | 消息类型 | `message_type_id` | `0x13c/13e/141/143/13d/146/104` | `INVALID_MESSAGETYPE` |
 
-运行时按 caps 循环。原版包：`fleet_ships: 5`、`hold_slots_per_ship: 5`、`prize_hold_buttons: 25`、`sailor_roster: 98`。
+运行时按 caps 循环。原版包：`fleet_ships: 5`、`hold_slots_per_ship: 5`、`prize_hold_buttons: 25`。
 
 会话快照只持 ID 与标量：`ship_instance_id`、`trading_item_id`、`qty`、`grade`、`buy_price`、`gold`、`water`、`food`。不持 `CShip*`、`World*`、`Player*`。
 
 ## 4. 算法 / 公式
 
-立即数进 `config/formulas/combat.yaml` 的 `prizes:`。脏寄存器的乘项标 `unverified`，禁止补成闭式。
+立即数进 `config/formulas/combat.yaml` 的 `prizes:`。金币与水粮的乘除数已从原始指令补齐（§2.3、§2.4）。
 
 ### 4.1 哪些船进结算
 
@@ -280,22 +298,22 @@ eligible_dock_now(ship):
 ### 4.2 水粮（原版包）
 
 ```
-n = sum(count_cabins(ship, supply_cabin_kind) for ship in captured_state_4)
+n = sum(Ships.cabin_count(ship, supply_room) for ship in captured_state_4)
 if n <= 0: supplies = {water: 0, food: 0}
 else:
-  a = n * k + rand(supply_rand)                  # k 来自前一调用，[未知]
-  b = a * n + rand(supply_rand)
-  emit LootSupplies { a, b }                     # 文案两桶
-  Ships.addSupplies(player_fleet_id, water=?, food=?, by_cabin_kind)
+  water = n * supplies_per_cabin + rand(supply_rand)
+  food  = n * supplies_per_cabin + rand(supply_rand)
+  emit LootSupplies { water, food }
+  Supplies.add(player_fleet_id, water, food)   # ships 拥有；原版 fn_1400044f8：按物资仓库容量逐船填，溢出下一艘
 ```
 
 ```yaml
-supply_cabin_kind_vanilla: 9
-food_cabin_kind_vanilla: 1         # fn_1400044f8 第二路；谁是水谁是粮 [未知]
+supply_cabin_role: supply_room     # 原版种类 9
+supplies_per_cabin: 20             # imul 0x14 [确认]
 supply_rand: 10
 ```
 
-`Ships.addSupplies` 按每船 `count_cabins(kind)^2` 做容量，溢出下一艘。实现对着 `fn_1400044f8`，不要改成「平均分」。
+`Supplies.add` 的容量规则（物资仓库间数 ×100、水粮配比）属 ships，战斗只给两个数。实现对着 `fn_1400044f8`，不要改成「平均分」。
 
 ### 4.3 金币
 
@@ -304,25 +322,37 @@ gap = 0
 extra = 0
 for ship in enemy_alive_slots:
   if state == 4:
-    gap += f_0084db(ship, 9) - hull(ship)
-  if state == 5 and singleton_flag == 1:
-    extra += ship.vfunc_20()
+    gap += Ships.max_hull(ship) - hull(ship)     # fn_1400084db 单参
+  if state in (4, 5) and Scenario.flag("prize_ship_value_bounty"):   # 原版 eScenario==1；剧本旗标，非修正器
+    extra += Ships.value(ship)
 
-gold_hull  = factor * gap + extras               # factor、extras [未知]
-if gold_hull > 0: Economy.credit(player, gold_hull)
+gold = hull_gold_factor * gap
+if enemy_flagship_captured and battle_owner == player:
+  gold += enemy_fleet_money / (fleet_money_div_alt if flag_b75 else fleet_money_div)
+if gold > 0: Economy.transfer(enemy_fleet, player, gold)
 
 if extra > extra_gold_min:
-  gold_extra = extra / extra_div                 # extra_div 反编译丢失
-  Economy.credit(player, gold_extra)
+  Force.add_gold(player_force, extra / extra_div, reason=prize_bounty)   # 原版：先 extra /= 10 再入账
 ```
 
 ```yaml
-extra_gold_min: 10
-extra_div: null                  # unverified
-hull_gold_factor: null           # unverified
+hull_gold_factor: 100            # [确认] imul 0x64
+fleet_money_div: 20              # [确认]
+fleet_money_div_alt: 50          # [确认] fn_140012b75 为真时；两者都是无符号 div
+extra_gold_min: 10               # [确认]
+extra_div: 10                    # [确认]
+supplies_per_cabin9: 20          # [确认] 水 / 粮各 n9*20 + rand(10)
+supplies_rand: 10
 ```
 
-`Economy.credit` 必须走有符号饱和，禁止把负的 `500-a` 那套无符号除法抄过来。战斗模块自己不算「这格货值多少钱」——那是市价，战后货的 `buy_price` 保持 0。
+`Force.add_gold` 走有符号饱和（factions 拥有；原版 `fn_140002cb6` 封 [0, `$caps.gold_max`=99,999,999]）。剧本 1 的船价奖金由剧本包旗标打开：
+
+```yaml
+# scenarios/vanilla_helmut.yaml 片段（D5）
+flags: { prize_ship_value_bounty: true }   # 战斗读 Scenario.flag("prize_ship_value_bounty")
+```
+
+战斗模块自己不算「这格货值多少钱」——那是市价，战后货的 `buy_price` 保持 0。
 
 ### 4.4 分货
 
@@ -345,7 +375,7 @@ on confirm:
 
 ```
 if eligible_dock_now(ship):
-  token = hull_token(ship)                       # vfunc+0x18 + dock_token_bias
+  token = Ships.ship_type(ship).template_hull     # 原版 vfunc+0x18 + 100
   emit HullCaptured { token, ship_id, instance_id }
   Fleets.detach(enemy_fleet, slot)
 elif eligible_tow(ship):
@@ -359,7 +389,6 @@ else:
 ```
 
 ```yaml
-dock_token_bias: 100
 tow_slots: 5
 ```
 
@@ -393,7 +422,7 @@ UI 选 key：`trade.prize` / `trade.star` / `trade.grade_fmt`。战斗不画字�
 | 入坞菜单 `cDock` 在城镇 / 造船 | town 订 `ShipTowed`，战斗不打开造船厂 |
 | 交易所左列画「战利品」 | 只靠 `buy_price==0`；economy 不特判 battle_id |
 | ★ 用品牌 + 等级 1 | `Economy.is_brand`；combat 不写品牌 |
-| 98 名册 | 不写；`CrewCaptured` 可空 |
+| 人物 / 航海士 | 不写；`CrewCaptured` 可空 |
 | `ClearHoldRecord` 与贸易共用 | `Ships.clearHold` 同一条 |
 | `fn_14000fb14` 类型号 | `ui/` 映射 `message_type_id → string_key` |
 
@@ -412,7 +441,6 @@ capture:
   skip_predicate: fn_140001bea           # 实现时换成命名查询
   tow_slots: 5
   dock_slots: 5
-  dock_token_bias: 100
   organize:
     hold_buttons: 25
     mode_leftover_tow: 3
@@ -420,7 +448,7 @@ capture:
     click_own_ships: { lo: 5, hi: 9 }
     click_holds: { lo: 11, hi: 35 }      # 0xB..0x23，属 UI
     click_tow_pages: { lo: 37, hi: 41 }
-    selected_ship_sentinel: 6
+    selected_ship_none: null             # 原版 6（越界哨兵）
 message_types:
   loot_gold_hull: 0x13c
   loot_supplies: 0x13e
@@ -446,31 +474,36 @@ string_keys:                             # 只引用，中文在 ui/strings
   ship_occupied: battle.ship_occupied
   crew_captured: battle.crew_captured    # 人；原版是否发 [未知]
 hold:
-  empty: trading_item.empty
+  empty: null                            # 原版 0x6A，legacy codec
   prize_buy_price: 0
   copy_grade: true
   copy_item: true
   fill_buy_price_on_capture: 0
-vanilla_cabin_map:
-  cargo: 10
-  supply_a: 9
-  supply_b: 1
+cabin_roles:
+  cargo: cargo_room                # 原版种类 10
+  supply: supply_room              # 原版种类 9
 ```
 
-`vanilla_cabin_map` 只存在于原版内容包。引擎问 `Ships.countCabins(instance, kind_id)`。
+引擎只问 `Ships.cabin_count(instance, role)`；原版种类号只在 `cabins.yaml`。
 
 ### `config/formulas/combat.yaml`（战利品段）
 
 ```yaml
 prizes:
-  supply_rand: 10
-  extra_gold_min: 10
-  extra_div: null                        # unverified
-  hull_gold_factor: null                 # unverified
-  star_grade: 1
-  prize_buy_price: 0
-  dock_token_bias: 100
-  organize_hold_buttons: 25
+  impl: vanilla.prizes
+  int_mode: vanilla_i32
+  quirks: { unsigned_div: true }         # 舰队金币 / fleet_money_div(_alt) 为无符号 div（§4.3）
+  params:
+    supply_rand: 10
+    supplies_per_cabin: 20
+    extra_gold_min: 10
+    extra_div: 10                          # [确认]
+    hull_gold_factor: 100                  # [确认] imul 0x64
+    fleet_money_div: 20                    # [确认] 无符号
+    fleet_money_div_alt: 50
+    star_grade: 1
+    prize_buy_price: 0
+    organize_hold_buttons: 25
 ```
 
 ### `config/caps.yaml` 片段
@@ -478,9 +511,7 @@ prizes:
 ```yaml
 fleet_ships: 5
 hold_slots_per_ship: 5
-hold_scan: 10
 prize_hold_buttons: 25                   # 原版 5×5；运行时 = fleet_ships * hold_slots
-sailor_roster: 98
 tow_slots: 5
 dock_capture_slots: 5
 ```
@@ -516,7 +547,7 @@ trade.grade_fmt: "{grade}等级"
 - 是否发 `CrewCaptured`（默认发、人物可忽略）
 - offscreen NPC 互打要不要金币（默认不要，与 `03` 的空 `loot` 一致）
 
-加一种「只抢货不拖船」：只加 `capture.allow_tow: false`，不要改炮击。把名册从 98 加长：人物系统改 `sailor_roster`，本文件不改。
+加一种「只抢货不拖船」：只加 `capture.allow_tow: false`，不要改炮击。俘虏航海士入队：人物系统订 `CrewCaptured`，本文件不改。
 
 ## 8. 对外接口
 
@@ -524,7 +555,7 @@ trade.grade_fmt: "{grade}等级"
 
 ```
 Combat.capture_snapshot(battle_id) -> CaptureSnapshot
-Ships.countCabins(instance_id, cabin_kind_id) -> int
+Ships.cabin_count(instance_id, role) -> int
 Ships.holds(instance_id) -> [HoldRecord]
 Ships.free_fleet_slots(fleet_id) -> int
 Dock.free_slots() -> int
@@ -550,8 +581,8 @@ CaptureSnapshot {
 命令：
 
 ```
-Economy.credit(owner_id, gold)                 # 正数入账
-Ships.addSupplies(fleet_id, kind_id, qty)
+Force.add_gold(force_id, delta, reason)        # factions；正数入账
+Supplies.add(fleet_id, kind_id, qty)           # ships
 Ships.setHold(instance_id, slot, HoldRecord)
 Ships.clearHolds(fleet_id)
 Ships.clone(instance_id) -> instance_id
@@ -568,7 +599,8 @@ PrizeHolds.cancel(session_id)                  # 没装的丢掉
 ```
 BattleResolved {
   battle_id:            int
-  result_id:            int                  # 0..n-1，名字未恢复
+  outcome:              key                  # 会话结局；不是 eBattleResult 槽号（01 §2.12）
+  force_a, force_b:     force | null         # factions 据此写战果记录槽
   winner_side:          0 | 1 | null
   attacker_fleet_id:    fleet_id
   defender_fleet_id:    fleet_id
@@ -582,7 +614,7 @@ BattleResolved {
 
   cargo: [
     {
-      trading_item_id:  int                  # empty 用哨兵，不省略槽
+      trading_item_id:  trading_item_id | null   # 空格 null，不省略槽
       qty:              int                  # 原版包 1
       grade:            int
       buy_price:        int                  # 缴获为 0
@@ -616,9 +648,9 @@ BattleResolved {
 
 | 事件 | 谁订 | 做什么 |
 | --- | --- | --- |
-| `BattleResolved` | economy | `credit(gold)`；不改市价 |
-| | ships / fleets | `addSupplies`、`attach` / `Dock.store` |
-| | factions | 读 `result_id`、`town_occupied` |
+| `BattleResolved` | economy | 不改市价（金币由 combat 直接调 `Force.add_gold`，§4.3） |
+| | ships / fleets | `Supplies.add`、`attach` / `Dock.store` |
+| | factions | 读 `force_a/force_b`、`winner_side`、`town_occupied`，写战果记录槽 |
 | | progression | 经验 / 名声（本系统不算） |
 | | narrative | 剧本触发 |
 | | ui | 战果句、分货窗 |
@@ -639,17 +671,17 @@ BattleResolved {
 | 项 | 事实 | 不要写成 |
 | --- | --- | --- |
 | `fn_140006b95(ship, 10)` 在 `005fb0` | 货舱计数 | 金币公式 |
-| `fn_14000a817` 的 `factor * gap` | 有乘、有 `rand(10)` | 闭式 `hull/10` 或「货值市价」 |
-| `extra_div` | `idiv` 丢失 | `100`、`10` |
-| 舱种 9 / 1 | 写入水粮 | 「9=水、1=粮」定论 |
-| `fn_1400084db(ship, 9)` | 与耐久相减 | 最大耐久确认 |
+| `fn_14000a817` 金币 | `[确认]` `gap*100` + 敌舰队现金 /20 或 /50；`s44/10` | 「货值市价」 |
+| `fn_140012b75(敌舰队)` | 决定 /50 还是 /20 | 海盗 / 王国定论 |
+| 物资仓库（9）/ 补给槽 0、1 | 9 是舱室种类（容量）；0/1 是补给下标，0 = 水、1 = 粮 `[推断，强]` | 把补给下标当舱室种类 |
+| `fn_1400084db(ship)` | 单参；`(改装2,3数)*表[size] + (vfunc48==3?10:0) + fn_14000e129` | 最大耐久 `[推断]` |
 | `fn_140001bea` | 真则跳过该船 | 「已是玩家船」 |
 | `fn_140008783(DAT_144296500)` | 决定 mode 4/3、能否克隆 | 「是否玩家回合」 |
-| 克隆里的 `0x62` | 与 98 同数 | 写入名册 |
+| 克隆里的 `0x62` | 与 dk4save 常数 98 同数 | 写入名册 |
 | `fn_14000d599 == 0x1A` | 无货时仍可能开窗 | 与 `CBattleResult` 同一枚举 |
-| `vfunc+0x18 + 100` | 入坞 token | `ship_id+100` 或实例下标 |
+| `vfunc+0x18 + 100` | 入坞 token = 船模 + 100（模板船槽 `[推断]`） | 引擎里做 `+100` 算术 |
 | `cCatchedShipArray` 5 个 u32 | 尺寸 24 B | 3 个指针 |
-| `iCaptureCrew` | 水手 headcount 累加 | 98 名册人数 |
+| `iCaptureCrew` | 水手 headcount 累加 | 航海士人数 |
 | `fn_14000eda9` / `fn_1400141ff` | 改 `person+0x20`、`0x190` | 俘虏入队 |
 | 具名航海士入册 | 无本链代码 | 原版会招俘虏当航海士 |
 | `eMessageType` 0x13c 等 | 类型号 | mesfile 偏移 |
@@ -664,4 +696,4 @@ BattleResolved {
 | 拖船在大地图上怎么跟 | 文案有「拖拉的船丢失了」 | 航速公式 |
 | offscreen 互打的金币 | `03` 允许空 loot | 与玩家同一公式 |
 
-`fn_14000a817` 全长 `0x5f5`，`fn_140005fb0` 全长 `0x2bb`。已确认的是调用图、舱种 10/9/1、25 格、拖船 5 指针、入坞 24 字节数组、战利品=买入价 0、★=品牌等级 1。其余算术对着 `0x1401c4e20` / `0x1401e2e70` 下断点补，不要从市价或别作的打捞表抄金币。
+`fn_14000a817` 全长 `0x5f5`，`fn_140005fb0` 全长 `0x2bb`。已确认：调用图、金币（`gap*100` + 敌舰队现金 /20 或 /50 + 剧本 1 船价 /10）、水粮（`n9*20 + rand(10)`）、舱种 10/9、25 格、拖船 5 指针、入坞 24 字节数组、战利品=买入价 0、★=品牌等级 1。未展开：`fn_140012b75`、`fn_1400044f8` 的水粮配比 `per`。不要从市价或别作的打捞表抄金币。

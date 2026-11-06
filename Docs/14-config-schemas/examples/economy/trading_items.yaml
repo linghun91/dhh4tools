@@ -1,25 +1,14 @@
 schema: dk4.economy.trading_items
 version: 1
-# 空货格哨兵 + 一条实例。
-# 105 个合法交易品 id 为 0–104；106 不在表内，是空格。
-# id 99 出现在伦敦特产品槽 0（Docs/_data/towns_world0.json）。中文名未从 mesfile 切词，禁止编造。
+# 原版包片段。完整 105 行见 Docs/04-economy/01-trading-items.md §3.2；目录 .data 0x140688190（导出脚本生成）。
+# 空货格不是一行：运行时 null（原版导出 106，只在 ids/legacy_codec.yaml）。
 
 items:
-  - id: 106
-    key: empty
-    name: ""
-    sentinel: true
-    kind_id: -1
-
-  - id: 99
-    key: trading_item_099
-    name: ""
-    name_i18n:
-      zh-CN: ""
-    kind_id: -1          # eTradingItemKind 未还原到该行
-    base_price: null     # TRADINGITEM_DATAPRICE 未从本行抽出
-    referenced_by:
-      - town_key: london
-        special_product_slot: 0
-        supply_or_price: 4500
-        grade: 15
+  - key: vanilla:coal
+    vanilla_index: 99
+    name_key: trading_item.coal.name     # 煤
+    kind: vanilla:ore                    # eTradingItemKind 17
+    data_price: 2000
+    grade_step: 700
+    initially_discovered: true
+    unlock_item: null

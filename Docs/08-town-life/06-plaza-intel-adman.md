@@ -14,7 +14,7 @@
 - 人群聚集事件的触发与派发（打开小游戏 / NPC / 广告人，具体集合未还原）
 - `CAdman` 单例状态：当前 `town_id` + 广告中的 `trading_item_id`
 - 「查阅市场行情」对话的打开与选港；**不**算费、不持有报价
-- 广场上听到的谣言种类与文案入口；计略「制造谣言」的目录仍在 `02-requests-schemes.md`
+- 广场上听到的谣言种类与文案入口；计略「制造谣言」的目录在 `04-schemes-rhetoric.md`
 
 本系统不管：
 
@@ -24,7 +24,7 @@
 | 缴费金额、会计长杀价公式 | economy（`08-price-intel`）；本系统只传 `paid_gold` |
 | `eTownFashion` 26 条目录、每港 2 槽、速度枚举 | factions（`02-countries-culture-fashion.md`） |
 | 小游戏规则与奖金 | `03-minigames.md`（本系统只发 `source: plaza_crowd`） |
-| 计略「制造谣言」是否成功、改友好度 | `02-requests-schemes` → factions |
+| 计略「制造谣言」是否成功、改友好度 | `04-schemes-rhetoric` → factions |
 | 阿科布人物六维、能否入队 | characters（`person_id` 89） |
 | 港口坐标、发展度怎么涨 | world / factions |
 | `Plaza.dk4` 像素、`CPlazaSylphid` 走位 | ui |
@@ -52,15 +52,17 @@
 
 | 点击号 | 分支 | 对象 |
 | --- | --- | --- |
-| `4 <= id < 9` | 先 `fn_140004ba1(CPlazaScreen, id)`，再调 `+0xf0` 上的招牌指针 | 最多 5 块 `CShopButton` |
+| `4 <= id < 9` | `slot = id - 4`（`sub rax,4`）；先 `fn_140004ba1(CPlazaScreen, slot)`，再 `fn_14000d01c(+0xf0[slot])` | 最多 5 块 `CShopButton` |
 | `id == 1` | `fn_140014d58` | 离开 |
-| `id == 2` | `fn_140166580` 为真才继续，回调 `+0x120` | 寻求支持 |
-| `id == 3` | `fn_1401667b0` 为真才继续，回调 `+0x128` | 发放交易品 |
+| `id == 2` | 执行 `fn_14001361a`（寻求支持本体）；返回非 0 则 `fn_14000daf8`；随后若 `fn_140166580()==0`，对 `+0x120` 按钮调 `fn_140014083`（`[推断]` 置灰/隐藏） | 寻求支持 |
+| `id == 3` | 执行 `fn_140011e19`（发放本体）；返回非 0 则 `fn_14000daf8`，再若 `fn_1401667b0()==0`，对 `+0x128` 调 `fn_140014083` | 发放交易品 |
 | `id == 0xA` | `fn_140003d37` | `[未知]` |
 
-`[推断]` 点击 4–8 对应招牌槽 0–4（`slot = id - 4`）。抬码按 `id*8 + 0xf0` 写，若字面执行会越过 5 槽；实现只认 `click_map`，禁止 `signs[id]`。
+`[确认]` 点击 4–8 对应招牌槽 0–4。原始指令 `0x1401685a2 sub rax,4` 后再按 `slot*8+0xf0` 取指针，反编译丢了这一步。
 
-`01-facilities.md` 把 1/2/3/4–8/`0xA` 标成未还原。本篇把 1–3 的标签和 4–8 的「是招牌」升格；槽下标与 `0xA` 仍按上表。
+`[确认]` `fn_140166580` / `fn_1401667b0` 不是「为真才继续」的前置门，而是**动作之后**重算按钮可见性；按钮初次是否创建也由它们决定（`fn_14000aa79` 末尾调 `fn_140166580`，为真才 `new CPlazaButton`）。
+
+`01-facilities.md` 把 1/2/3/4–8/`0xA` 标成未还原。本篇把 1–3 的标签和 4–8 的「是招牌」升格；`0xA` 仍未知。
 
 `[确认]` 三颗 `CPlazaButton` 的 GBK 标签（`fn_14000aa79` 调 `CPlazaButton` ctor 的 `lstrcpyA` 实参，UTF-16 转义按 LE 解 GBK）：
 
@@ -116,7 +118,9 @@ shop_count = 1 + count(develop >= threshold[i] for i in 0..3)
 
 `[确认]` `fn_14000b53c` 在广场函数族里：先过若干守卫（含 `fn_140005272(2)`、某对象 `vfunc` 非 0、返回值 `== 3`），再 `new` 一段从 `start` 走到 `end` 的演出，类型立即数 `0x33` / `0x34` 二选一。`[未知]` 这是不是「聚集了一群人」的生成器；`0x33/0x34` 不要当成 mesfile 下标（下标 51/52 是主角简介）。
 
-`[未知]` 原版触发率。`01-facilities.md` 的 `plaza_crowd_chance` 仍为 `null`。人群打开的是小游戏、阿科布、广告人还是纯对白，未从 cpp 钉死。`03-minigames.md` 用 `triggers: [plaza_crowd]` 挂候选，本篇只发事件。
+`[未知]` 原版触发率。`01-facilities.md` 的 `plaza_crowd_chance` 仍为 `null`。
+
+`[确认]` 原版广场代码**不**直接启动小游戏：7 个小游戏只经事件脚本指令（`fn_1400020fe` → `fn_14000508d` → `fn_14000847c`）按游戏号启动（`03-minigames.md` §2.0）。「聚集了一群人」若引出小游戏，也是剧本事件，不是广场自带抽签。`plaza_crowd` 只作模组挂钩，原版包不填。
 
 ### 2.5 `CAdman` 世界单例
 
@@ -144,7 +148,7 @@ fn_1402a59c0(this+0x2d80, ...)                 # CAdman::CAdman
 
 `[确认]` `0x6A` 是交易品空哨兵（`ITEM_EMPTY`，`04-id-registry.md`）。`[推断]` `+0x09` 是正在广告的 `trading_item_id`。
 
-`[推断]` `+0x08` 是广告人所在 `town_id`，空哨兵 `town.none = 98 = NUM_TOWN+1`（`01-world/02-towns.md` 已用于选港 UI）。依据：对象跟在 97 港数组后面；`fn_140168770` 把读到的值与 `0x62` 比较走「无港」分支。禁止把 98 写成「欧洲男子店主」——那是 `person_id` 98，另一套空间。
+`[推断]` `+0x08` 是广告人所在 `town_id`，原版空哨兵 `98 = NUM_TOWN+1`（重构运行时为 `null`，98 只在 legacy codec）（`01-world/02-towns.md` 已用于选港 UI）。依据：对象跟在 97 港数组后面；`fn_140168770` 把读到的值与 `0x62` 比较走「无港」分支。禁止把 98 写成「欧洲男子店主」——那是 `person_id` 98，另一套空间。
 
 `[确认]` 广场布局末尾 `fn_14016a130`：读广告人两字节，若商品不是 `0x6A` 且与本港某槽相等，则在 `CPlazaView+0xd8` 再挂一个精灵。`[推断]` 「广告人此刻在这座广场」。
 
@@ -154,7 +158,21 @@ fn_1402a59c0(this+0x2d80, ...)                 # CAdman::CAdman
 0x343, 0x344, 0x345, 0x346, 0x347, 0x348, 0x371, 0x372, 0x373
 ```
 
-按本港 / 广告人字节选一句，经 `fn_140004b3d` 播出。这 9 个整数**不是** mesfile 文件偏移（偏移 `0x343` 落在「查阅市场行情」句中间）；也**不要**用抽出表的顺序下标去对中文（下标 835 起是主角临终句）。对应哪句 `[未知]`。
+按本港 / 广告人字节选一句，经 `fn_140004b3d` 播出。这 9 个整数是 **exe 消息号**，不是 mesfile 文件偏移，也不是按 NUL 切的序号。`[确认]` 按 exe 消息号表（`.data 0x140683620` 37 块 `{first_id,size}` + `0x1406836c0` 每条块内偏移，`11-progression/01-level-exp-skills.md`）解 SC：
+
+| 消息号 | 句 |
+| --- | --- |
+| `0x343` | 阿科布啊，好像在%s。 |
+| `0x344` | 阿科布啊，我想在%s。 |
+| `0x345` | 阿科布呀，我想在%s。 |
+| `0x346` | 阿科布去追求新流行的人们所在的城市了。 |
+| `0x347` | 阿科布为了寻找传播新流行的城市，去流浪了。 |
+| `0x348` | 不知道阿科布去哪里了，他在寻找掀起新流行的城市。 |
+| `0x371` | 阿科布啊，刚才还在这里呢。 |
+| `0x372` | 阿科布啊，在那里见到了。 |
+| `0x373` | 阿科布呀，不知道。 |
+
+即前 3 句报告广告人所在港（`%s` `[推断]` 为 `+0x08` 港名），中 3 句「去向不明」，后 3 句「刚在本港」。九句的主语全是阿科布。
 
 `[确认]` 气候文档已声明：`CAdman` 写 `0x62/0x6A` 与气候无关，勿混入 `04-climate-weather-zodiac.md`。
 
@@ -176,7 +194,7 @@ fn_1402a59c0(this+0x2d80, ...)                 # CAdman::CAdman
 
 本系统**不**实现该 View，只发 `OpenPriceIntel { town_id }`。扣费、报价、2 格流行怎么画，见 economy。
 
-缴费数字 `[未知]`。杀价句存在，是否走 `ModifierSet.sell_price_factor` / 会计术 `[未知]`，禁止在本系统读六维。
+缴费数字 `[未知]`。杀价句存在，是否走修正器 key（如 `trade.intel_fee`）/ 会计术 `[未知]`，禁止在本系统读六维或技能值。
 
 ### 2.7 谣言：广场听闻 vs 计略制造
 
@@ -192,7 +210,7 @@ fn_1402a59c0(this+0x2d80, ...)                 # CAdman::CAdman
 
 `[未知]` 听完是否解锁该港行情（免一次缴费），还是纯对白。实现缺省：只展示，不写市价缓存。
 
-**B. 计略「制造谣言」（`02-requests-schemes.md`）** `[确认]` 文本：
+**B. 计略「制造谣言」（`04-schemes-rhetoric.md`）** `[确认]` 文本：
 
 - 选目标港：「在哪个城市散布谣言？」`0x912f` `0x919b`
 - 结果：「在 %s，流传着 %s 的坏话。」「这传闻没有被相信。」`0x3ad7`
@@ -202,13 +220,13 @@ fn_1402a59c0(this+0x2d80, ...)                 # CAdman::CAdman
 
 `0x8653` 里混有埋藏物方向传闻，发现物属 world/items，广场只当 `rumor.kind = remains_hint` 展示。
 
-### 2.8 阿科布不是 `CAdman`
+### 2.8 阿科布与 `CAdman`
 
-`[确认]` 阿科布·达迈 `person_id` 89（`PersonID.h` `ePerson_089`，`Docs/_data/persons.tsv`）。文案：要把「新的流行趋势带到世界的所有城市」；请求把阿科布带到别的广场；发放品牌商品 `%s` 做宣传。`0x6fa3` `0x728b` `0x72ef`。
+`[确认]` 阿科布·达迈 `person_id` 89（`PersonID.h` `ePerson_089`，`Docs/_data/persons.tsv`）。文案：要把「新的流行趋势带到世界的所有城市」；请求把阿科布带到别的广场；发放品牌商品 `%s` 做宣传。`0x6fa3` `0x728b` `0x72ef`（mesfile 块偏移）。
 
-`[确认]` `CAdman` 没有 `person_id` 字段。二者类型不同：人物 vs 两字节存档块。
+`[确认]` `CAdman` 没有 `person_id` 字段，但它的九句消息（2.5）主语全是阿科布。`[推断]` `CAdman` 就是「阿科布行踪 + 他在推广的商品」的状态块，人物身份写死在文案里而不在数据里。
 
-`[推断]` 阿科布抵达某港、或发放品牌时，叙事发 `Adman.set(town_id, item_id)` 写入单例。cpp 未见 `person==89` 与 `CAdman+0x8` 的赋值。禁止把广告人做成「只有阿科布能当」的硬编码。
+`[推断]` 阿科布抵达某港、或发放品牌时，叙事发 `Adman.set(town_id, item_id)` 写入单例。cpp 未见 `person==89` 与 `CAdman+0x8` 的赋值。重构把广告人做成内容字段 `adman.person: vanilla:person_089`，文案 `%s` 取该人物名；禁止代码里写死 89。
 
 ### 2.9 资源
 
@@ -220,26 +238,26 @@ fn_1402a59c0(this+0x2d80, ...)                 # CAdman::CAdman
 
 | 实体 | 原版符号 | 计数 | 空 / 非法 | 来源 |
 | --- | --- | --- | --- | --- |
-| 广告人 | `CAdman`（无 `eAdman`） | 1 | `item == 106` 视为未启用 | `CAdman.cpp` |
-| 广告人所在港 | 无独立枚举 | 与 `eTown` 同空间 | `0x62` = 98 `[推断]` `town.none` | 初值 + 选港哨兵 |
+| 广告人 | `CAdman`（无 `eAdman`） | 1 | 原版 `item == 106` 未启用；运行时 `item: null` | `CAdman.cpp` |
+| 广告人所在港 | 无独立枚举 | 与 `eTown` 同空间 | 原版 `0x62` = 98 `[推断]` 无港；运行时 `null` | 初值 + 选港哨兵 |
 | 广告商品 | `eTradingItem` | 表长 | `0x6A` = 106 | `+0x09` |
 | 招牌槽 | 无 | 每港 1–5 | 槽内 `106` 不画 | `+0xf0`、`+0x118` |
 | 广场点击 | 无 `ePlazaClick` | 原版号 1–8、`0xA` | — | `vfunc_13` |
 | 店主 | `ePerson` 98–107 | 10 | — | factions 圈表 |
 | 阿科布 | `ePerson` 89 | 1 | — | 人物表 |
-| 人群事件 | 无 | 重构目录 | `invalid` | 本篇 key |
-| 谣言种类 | 无 | 重构目录 | `invalid` | 文案 |
+| 人群事件 | 无 | 重构目录 | `null` | 本篇 key |
+| 谣言种类 | 无 | 重构目录 | `null` | 文案 |
 
-原版没有 `eFacility` 子枚举「情报」。重构 key 只在本系统内用，不占用 `facility_id` 0–8。
+原版没有 `eFacility` 子枚举「情报」。重构 key 只在本系统内用（命名空间 key，D1）。
 
-哨兵碰撞：`98` 既是 `town.none` 候选，又是欧洲男店主。配置里必须分字段 `town_id` / `person_id`，禁止一个 `id: 98` 两用。
+哨兵碰撞：`98` 既是原版「无港」，又是欧洲男店主 `person_id`；`106` 既是空货，又是日本店主 `person_id`。这正是 D1 的理由：运行时一律 `null`，原版哨兵只在 `ids/legacy_codec.yaml` 导入导出时翻译。
 
 ## 4. 算法 / 公式
 
 全部进 `config/formulas/town.yaml`。场景代码禁止出现 `2000`、`0x6A`、`if click==4`。
 
 ```
-# 招牌数。develop 来自 Factions.townDevelop(town_id).commerce  [推断 商业轨]
+# 招牌数。develop 来自 Towns.develop(town_id, commerce)  [推断 商业轨]
 shop_count(develop) =
     1 + count(develop >= t for t in shop_develop_thresholds)
 shop_count ∈ [shop_count_min, shop_count_max]
@@ -249,48 +267,72 @@ shop_count_max = 5
 
 # 招牌商品。pick 原版 fn_1401696e0，未还原前原版包标 unverified
 sign_item(town_id, slot) =
-    PlazaSignPick(town_id, slot, Fashion.current(town_id), Calendar.now())
-    # 返回 trading_item_id；空 = trading_item.empty
+    PlazaSignPick(town_id, slot, Fashion.current(town_id), Clock.now())
+    # 返回 trading_item_id | null
 
 # 广告人是否启用
 adman_active =
-    adman.item_id != trading_item.empty
+    adman.item != null
 adman_present(town_id) =
     adman_active AND adman.town_id == town_id
 
-# 寻求支持按钮。原版 fn_140166580 控制流 [确认]，语义 [未知]
+# 寻求支持按钮。原版 fn_140166580（body 0x140166580）逐条 return 0，只有末尾一处 return 1 [确认]
 can_seek_support(town_id, fleet_id) =
-    probe_item != empty
-    AND Characters.modifier(support_check) >= support_modifier_min   # 原版 100；eAbility/eSkill 下标 [未知]
-    AND NOT (all_share_slots_owned AND share_sum == share_cap)      # 三槽份额
-    AND NOT (special_product_type(probe_item) == 6
-             AND Economy.kind_rate(town_id, kind) < rate_hide_below
-             AND other_state < rate_hide_below)
-support_modifier_min = 100
-share_cap            = 100
-rate_hide_below      = 100
-special_type_hide    = 6          # 类型名 [未知]
+    probe_item != null                                              # fn_140168a50 != 0x6A（交易品）
+    AND post_holder(fleet, support_post) != null                    # fn_140010cee(fleet, 3) != 0xEC；岗位 3 = 会计长 purser
+    AND Skill(holder, support_skill) >= support_skill_min           # fn_14000e1ce(p, 4) >= 100（jge）；eSkill 4 = 会计术 accounting
+    AND fn_14001423b()                                              # [未知] 布尔
+    AND NOT (share_guard AND share_sum == share_cap)                # 三槽份额累加 == 100 且守卫成立
+    AND special_product_type(town_id, probe_item) == support_special_type   # fn_14000680c == 6
+    AND town_kind_value(town_id, kind(probe_item)) >= support_rate_min      # fn_1400095ed >= 100
+    AND town_other_value(town_id) < support_other_max                       # fn_1400088f0 < 100
+support_post          = purser       # 原版岗位下标 3 [确认]（03-characters 岗位表，fn_140012dd2）
+support_skill         = accounting   # 原版 eSkill 4 [确认]；fn_14000e1ce 第二参是技能，不是六维
+support_skill_min     = 100          # 技能值（0–500 量纲）
+share_cap             = 100
+support_special_type  = 6          # 类型名 [未知]
+support_rate_min      = 100
+support_other_max     = 100
 
-# 发放交易品：岗位修正器 + 船上有货
+# 寻求支持动作。原版 fn_14001361a（body 0x1401651d0）[确认]；写成 D9 Action
+seek_support: Action
+  guard:  [ can_seek_support(town_id, fleet_id), player.confirms() ]
+  roll:   seek_support_roll          # rand(1000) < th，命名随机流 town.plaza
+  #   th = (town_kind_value(town_id, kind) - 100) * support_rate_mul        # *10，原始 imul 0xA
+  #      + Skill(post_holder(fleet, purser), accounting)                    # fn_14000f2d6(fleet,3) → fn_14000e1ce(p,4)
+  #      + Factions.influence(player_force, MajorSea.of_town(town_id)) / support_influence_div   # /10（cdq; idiv 0xA）
+  effects:
+    success: [ Share.add(town_id, player_force, support_share_gain, reason: support) ]   # [确认] 份额 +1：0x1401653ad–0x1401653cd `fn_1400122f6(town, fn_1400054cf()=玩家势力, 1, 1, 1)`，与卖流行品同形；消息 0x341「噢，太棒了！只有%s才会如此！」+ 0x8f「%s的市场份额上涨了。」
+    else_if influence >= support_influence_b_min:                      # 1000
+             [ fn_140012a21 / fn_140004435(…,1) ]                     # 消息 0x342「嗯，是%s吗？它可能会畅销。」；字段 [未知]
+    else:    []                                                       # 仅音效 0x90
+  cost:   { days: support_days_cost }  # fn_14000b122(…, 1)，三支都走 1 天
+
+# 发放交易品：岗位 + 船上有货
 can_distribute(town_id, fleet_id) =
-    Characters.modifier.can_distribute_goods
-    AND Ships.hasCargo(fleet_id)     # 原版 fn_1401667b0 扫 asShipLoad
+    Ships.hasCargo(fleet_id)                                  # fn_1401667b0：fn_140007266(asShipLoad) != 0
+    AND post_holder(fleet, distribute_post) != null           # fn_140010cee(fleet, 0xA) != 0xEC
+distribute_post = missionary   # 原版岗位 10 = 传教士 [确认]（岗位表）；mesfile 0xc1fb「如果有传教士…在广场上还能散发交易品」
+
+# 发放动作 fn_140011e19（body 0x1401680b0）[确认]：确认后读货舱 nLoadTotal，<=0 退出；
+# 消息 0x2ee「嗯！如果是免费赠送就试试！」；fn_1400026d5(post_holder(fleet, missionary), 50, 1)（[推断] 给传教士加 50 经验）；
+# 具体扣货与效果在 fn_14000938b / fn_14000e79b / fn_14000c658，属 economy [未知]
 
 # 人群。触发率未还原
 on PlazaOpened:
     if rand() < plaza_crowd_chance:          # null = 原版未核实，禁止填假数
         emit PlazaCrowdGathered { town_id }
-        # 订阅方：minigames / narrative / 本系统 Adman 表现
+        # 订阅方：narrative / 本系统 Adman 表现；小游戏只能经叙事 Minigames.run
 
 # 查阅行情：本系统只做入口
 OpenPriceIntel(town_id):
     fee = Economy.priceIntelFee(from_town_id, to_town_id)   # 金额 [未知]，属经济
-    # 杀价若有，走 ModifierSet，不读六维
+    # 杀价若有，走 Modifiers.eval(key)，不读六维 / 技能值
     emit PriceIntelRequested { from_town_id, to_town_id, fee }
     # economy 扣费失败则本系统不打开选港
 ```
 
-招牌抽选、人群概率、行情费、寻求支持的成功效果，全部 `[未知]` 的保持 `null` / `unverified: true`。缺省禁止在代码里猜。
+`support_share_gain = 1`（原版立即数，`formulas/town.yaml`）。招牌抽选、人群概率、行情费、寻求支持结果 B 的效果，全部 `[未知]` 的保持 `null` / `unverified: true`。缺省禁止在代码里猜。
 
 ## 5. 耦合分析
 
@@ -311,15 +353,14 @@ OpenPriceIntel(town_id):
 town-life/plaza → world.town_id
 town-life/plaza → factions.Fashion.current / plazaShopkeeper / townDevelop
 town-life/plaza → economy.OpenPriceIntel / DistributeGoods / kind_rate（只读）
-town-life/plaza → characters.ModifierSet / person_id 89 是否在队（只读）
+town-life/plaza → fleets.post_holder(fleet, post_key) / characters.Skill(person, skill_key)（只读）
 town-life/plaza → ships.hasCargo（只读）
-town-life/plaza → town-life/minigames.Launch { source: plaza_crowd }
 town-life/plaza → narrative（阿科布事件、Adman.set）
 ```
 
 禁止：economy 改招牌表；factions 写 `CAdman` 布局；ui 存广告人状态；本系统调用 `quote()`。
 
-`CAdman` 配置落在 `config/world/adman.yaml`：它是世界存档块，不是设施菜单。广场怎么画它，落在 `config/town/plaza.yaml`。
+`CAdman` 配置与广场呈现都落在 `config/town/plaza.yaml`（`adman:` 段；状态仍是世界存档块，不是设施菜单）。
 
 ## 6. 解耦后的配置
 
@@ -331,7 +372,7 @@ version: 1
 
 clicks:
   - { click_id: 1, key: leave,          command: LeavePlaza }
-  - { click_id: 2, key: seek_support,   command: SeekSupport,   visible: can_seek_support }
+  - { click_id: 2, key: seek_support,   command: "Actions.run(town.plaza.seek_support)", visible: can_seek_support }
   - { click_id: 3, key: distribute,     command: DistributeGoods, visible: can_distribute }
   - { click_id: 4, key: shop_sign_0,    command: HearFashionIntel, slot: 0 }
   - { click_id: 5, key: shop_sign_1,    command: HearFashionIntel, slot: 1 }
@@ -343,7 +384,6 @@ clicks:
 signs:
   slot_min: 1
   slot_max: 5
-  empty_item_id: 106
   # 坐标属原版包像素，ui 可覆盖；逻辑只认 slot
   layout_vanilla:
     y: 433                    # 0x1B1
@@ -353,7 +393,7 @@ crowd:
   chance: null                # [未知]
   message_i18n: plaza.crowd.gather
   outcomes:                   # 原版集合未还原；空 = 只播文案
-    - { key: minigame, via: LaunchMinigame, source: plaza_crowd }
+    - { key: minigame, via: Minigames.run, source: plaza_crowd }    # 模组挂钩；原版无，原版小游戏只由剧本启动
     - { key: adman,    via: PresentAdman }
     - { key: fashion_npc, via: PresentPerson, person_id: 89 }   # 阿科布；不写死为唯一广告人
     - { key: talk,     via: PresentRumor }
@@ -376,32 +416,34 @@ price_intel:
   command: OpenPriceIntel
   fee: { owner: economy, key: price_intel_fee }
 
-seek_support:
-  effect: null                # 成功后改什么 [未知]
+seek_support:                 # D9 Action；guard / roll / cost 见 §4，数值在 formulas/town.yaml
+  action: town.plaza.seek_support
+  outcome_a: { msg: [mes.0x341, mes.0x8f], effect: { command: Share.add, delta: 1, reason: support } }   # [确认] fn_1400122f6(town, 玩家势力, 1,1,1)，份额 +1
+  outcome_b: { msg: [mes.0x342], effect: null }             # fn_140012a21 / fn_140004435；字段 [未知]
+
+distribute_goods:
+  action: town.plaza.distribute_goods
+  guard_post: vanilla:missionary
+  msg: mes.0x2ee
+  exp_to_holder: 50             # fn_1400026d5(p, 50, 1) [推断] 经验
 ```
 
-`config/world/adman.yaml` — 世界单例定义（状态仍进存档）。
+`config/town/plaza.yaml` 的 `adman:` 段 — 世界单例定义（状态仍进存档）。
 
 ```yaml
-schema: dk4.world.adman
-version: 1
+# plaza.yaml 续（adman 段内容，缩进省略）
 
 # 原版无 eAdman。内容包只声明哨兵与文案槽
 instance_count: 1
-town_empty_id: 98             # [推断] 与 town.none 同值；校验：不得指向 persons.98
-item_empty_id: 106
-active_if_item_not_empty: true
+person: vanilla:person_089    # 文案主语；原版写死在九句消息里
+active_if_item_not_null: true
+# 原版哨兵（+0x08=0x62 无港、+0x09=0x6A 空货）只在 ids/legacy_codec.yaml；运行时 town / item 为 null
 
-messages:                     # aeAdmanMessage 九槽。中文未对上，只存原版 id
-  - { index: 0, original_id: 0x343, i18n: plaza.adman.0 }
-  - { index: 1, original_id: 0x344, i18n: plaza.adman.1 }
-  - { index: 2, original_id: 0x345, i18n: plaza.adman.2 }
-  - { index: 3, original_id: 0x346, i18n: plaza.adman.3 }
-  - { index: 4, original_id: 0x347, i18n: plaza.adman.4 }
-  - { index: 5, original_id: 0x348, i18n: plaza.adman.5 }
-  - { index: 6, original_id: 0x371, i18n: plaza.adman.6 }
-  - { index: 7, original_id: 0x372, i18n: plaza.adman.7 }
-  - { index: 8, original_id: 0x373, i18n: plaza.adman.8 }
+messages:                     # aeAdmanMessage 九槽 = exe 消息号（2.5 已解出中文）
+  located:   [mes.0x343, mes.0x344, mes.0x345]   # 广告人在某港（%s）
+  wandering: [mes.0x346, mes.0x347, mes.0x348]   # 去向不明
+  here:      [mes.0x371, mes.0x372, mes.0x373]   # 刚在本港
+  # 三组内选哪句的规则在 fn_140168770 [未知]
 
 # 谁可以写这个单例。默认叙事 + 品牌发放，不写死 person 89
 writers:
@@ -413,8 +455,8 @@ writers:
 
 ```yaml
 adman:
-  town_id: 98                 # empty
-  item_id: 106                # empty
+  town: null                  # 原版 0x62
+  item: null                  # 原版 0x6A
 plaza_session:                # 可不进存档
   signs: []                   # 入港时按公式重建
 ```
@@ -423,14 +465,54 @@ plaza_session:                # 可不进存档
 
 ```yaml
 # 下列键并入既有 dk4.formulas.town
-shop_develop_thresholds: [2000, 3000, 5000, 7000]
-shop_count_min: 1
-shop_count_max: 5
-support_modifier_min: 100
-support_rate_hide_below: 100
-support_special_type_hide: 6
-plaza_crowd_chance: null      # 已有；仍未知
-price_intel_fee: null         # 金额属经济公式包；本键只作跨表声明
+shop_count:                     # 招牌数 = 1 + count(develop >= t)，夹 [min, max]
+  impl: vanilla.shop_count
+  params:
+    shop_count_min: 1
+    shop_count_max: 5
+  tables:
+    shop_develop_thresholds: [2000, 3000, 5000, 7000]
+  inputs: [develop]             # Towns.develop(town_id, commerce) [推断 商业轨]
+
+can_seek_support:               # fn_140166580；含 [未知] 布尔 fn_14001423b，控制流重
+  impl: vanilla.can_seek_support
+  params:
+    support_skill_min: 100
+    support_special_type: 6
+    support_rate_min: 100
+    support_other_max: 100
+  refs:
+    support_post: vanilla:purser          # 原版岗位 3
+    support_skill: vanilla:accounting     # 原版 eSkill 4
+
+seek_support_roll:              # rand(1000) < th
+  impl: expr
+  int_mode: vanilla_i32         # /10 为 cdq; idiv 0xA
+  params:
+    support_roll_den: 1000
+    support_rate_mul: 10
+    support_influence_div: 10   # 玩家在本港大海域的影响力 /10
+  inputs: [kind_value, accounting, influence]   # town_kind_value / purser 的 accounting / Factions.influence
+  rng_stream: town.plaza
+  expr: "rand(support_roll_den) < (kind_value - 100) * support_rate_mul + accounting + influence / support_influence_div"
+
+seek_support_effects:           # 结果 A / B / 空 与走日
+  impl: vanilla.seek_support_effects
+  params:
+    support_influence_b_min: 1000
+    support_share_gain: 1       # 结果 A 份额增量 [确认]（fn_1400122f6 第三参）
+    support_days_cost: 1
+
+plaza_crowd:
+  impl: null
+  unverified: true
+  params:
+    plaza_crowd_chance: null    # 已有；仍未知
+
+price_intel_fee:                # 金额属经济公式包；本键只作跨表声明
+  impl: null
+  unverified: true
+  params: { price_intel_fee: null }
 ```
 
 `config/caps.yaml` 片段：
@@ -438,7 +520,6 @@ price_intel_fee: null         # 金额属经济公式包；本键只作跨表声
 ```yaml
 plaza_shop_slots: 5
 adman_count: 1
-town_none_id: 98              # 与 NUM_TOWN+1 对齐的原版包哨兵；运行时读表长+1
 ```
 
 文案进 `config/ui/strings.zh-CN.yaml`，key 如 `plaza.crowd.gather`、`plaza.fashion.intel`、`plaza.price_intel.prompt`、`plaza.adman.0`。禁止把中文写进 `plaza.yaml`。
@@ -454,7 +535,7 @@ town_none_id: 98              # 与 NUM_TOWN+1 对齐的原版包哨兵；运行
 - 人群是否派发小游戏 / 广告人 / 阿科布
 - 广场听闻谣言种类增减
 - `aeAdmanMessage` 九句换成别的 key
-- 广告人空哨兵（须同步 `town.none` 与 `trading_item.empty`）
+- 广告人对应人物（`adman.person`）与九句消息 key
 - 是否显示「寻求支持」「发放交易品」
 
 改这些走边界，但仍不改贸易/战斗代码：
@@ -485,7 +566,7 @@ Plaza.rumors(town_id) -> [{ kind, args }]     # 含 schemes 的只读投影
 LeavePlaza { }
 HearFashionIntel { town_id, slot }
   → ui.play(Fashion.current + plaza.fashion.*)
-SeekSupport { town_id, fleet_id }            # 效果未还原；失败只关对话
+Actions.run(town.plaza.seek_support, { town_id, fleet_id })   # D9 Action；结果 A = Share.add +1 [确认]，B 效果未还原
 DistributeGoods { town_id, fleet_id, item_id } → economy
 OpenPriceIntel { from_town_id, to_town_id }  → economy
 Adman.set { town_id, item_id }               # narrative / 品牌
@@ -515,25 +596,56 @@ LaunchCrowd { town_id }                      # 内部再 emit
 | 项 | 观察 | 禁止写成 |
 | --- | --- | --- |
 | `CPlazaView` 点击 `0xA` | `fn_140003d37` | 「情报按钮」或「人群」 |
-| 点击 4–8 → 槽 0–4 | 5 槽 + `4<=id<9` | 确认 `signs[id]` 或确认 `id-4` |
+| 点击 4–8 → 槽 0–4 | 已确认 `id-4`（`0x1401685a2`） | `signs[id]` |
 | `+0x08 == town_id` | 初值 `0x62`、与 `town.none` 同形 | 确认字段名 `town` |
 | `+0x08` 与 `person_id` 98 | 同值 98 | 广告人就是欧洲男店主 |
-| `aeAdmanMessage[9]` → 中文 | 九个 dword | 临终句 / 宣战句 / 行情句 |
+| `aeAdmanMessage` 三组内选句规则 | 九句已按消息号表解出（2.5） | 按 mesfile 偏移取句 |
 | `fn_1401696e0` 抽选 | 读流行 2 槽与日历 | 确认公式 |
 | 发展度标量是商业轨 | 阈值 2000…7000 | 确认 `nCommerce` |
 | 人群触发率 | 文案有，cpp 无立即数 | `chance: 1.0` 或「每次入港」 |
-| 人群打开哪些小游戏 | `03` 已声明未知 | 写死 coin/water |
+| 人群打开哪些小游戏 | 原版只由剧本启动 | 写死 coin/water |
 | `fn_14000b53c` 的 `0x33/0x34` | 二分类型 | mesfile 下标 |
-| 「寻求支持」成功效果 | 只有可见性函数 | 投资 / 合约 / 加份额 |
-| `fn_140166580` 的 `0x1C`、类型 `6` | 立即数 | 确认 kind 名 |
+| 「寻求支持」结果 B | A 已确认份额 +1（`fn_1400122f6(town, 玩家势力, 1, 1, 1)`）；B `fn_140004435` 改什么 | 投资 / 合约 |
+| 支持判定里两个港口量 | `fn_1400095ed`、`fn_1400088f0`（第三个 `fn_1400023ab` 已知是玩家在本港大海域的影响力） | 确认是份额 / 友好 / 发展度 |
+| `fn_140166580` 的类型 `6` | 立即数；岗位 3 = 会计长、`eSkill` 4 = 会计术已钉死 | 确认名字 |
 | 行情费 | 文案「缴费一次」 | 任何金币默认值 |
-| 杀价是否会计长 | 通融句与酒馆/交易所同型 | 确认走 `sell_price_factor` |
+| 行情杀价是否会计长 | 通融句与酒馆/交易所同型 | 确认走某修正器 key |
 | 行情入口点击号 | 无独立 `vfunc_13` 分支 | `click_id: 10` |
 | 听闻谣言是否解锁行情 | 「得到了情报」 | 免缴费缓存 |
-| 阿科布写入 `CAdman` | 文案相关、无赋值 | `person_id: 89` 硬编码 |
+| 阿科布写入 `CAdman` | 九句消息主语都是阿科布；无赋值点 | 代码里 `person_id == 89` |
 | `CPlazaSylphid` 10 槽 | 状态 0–4 | 人群事件状态机 |
 | `CPlazaView+0xd8` 精灵 | 广告人在场时创建 | 确认类名 |
 | `CPriceInformationView` 11 行 | 循环 `>= 0xB` | 「11 种特产品」或「11 港」 |
 | `fn_14000e732(0x12c)` | 与人群文案偏移相同 | 确认就是播那句（其它 View 的 `+0x12c` 是布局常数） |
 
 `CAdman` 除 `+0x08/+0x09` 以外若有填充字节，一律 `unknown_bytes`。世界表 hex 与本对象无关：广告人不是 DLL 行。
+
+## 附：mesfile 块偏移 → exe 消息号
+
+按 D10，文案 key 用 exe 消息号，不用 mesfile 字节偏移。正文里 `0x` 开头、落在 mesfile 的数多为 `catalog/mesfile_sc.txt` 的 NUL 块偏移；一块常含多条消息。下表由脚本按 exe 消息号表（`.data 0x140683620` 37 块 `{first_id,size}` + `0x1406836c0` 块内偏移；`.data` 文件偏移 = VA − `0x140001600`）切句，再按正文引号句匹配生成。只给一条的是已匹配到句；给区间的需导出时按句再选。正文里已标「消息」的号（如 `0x58a`、`0xb2e`）本来就是消息号，不在此表。
+
+| 块偏移 | 消息号 | 首句 |
+| --- | --- | --- |
+| `0x12c` | `0x0` | 提督。好像广场上聚集了一群人。 |
+| `0x217` | `0x8` | 提督。好像广场上聚集了一群人。 |
+| `0x257` | `0xa` | 谢谢。今后还请多关照。 |
+| `0x27b` | `0xb–0xd`（块内多条，按句选） | 真没办法，再给你算公道点儿。 |
+| `0x2ef` | `0x13` | 查阅市场行情每看一次缴费一次。要看哪个城市的市场 |
+| `0x35f` | `0x16` | 金额方面能不能再给我们公道一些呢？ |
+| `0x383` | `0x18` | 金额方面能不能再帮帮忙。 |
+| `0x1143` | `0x8e` | 请选择零售店的招牌，就可以听取流行情报。 |
+| `0x3ad7` | `0x190` | 这传闻没有被相信。 |
+| `0x5f13` | `0x2da` | 我们是零售店。 |
+| `0x6fa3` | `0x330` | 真的吗？谢谢！啊，我要把新的流行趋势带到世界的所 |
+| `0x728b` | `0x343–0x346`（块内多条，按句选） | 阿科布啊，好像在%s。 |
+| `0x72ef` | `0x347`（块内多条，按句选） | 阿科布为了寻找传播新流行的城市，去流浪了。 |
+| `0x8653` | `0x3ed` | 这城市好像正在流行%s，也许是发大财的机会呢？ |
+| `0x86fb` | `0x3ef` | 喂，你听我说，有大新闻，听说%s正流行%s呢。 |
+| `0x8727` | `0x3f0` | 听说%s正流行%s，颇受好评。 |
+| `0x912f` | `0x44b` | 想在哪个城市散布谣言？ |
+| `0x919b` | `0x44f` | 在哪个城市散布谣言好呢？ |
+| `0xbadf` | `0x575–0x57a`（块内多条，按句选） | 请随意。 |
+| `0xc1fb` | `0x5c8`（块内多条，按句选） | 如果有传教士，能够消除水手的不满。在广场上还能散 |
+| `0x150af` | `0xb23` | 好像%s要在%s制造谣言，没关系，解决方法万无一 |
+| `0x16ce7` | `0xc22` | 要调查各港口的市场行情。 |
+| `0x16d33` | `0xc26` | 市场行情吗……嗯，不十分了解。 |

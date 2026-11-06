@@ -1,0 +1,13 @@
+schema: dk4.formulas.items
+version: 1
+# 换公式：整条 replace 成表达式；golden 是本模组自己的期望值
+item_bargain:
+  $op: replace
+  impl: expr
+  int_mode: { div: trunc, width: sat64 }
+  params: { max_discount_pct: 30, ability_ref: 500 }
+  refs: { skill: vanilla:accounting, post: vanilla:purser }
+  inputs: [price, ability]
+  expr: "price - price * max_discount_pct * clamp(ability, 0, ability_ref) / (100 * ability_ref)"
+  golden: [{price: 1000, ability: 500, out: 700}, {price: 1000, ability: 0, out: 1000}]
+  modifiers: trade.item_shop_price

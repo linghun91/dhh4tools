@@ -19,7 +19,7 @@
 - 特产品供给、投资垫板（`04`）
 - 份额槽谁拥有（`02-factions`；本系统只读 `player_share(target) > 0`）
 - 港口「已知」位谁置位（world / 入港；本系统只查询）
-- 人物六维与会计术原值（只读 `ModifierSet`；原版扣费函数**不读**技能）
+- 人物六维与会计术原值（只经修正器注册表按 key 读；原版扣费函数**不读**技能）
 - 航线是否已建立（`01-world/05-routes-navigation.md`）
 - 广场听流行、酒馆打听（`08-town-life`）
 - 文案、贴图、按钮像素（`12-ui-save`）
@@ -107,12 +107,24 @@ return fee
 | 调用点 | 做什么 | 标记 |
 | --- | --- | --- |
 | `0x1400eaa30` | 入港：`GetTown(当前港)` 后 `SetBit1(1)` | [确认] 访问过的港可查 |
-| `0x1402a8e10` | 开局：按主角/剧本分支对若干 `town_id` `SetBit1(1)` | [确认] 有 switch；哪条分支对应哪个提督 `[未知]` |
+| `0x1402a8e10` | 开局（`CWorld::vfunc_05`）：按开局参数 `+0xc`（0–6，跳表 `0x1402a9c6c`）对若干 `town_id` `SetBit1(1)` | [确认] 分支→港见下表 |
 | `0x1401b5610` | 另一处置位 | [确认] 有调用；触发条件 `[未知]` |
 
-开局函数里出现过的 `town_id` 并集（跨全部分支，不是一次全亮）：1, 2, 3, 5–12, 38–41, 48, 49, 52, 54–60, 65–68, 70, 85, 93。伦敦 0 不在这份并集里——未访问前默认不可点。
+开局揭示 `[确认]` 每条 case 内 `fn_140009fed(elem, town_id)` → `fn_14000f2e0` 的立即数：
 
-bit 0、bit 2 各有独立 setter（`fn_140265780` / `fn_1402659d0`）。行情点选只用 bit 1。`eTOWNACCESS` 符号存在，与这三位是否同一枚举 `[未知]`。
+| case | 港 |
+| --- | --- |
+| 0 | 11 里斯本、12 休达 |
+| 1 | 6 吕贝克、7 斯德哥尔摩、8 奥斯陆、9 哥本哈根、10 里加 |
+| 2 | 1 布里斯托尔、2 阿姆斯特丹、3 布鲁日、5 汉堡 |
+| 3 | 54 杭州、55 泉州、56 澳门、57 汉城、58 长崎、85 沂州 |
+| 4 | 48 文莱、49 马尼拉、52 德尔纳特、58 长崎、59 大阪、60 那霸、93 马纳多 |
+| 5 | 38 巴士拉、39 亚丁、40 马斯喀特、41 霍尔木兹 |
+| 6 | 65 委拉克鲁斯、66 梅里达、67 波托韦洛、68 马拉开波、70 特鲁希略 |
+
+`[推断]` case 号 = `eScenario`（= 主角 `ePerson` 0–6）。依据：7 路分支与 `NUM_SCENARIO=7` 同数；地理与七位提督出身逐一对上（拉斐尔/里斯本、赫德拉姆/波罗的海、丽璐/北海、华梅/中国、杏太郎/东亚、伍丁/阿拉伯、蒂雅/加勒比）。伦敦 0 不在任何一支——未访问前默认不可点。这张表属剧本内容包（`scenario.initial_known_towns`）。
+
+bit 0、bit 2 各有独立 setter（`fn_140265780` / `fn_1402659d0`）。行情点选只用 bit 1。bit 2 被投资路径读（`fn_14000f759`，见 `07` §4.3）。`eTOWNACCESS` 符号存在，与这三位是否同一枚举 `[未知]`。
 
 航线底图仍可能画出未置位的港。`[确认]` 的门是「点选」；未置位港是否画灰点属 UI，不进本规则。
 
@@ -154,16 +166,16 @@ destroy map
 
 `[确认]` `fn_140003918` 与 `fn_14027a310` 不调用 `fn_1400135cf` / `fn_14000e1ce`。会计术真正进交易所的是成交杀价 `fn_1400137b4`（`CTrade::CommitDeal` 调），与本篇无关。
 
-重构仍预留 `ModifierSet.price_intel_fee_factor`。原版包必须是恒等（不打折）。禁止在引擎里写死「会计越高越便宜」却标成原版确认。
+重构仍预留修正器 key `trade.price_intel_fee_pct`（缺省 100，原版包无贡献 = 恒等）。模组若要「会计越高越便宜」，由人物 / 装备向注册表登记贡献，不在本公式里读技能。禁止标成原版确认。
 
 ## 3. 实体与 ID
 
 | 实体 | 键 | 范围 / 哨兵 | 存哪 |
 | --- | --- | --- | --- |
 | 行情会话 | 不持久 | 一次交易所菜单 | 不存 |
-| 目标港 | `town_id` | 0–表长；未选 `town.none=98` | 命令参数 |
+| 目标港 | `town_id` | 表内 key；未选 = `null`（原版 98） | 命令参数 |
 | 已知可查 | `(town_id, flag known_for_intel)` | bit 1 | 存档 `CTown+0x10`（world 状态） |
-| 份额门 | `Factions.player_share(town_id)` | 0–100；>0 走低价 | 存档份额槽 |
+| 份额门 | `Share.of(town_id, player_force)` | 0–100；>0 走低价 | 存档份额槽 |
 | 金币报价板 | 纯查询 | 见 `02` | 不存 |
 | 本笔扣费 | `gold` | 原版包 0 / 50 / 200 | 不存公式 |
 
@@ -176,14 +188,13 @@ destroy map
 ### 4.1 点选映射
 
 ```
-town_none            = 98          # vanilla 0x62
-button_id_base       = 47          # vanilla 0x2F
+button_id_base       = 47          # vanilla 0x2F（UI 对照）
 button_id_end        = 144         # vanilla 0x90，开区间
 
 selected_town(button_id):
     if button_id_base <= button_id < button_id_end:
-        return button_id - button_id_base
-    return town_none
+        return town_by_index(button_id - button_id_base)
+    return null                      # 原版 0x62
 ```
 
 运行时用 `len(towns)` 代替 `button_id_end - button_id_base`；原版包 97 与 `0x90-0x2F` 相切。
@@ -195,26 +206,26 @@ visible(town_id) =
     World.town_flag(town_id, flag_known_for_intel)   # 原版 bit 1
 ```
 
-经济不写该位。入港 / 开局 / 其它发现路径由 world 发 `TownKnown { town_id }`。
+经济不写该位。入港 / 开局 / 其它发现路径由 world 发 `TownBecameKnown { town_id, force_id }`。
 
 ### 4.3 扣费 `price_intel_fee`
 
 ```
-share = Factions.player_share(town_id)               # 玩家势力在该港 3 槽中的份额；没有槽 = 0
+share = Share.of(town_id, player_force)              # 玩家势力在该港 3 槽中的份额；没有槽 = 0
 
 raw =
     fee_same_town          if town_id == current_town_id     # vanilla 0
     fee_has_share          if share > share_positive_min     # vanilla 50, min 0
     fee_unknown_relation   otherwise                         # vanilla 200
 
-fee = clamp(raw * Characters.modifier(price_intel_fee_factor),
+fee = clamp(raw * Modifiers.eval("trade.price_intel_fee_pct", { person: player }) / 100,
             gold_fee_min, gold_fee_max)
 ```
 
 原版包：
 
 ```
-price_intel_fee_factor = 1          # 会计术不参与
+trade.price_intel_fee_pct = 100     # 无贡献；会计术不参与
 share_positive_min     = 0          # 比较是 > 0
 gold_fee_min           = 0
 gold_fee_max           = gold_quote_max   # 与 02 同一金币夹值；本功能观察值远小于它
@@ -228,22 +239,22 @@ gold_fee_max           = gold_quote_max   # 与 02 同一金币夹值；本功�
 
 ```
 on confirm(town_id):
-    if town_id == town_none: close session
+    if town_id is null: close session
     if not visible(town_id): ignore click
-    town = World.town(town_id)
+    town = Towns.def(town_id)
     if town is None: ignore
     cost = price_intel_fee(current_town_id, town_id)
-    gold = Wallet.gold()                   # 与 03 CommitDeal 同一 fn_140012bfc / +0xc
+    gold = Force.gold(player_force)        # 与 03 CommitDeal 同一 fn_140012bfc / +0xc
     if gold < cost:
         emit PriceIntelRejected { town_id, reason: not_enough_gold }
         return
-    Wallet.add_gold(-cost)                 # 原版 fn_14001117b，无月账 expense 调用
+    Force.add_gold(player_force, -cost, price_intel)   # 原版 fn_14001117b，无月账 expense 调用
     emit PriceIntelViewed { from_town_id, town_id, gold: cost }
     ui.open PriceBoard {
         town_id,
         kinds: Economy.kind_rates(town_id),          # 19
         specials: Economy.specials(town_id),         # 最多 5
-        fashion: Factions.current_fashion(town_id),  # 2 格
+        fashion: Fashion.current(town_id),           # 2 格
         quotes: Economy.quote(town_id, item_id)      # 按种类筛
     }
 ```
@@ -271,9 +282,9 @@ town-life  OpenExchange { town_id }
 
 economy.price_intel
     → World.town_flag(known_for_intel)     只读
-    → Factions.player_share                只读
-    → Wallet.gold / add_gold               与 03 同一玩家金库；只发 delta
-    → Characters.modifier_set              只读 factor（原版 1）
+    → Share.of(town_id, player_force)      只读
+    → Force.gold / Force.add_gold          与 03 同一玩家金库；只发 delta
+    → Modifiers.eval(trade.price_intel_fee_pct)   只读（原版 100）
     → Economy.quote / kind_rate            同系统只读
     → ui 投影航路图与市价板
 ```
@@ -288,12 +299,11 @@ schema: dk4.economy.price_intel
 version: 1
 
 entry:
-  facility_key: exchange          # 不是独立设施
+  facility_key: vanilla:exchange  # 不是独立设施；与 08-town-life/01 设施 key 同名
   menu_index: 2                   # 原版 sMenuOption 下标；禁止代码写死 if (i==2)
   pay_per_view: true              # false 则一次会话只扣第一座（原版包必须 true）
 
 selection:
-  town_none: 98
   button_id_base: 47              # 0x2F；仅对照原版 UI。运行时按表长生成按钮
   map_marker_kind: 5              # vfunc_45 的类型号；UI 配置可改
 
@@ -301,7 +311,7 @@ visibility:
   flag: known_for_intel           # World.town_flag 的名字
   original_bit: 1                 # CTown+0x10；对照用，运行时读 flag 名
   reveal_on_visit: true           # 对应入港 SetBit1
-  # 开局揭示表属于 world 内容包（按主角），本文件不列 97 行
+  # 开局揭示表属于剧本包 scenario.initial_known_towns（§2.5），本文件不列
 
 ui:
   route_map_class: CMarketPriceRouteMap
@@ -315,17 +325,16 @@ ui:
 ```yaml
 # config/formulas/economy.yaml  （本篇新增段）
 price_intel:
-  fee_same_town: 0
-  fee_has_share: 50
-  fee_unknown_relation: 200
-  share_positive_min: 0           # 比较用 > 此值
-  gold_fee_min: 0
-  gold_fee_max: null              # 缺省用 quote.gold_max
-  accounting:
-    enabled: false                # 原版不打折。true 时乘 factor
-    skill_key: accounting         # eSkill 4；只给人物系统映射 ModifierSet
-    # price_intel_fee_factor 由人物系统输出，缺省 1
-    # 禁止在本表编造「(100-skill)/100」充原版
+  impl: vanilla.price_intel
+  modifiers: trade.price_intel_fee_pct   # 原 modifier_key；缺省 100；原版包无贡献
+  params:
+    fee_same_town: 0
+    fee_has_share: 50
+    fee_unknown_relation: 200
+    share_positive_min: 0         # 比较用 > 此值
+    gold_fee_min: 0
+    gold_fee_max: null            # 缺省用 quote.gold_max
+  # 禁止在本表编造「(100-skill)/100」充原版；要折扣由别的系统登记贡献
 ```
 
 ```yaml
@@ -349,8 +358,8 @@ price_intel.not_enough_gold: "钱不够，我这里不是慈善机构，没有�
 - `fee_same_town` / `fee_has_share` / `fee_unknown_relation`
 - `share_positive_min`（改成「份额 ≥ 10 才算熟客」只动本公式）
 - `pay_per_view`（一次会话通票）
-- `accounting.enabled` 与人物系统的 `price_intel_fee_factor` 曲线
-- 开局揭示哪些港（world 内容包）
+- 修正器 `trade.price_intel_fee_pct` 的贡献（原版无）
+- 开局揭示哪些港（剧本包 `initial_known_towns`）
 - 市价板展示哪些列（UI）
 
 把「熟客价」改成按距离，只换 `price_intel_fee` 纯函数，不要让航路图去算金币。
@@ -385,7 +394,7 @@ Economy.priceBoard(town_id) -> {
 ```
 OpenPriceIntel { town_id }           # town-life / 交易所菜单
 ConfirmPriceIntel { from, to }       # UI 选港后
-Wallet.add_gold { delta }            # 本系统发；与 Trade.commit 同一接收方
+Force.add_gold(force_id, delta, reason)   # factions 命令；本系统发；与 Trade.commit 同一接收方
 ```
 
 事件：
@@ -393,7 +402,7 @@ Wallet.add_gold { delta }            # 本系统发；与 Trade.commit 同一接
 ```
 PriceIntelViewed   { from_town_id, to_town_id, gold }
 PriceIntelRejected { to_town_id, reason }   # not_enough_gold | not_visible | no_town
-TownKnown          { town_id }              # world 置位后发；本系统刷新可见集
+TownBecameKnown    { town_id, force_id }    # world 置位后发（本系统订阅）；刷新可见集
 ```
 
 UI：`CMarketPriceRouteMap` 对悬停港调 `priceIntelFee` 画数字；确认后调 `confirmPriceIntel`，成功再向 `priceBoard` 要快照。
@@ -404,14 +413,14 @@ UI：`CMarketPriceRouteMap` 对悬停港调 `priceIntelFee` 画数字；确认�
 | --- | --- |
 | mes 下标 `0x13` / `0x38c` 与 `mesfile_sc.txt` 偏移的一一对应 | 只确认调用了 `fn_1400012da`；句文是推断 |
 | `0x2ef` 里「金额方面能不能再给我们想想办法」是否曾用于行情还价 | 扣费路径没有还价；当杀价套话直到找到独立 xref |
-| 开局 `0x1402a8e10` 的 jump table → 提督 / 剧本 | 有置位调用；分支与 `ePerson` 0–6 未钉 |
+| 开局 `0x1402a8e10` 的 jump table → 提督 / 剧本 | case→港已钉（§2.5 表）；case 号即 `eScenario` 为强推断（参数来自开局对象 `+0xc`，未追到写入点） |
 | `0x1401b5610` 置 bit 1 的玩法触发 | 有 call，条件未读完 |
 | bit 0 / bit 2 / `eTOWNACCESS` 与 bit 1 的关系 | 独立 setter；行情只用 bit 1 |
 | 未置位港在航路图上是否仍绘制 | 只确认点选被拒 |
 | `CPriceInformationView` 11 行 sprite 对应特产品还是种类分页 | 构造循环 `0xB`，填充函数未完整抬码 |
 | 市价板是否显示买入列、卖出列还是指数 | 走 `quote` 家族；列开关 `[未知]` |
 | 扣费是否写入月账 `expense` | `fn_14027a310` 只 `AddGold(-cost)` |
-| 会计术折扣曲线 | 原版无；YAML `enabled: false`。不要把攻略口说写进 default |
+| 会计术折扣曲线 | 原版无；修正器无贡献。不要把攻略口说写进 default |
 | 悬停 `vfunc_45` 两个城镇参数顺序与扣费是否始终一致 | 扣费路径已钉 `fee(target, current)`；绘制路径动态类型转换未逐项对完 |
 | `map_marker_kind == 5` 的枚举名 | 立即数 |
 | 钱包对象 `+0xc` 的类型名 | 与买卖共用，字段正式名未恢复 |

@@ -38,7 +38,7 @@ World1 五张表 VA 都比 World0 **+0x10**。来源：`World0_*.c` / `World1_*.
 
 ### 2.2 剧本怎么选包
 
-[确认] exe `fn_14000ff60`（body `0x1402a89a0`）：
+[确认] exe `fn_14000ff60`（body `0x1402a89a0`，23 字节，`cmp [rsp+0x10],4; jge`）：
 
 ```
 if (scenario_id >= 4) return 1;  /* World1.dll */
@@ -70,11 +70,11 @@ else                  return 0;  /* World0.dll */
 
 | 表 | 整行相同 | 动过的内容字段 | 确认未动 |
 | --- | ---: | --- | --- |
-| town 97 | 19 | 仅 `+0x46..+0x55` 共 16 字节（78 港） | 名、坐标、首都、region、b38/b39、**5 槽特产品**、`+0x56..+0x83` |
+| town 97 | 19 | 仅 `+0x46..+0x55` 共 16 字节（78 港） | 名、坐标、首都、`culture_id`、`remains_id`、`+0x27`、**5 槽特产品**、`+0x56..+0x83` |
 | person 235 | 138（named payload） | 8 人六维；81 人 `+0x18/+0x1C`；1 人姓名；36 人 `+0x26` 起 rest | 性别 `+0x26` 无差；0–6 姓名三字段无差 |
 | force 25 | 0 | 母港、金币、7×u16、`+0x1E`（1 条）、友好度（3 条） | 名、领袖、kind、`+0x04`、25 旗、`+0x51` 尾 |
 | fleet 69 | 12 | 57 条：船槽 45、`+0x16` 12、`town_id` 1、`+0x12` 1、`+0x14` 14 | `person_id`、`map_x/y`、`+0x06..07`、`+0x13`、`+0x15`、`+0x17` |
-| item 231 | 105（named payload） | 126 条 rest：`+0x0C/+0x10` 46、`+0x15` 36、`+0x18` 37、`+0x19` 97 | 名、`+0x08` 标价、`+0x14` kind、`+0x16/+0x17`、`+0x1C..` |
+| item 231 | 105（named payload） | 126 条 rest：`+0x0C/+0x10` 47、`+0x15` 36、`+0x18` 37、`+0x19` 97 | 名、`+0x08` 标价、`+0x14` kind、`+0x16/+0x17`、`+0x1C..` |
 
 整行相同的 19 港：[确认] 南特、吕贝克、奥斯陆、塞浦路斯、的黎波里、阿尔及尔、马德拉、拉斯帕马斯、绿角、锡兰、安曼、马尼拉、卡宴、马达加斯加、班贾尔马辛、望加锡、朋沙科拉、阿布哈兹、卡拉卡斯。
 
@@ -92,7 +92,7 @@ else                  return 0;  /* World0.dll */
 | ---: | --- | --- |
 | 202 | given=`长老`，family 空 | given=`中南美`，family=`长老` |
 
-六维两包都是全 0。C 抽出里 id 203+ 的 family 含未能按 GBK 读出的字节（`놣` / `늣`），两包相同，不另造名。来源：`World0_person.c` / `World1_person.c`、`world1_names.json`。
+六维两包都是全 0。[确认] C 抽出里 id 203–210 中 7 人的 family 显示为 `놣` / `늣` / `뎣`，那是 GBK 全角数字 `１` / `２` / `３`（`A3B1` / `A3B2` / `A3B3`）被按 UTF-16LE 误解码（`U+B1A3` 等字节序正好相同）。即「水手·１/２/３」「贵族女人·１/２」「年轻僧侣·１/２」，两包相同。来源：`World0_person.c` / `World1_person.c`、`world1_names.json`、`srcdata/source/PersonID.h` 203–210 注释；字节对照见 `15-catalogs`。
 
 #### 2.5.2 六维：恰好 8 人不同
 
@@ -267,13 +267,13 @@ id 0 拉斐尔、4 杏太郎、6 蒂雅这两格无差。id 31–38、95–97 �
 | 94 | 克丽雅·波福特 | +0x28: `08`→`03` | `0100080a1abd010000000000000000000000` | `0100030a1abd010000000000000000000000` |
 | 201 | 丹第 | +0x27: `0d`→`00` | `000d00021ab1050000000100000000000000` | `000000021ab1050000000100000000000000` |
 | 202 | 长老 | +0x27: `12`→`14`, +0x2B: `d4`→`66` | `0012000d1ad4010000000000000000000000` | `0014000d1a66010000000000000000000000` |
-| 203 | 水手·놣 | +0x2B: `a9`→`cf` | `0004000d1aa9010000000000000000000000` | `0004000d1acf010000000000000000000000` |
-| 204 | 水手·늣 | +0x2B: `7b`→`d0` | `0004000d1a7b010000000000000000000000` | `0004000d1ad0010000000000000000000000` |
-| 206 | 贵族女人·놣 | +0x2B: `68`→`cc` | `0100000d1a68010000000000000000000000` | `0100000d1acc010000000000000000000000` |
-| 207 | 贵族女人·늣 | +0x2B: `69`→`cd` | `0100000d1a69010000000000000000000000` | `0100000d1acd010000000000000000000000` |
+| 203 | 水手·１ | +0x2B: `a9`→`cf` | `0004000d1aa9010000000000000000000000` | `0004000d1acf010000000000000000000000` |
+| 204 | 水手·２ | +0x2B: `7b`→`d0` | `0004000d1a7b010000000000000000000000` | `0004000d1ad0010000000000000000000000` |
+| 206 | 贵族女人·１ | +0x2B: `68`→`cc` | `0100000d1a68010000000000000000000000` | `0100000d1acc010000000000000000000000` |
+| 207 | 贵族女人·２ | +0x2B: `69`→`cd` | `0100000d1a69010000000000000000000000` | `0100000d1acd010000000000000000000000` |
 | 208 | 吟游诗人·印度 | +0x2B: `d4`→`ce` | `000e000d1ad4010000000000000000000000` | `000e000d1ace010000000000000000000000` |
-| 209 | 年轻僧侣·놣 | +0x2B: `d4`→`d1` | `000a000d1ad4010000000000000000000000` | `000a000d1ad1010000000000000000000000` |
-| 210 | 年轻僧侣·늣 | +0x2B: `d4`→`d2` | `000a000d1ad4010000000000000000000000` | `000a000d1ad2010000000000000000000000` |
+| 209 | 年轻僧侣·１ | +0x2B: `d4`→`d1` | `000a000d1ad4010000000000000000000000` | `000a000d1ad1010000000000000000000000` |
+| 210 | 年轻僧侣·２ | +0x2B: `d4`→`d2` | `000a000d1ad4010000000000000000000000` | `000a000d1ad2010000000000000000000000` |
 | 211 | 村民·东南亚 | +0x2B: `7a`→`c7` | `0014000d1a7a010000000000000000000000` | `0014000d1ac7010000000000000000000000` |
 
 
@@ -283,15 +283,15 @@ id 0 拉斐尔、4 杏太郎、6 蒂雅这两格无差。id 31–38、95–97 �
 
 ### 2.6 港口与特产品
 
-布局见 [02-towns.md](../01-world/02-towns.md)：名 20 字节、`x1 y1 x2 y2`、`is_capital`、`region`、`b38/b39`、5×(u16 item, u16 supply_or_price, u16 grade) 始于 `+0x28`，空槽 `item_id=106`。
+布局见 [02-towns.md](../01-world/02-towns.md)：名 20 字节、`x1 y1 x2 y2`、`is_capital`、`+0x25 culture_id`（JSON 旧名 `region`）、`+0x26 remains_id`（JSON 旧名 `b38`，26 = 无）、`+0x27`（`b39`，恒 0）、5×6 字节特产品槽始于 `+0x28`：`+0` u8 `trading_item_id`、`+1` 填充、`+2` u16 上架门槛（商业发展度 ≥ 门槛才上架）、`+4` u8 供给基数（月初配额 = 基数 × (商业/50+100)/100）、`+5` 填充。空槽 `item_id=106`（原版哨兵，只在 `legacy_codec`）。JSON 旧键 `supply_or_price` / `grade` 是误标，本篇改用 `listing_threshold` / `supply_base`（与 `01-world/02-towns.md`、`04-economy/04` 一致）。
 
 #### 2.6.1 特产品：97 港 × 5 槽全部相同
 
-[确认] `raw[+0x28 .. +0x45]` 两包 97 条都相等。`item_id` / `supply_or_price` / `grade` 零差异。空槽两包都是 **45**。105 件交易品作为特产品的出现集合不变。
+[确认] `raw[+0x28 .. +0x45]` 两包 97 条都相等。`item_id` / `listing_threshold` / `supply_base` 零差异。空槽两包都是 **45**。105 件交易品作为特产品的出现集合不变。
 
 伦敦（两包共用）示例：
 
-| slot | item_id | 名 | supply_or_price | grade | empty |
+| slot | item_id | 名 | listing_threshold | supply_base | empty |
 | ---: | ---: | --- | ---: | ---: | --- |
 | 0 | 99 | 煤 | 4500 | 15 | false |
 | 1 | 47 | 羊毛 | 2000 | 25 | false |
@@ -302,7 +302,7 @@ id 0 拉斐尔、4 杏太郎、6 蒂雅这两格无差。id 31–38、95–97 �
 
 特产品定义仍按包落 `economy/special_products.yaml`：两份原版包内容碰巧相同，**不要**让 World1 缺表时回退读 World0。
 
-[确认] 名 20 字节、`x1/y1/x2/y2`、`is_capital`、`region`、`b38`、`b39` 97 港全相同。
+[确认] 名 20 字节、`x1/y1/x2/y2`、`is_capital`、`culture_id`、`remains_id`、`+0x27` 97 港全相同。
 
 #### 2.6.2 真正的港口差：只在 `+0x46..+0x55`
 
@@ -535,7 +535,7 @@ id 0 拉斐尔、4 杏太郎、6 蒂雅这两格无差。id 31–38、95–97 �
 
 | 偏移 | 宽 | 条数 | 观察 |
 | --- | --- | ---: | --- |
-| `+0x0C`、`+0x10` | s32 | 46 | 常为 −1；非 −1 时量级像原版坐标。World0 双 −1 共 146，World1 共 127；−1→有值 27 条，有值→−1 共 8 条，两边都有值但数字不同 12 条 |
+| `+0x0C`、`+0x10` | s32 | 47 | 常为 −1；非 −1 时量级像原版坐标。World0 双 −1 共 146，World1 共 127；−1→有值 27 条，有值→−1 共 8 条，两边都有值但数字不同 12 条 |
 | `+0x15` | u8 | 36 | 与坐标成对出现；8 在「双 −1」时最常见 |
 | `+0x18` | u8 | 37 | 取值不是合法 `town_id` 就是 `98` 空港哨兵 |
 | `+0x19` | u8 | 97 | 取值 0/1/8/10/11 |
@@ -732,14 +732,17 @@ source_va:
   person: 0x1800e3d80
   town:   0x1800e7b30
   force:  0x1800eb740
-tables:
-  world/towns.yaml:              { schema: dk4.world.towns, count: 97 }
-  economy/special_products.yaml: { schema: dk4.economy.special_products, count: 485 }  # 97×5
-  characters/persons.yaml:       { schema: dk4.characters.persons, count: 235 }
-  factions/forces.yaml:          { schema: dk4.factions.forces, count: 25 }
-  fleets/templates.yaml:         { schema: dk4.fleets.templates, count: 69 }
-  items/items.yaml:              { schema: dk4.items.items, count: 231 }
-
+tables:   # count 只是原版实例数，供提取校验；运行时按表长
+  # 一条 DLL 港口记录按所有权拆成多张初值表（DECISIONS D10；拆法见 01-world/02-towns.md）
+  world/towns.yaml:                  { schema: dk4.world.towns, count: 97 }          # 名、坐标、首都、culture、remains、develop_initial（特产品整行归 economy）
+  town/town_map_points.yaml:         { schema: dk4.town.town_map_points, count: 97 } # +0x48 地图点种类
+  factions/town_shares_initial.yaml: { schema: dk4.factions.town_shares, count: 97 } # +0x4c
+  economy/special_products.yaml:     { schema: dk4.economy.special_products, count: 485 }  # 97×5；门槛、基数、+0x60 运行态初值
+  characters/persons.yaml:           { schema: dk4.characters.persons, count: 235 }
+  factions/forces.yaml:              { schema: dk4.factions.forces, count: 25 }
+  fleets/templates.yaml:             { schema: dk4.fleets.templates, count: 69 }
+  items/items.yaml:                  { schema: dk4.items.items, count: 231 }
+---
 # packs/vanilla-world1/pack.yaml
 schema: dk4.pack.world
 version: 1
@@ -751,28 +754,24 @@ source_va:
   person: 0x1800e3d90
   town:   0x1800e7b40
   force:  0x1800eb750
-tables:  # 与上相同 schema / count
-  world/towns.yaml:              { schema: dk4.world.towns, count: 97 }
-  economy/special_products.yaml: { schema: dk4.economy.special_products, count: 485 }
-  characters/persons.yaml:       { schema: dk4.characters.persons, count: 235 }
-  factions/forces.yaml:          { schema: dk4.factions.forces, count: 25 }
-  fleets/templates.yaml:         { schema: dk4.fleets.templates, count: 69 }
-  items/items.yaml:              { schema: dk4.items.items, count: 231 }
+tables:  # 与上相同 schema / count；同一批 vanilla:* key，World1 不新建 key
+  # （同上八张表）
 ```
 
 ```yaml
 # config/narrative/scenarios.yaml  片段；完整见 01-scenarios.md
 schema: dk4.narrative.scenarios
-version: 1
-world_pack_split: 4          # 仅提取器用
+version: 2
+# world_pack_split: 4 只在 legacy_codec / 提取器里用，不进运行时
 scenarios:
-  - { id: 0, key: raphael,  world_pack: vanilla-world0, event_pack: EV0, protagonist_person_id: 0 }
-  - { id: 1, key: helmut,   world_pack: vanilla-world0, event_pack: EV1, protagonist_person_id: 1 }
-  - { id: 2, key: lulu,     world_pack: vanilla-world0, event_pack: EV2, protagonist_person_id: 2 }
-  - { id: 3, key: hua_mei,  world_pack: vanilla-world0, event_pack: EV3, protagonist_person_id: 3 }
-  - { id: 4, key: kyotaro,  world_pack: vanilla-world1, event_pack: EV4, protagonist_person_id: 4 }
-  - { id: 5, key: woodin,   world_pack: vanilla-world1, event_pack: EV5, protagonist_person_id: 5 }
-  - { id: 6, key: tia,      world_pack: vanilla-world1, event_pack: EV6, protagonist_person_id: 6 }
+  - { key: vanilla:raphael, vanilla_index: 0, world_pack: vanilla-world0, event_pack: vanilla-ev0, protagonist: vanilla:raphael_castro }
+  - { key: vanilla:helmut,  vanilla_index: 1, world_pack: vanilla-world0, event_pack: vanilla-ev1, protagonist: vanilla:helmut_bergstone }
+  - { key: vanilla:lulu,    vanilla_index: 2, world_pack: vanilla-world0, event_pack: vanilla-ev2, protagonist: vanilla:lulu_agate }
+  - { key: vanilla:hua_mei, vanilla_index: 3, world_pack: vanilla-world0, event_pack: vanilla-ev3, protagonist: vanilla:hua_mei_li }
+  - { key: vanilla:kyotaro, vanilla_index: 4, world_pack: vanilla-world1, event_pack: vanilla-ev4, protagonist: vanilla:kyotaro_saeki }
+  - { key: vanilla:woodin,  vanilla_index: 5, world_pack: vanilla-world1, event_pack: vanilla-ev5, protagonist: vanilla:abraham_woodin }
+  - { key: vanilla:tia,     vanilla_index: 6, world_pack: vanilla-world1, event_pack: vanilla-ev6, protagonist: vanilla:tia_chaska }
+# 剧本特例（flags / modifiers）见 01-scenarios.md 第 6 节
 ```
 
 人物行（World1 赫德拉姆）示例——六维不抄进剧本表：
@@ -783,8 +782,8 @@ schema: dk4.characters.persons
 version: 1
 pack: vanilla-world1
 persons:
-  - id: 1
-    key: hedram_bergstone
+  - key: vanilla:helmut_bergstone   # 原版 person 1；World1 用同一 key 覆盖数值
+    vanilla_index: 1
     given: 赫德拉姆
     family: 柏格斯通
     name3: 约阿其姆
@@ -806,18 +805,21 @@ persons:
 schema: dk4.economy.special_products
 version: 1
 pack: vanilla-world0
-empty_trading_item_id: 106
-slots_per_town: 5
+slots_per_town: 5               # 只是原版包实例数；运行时按本表长
+# 空槽不写行。原版空槽 106 只出现在导入/导出层 ids/legacy_codec.yaml（DECISIONS D1）
 products:
   # town_id 0 伦敦（两包相同；提取器从 DLL 生成，禁止手抄）
-  - { town_id: 0, slot: 0, trading_item_id: 99, supply_or_price: 4500, grade: 15 }
-  - { town_id: 0, slot: 1, trading_item_id: 47, supply_or_price: 2000, grade: 25 }
-  - { town_id: 0, slot: 2, trading_item_id: 51, supply_or_price: 2000, grade: 25 }
-  - { town_id: 0, slot: 3, trading_item_id: 90, supply_or_price: 4000, grade: 12 }
-  - { town_id: 0, slot: 4, trading_item_id: 91, supply_or_price: 3500, grade: 12 }
+  # 主键用命名空间 key（DECISIONS D1）；整数下标由加载器分配
+  - { town: vanilla:london, slot: 0, trading_item: vanilla:coal,            listing_threshold: 4500, supply_base: 15 }
+  - { town: vanilla:london, slot: 1, trading_item: vanilla:wool,            listing_threshold: 2000, supply_base: 25 }
+  - { town: vanilla:london, slot: 2, trading_item: vanilla:woolen_cloth,    listing_threshold: 2000, supply_base: 25 }
+  - { town: vanilla:london, slot: 3, trading_item: vanilla:musket,          listing_threshold: 4000, supply_base: 12 }
+  - { town: vanilla:london, slot: 4, trading_item: vanilla:cannon,          listing_threshold: 3500, supply_base: 12 }
 ```
 
 加载顺序：caps → formulas → **当前 `world_pack` 的六张表** → 事件包。外键只指向本包已加载的 ID。
+
+作者侧可选 `extends: vanilla-world0` + 按 `(table, id, field)` 的补丁文件（本篇第 2 节的差异表就是天然的 World1 补丁）。但**补丁只在打包期展开**：内容编译器输出完整六张表，运行时仍然只读完整包、不做跨包回退。这样模组作者只维护差异，引擎侧仍守「缺字段禁止回退」。
 
 ## 7. 独立旋钮
 
@@ -836,25 +838,25 @@ products:
 
 | 事件 | 载荷 | 谁听 |
 | --- | --- | --- |
-| `ScenarioSelected` | `scenario_id`, `world_pack`, `event_pack`, `person_id` | 世界加载、人物、势力、舰队、道具、事件解释器 |
+| `ScenarioSelected` | `scenario_id`, `world_pack`, `event_pack`, `protagonist_id` | 世界加载、人物、势力、舰队、道具、事件解释器 |
 | `WorldPackLoaded` | `world_pack`, `schema_version` | 存档会话（记下包 id，不存表原文） |
 
 查询（LIVE，取当前包；取不到则 no-op）：
 
 ```
 World.pack_id() -> world_pack
-World.town(town_id) -> TownDef
+Towns.def(town_id) -> TownDef
 Characters.get(person_id) -> PersonDef          # 含该包六维初值
-Factions.force(force_id) -> ForceDef
+Force.get(force_id) -> ForceDef
 Fleets.template(fleet_id) -> FleetTemplate
 Items.get(item_id) -> ItemDef
-Economy.special_slot(town_id, slot) -> SpecialProductDef
+Economy.specials(town_id) -> [SpecialProductDef]      # 单槽报价 Economy.special_offer(town_id, slot, force_id)
 ```
 
 命令：
 
 ```
-Narrative.select_scenario(scenario_id, seed)  # 内部选包，不把 scenario_id 传给经济
+Narrative.select_scenario(scenario_key, seed) # 内部选包，不把剧本 key 传给经济
 World.load_pack(world_pack)                   # 启动 / 读档
 ```
 
@@ -874,6 +876,6 @@ World.load_pack(world_pack)                   # 启动 / 读档
 | 舰队船槽 5 字节 | 45 条有差，值常 > `NUM_SHIP` | 整段 `unknown_bytes` |
 | 舰队 `+0x12/+0x14/+0x16` | 见第 2.8 节 | `+0x14` 的 57→99 不要当汉城 |
 | 道具 `+0x0C/+0x10/+0x15/+0x18/+0x19` | 126 条 | 坐标 / 发现港只标 [推断] |
-| id 203+ 姓名乱码 | 抽出 GBK 失败，两包相同 | 不要为 World1 另造译名 |
+| id 203–210 姓名「乱码」 | 已解：全角 `１/２/３` 被误解码（2.5.1） | 提取器按 GBK 重解；不要为 World1 另造译名 |
 
 提取器：确认字段进 YAML；本篇列出的残余进 `unknown_bytes`；指针丢弃。

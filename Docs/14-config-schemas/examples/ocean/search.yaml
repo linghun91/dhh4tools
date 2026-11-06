@@ -1,0 +1,23 @@
+schema: dk4.ocean.search
+version: 2
+# 片段。所属：Docs/06-ocean/02-search-encounters.md；F-OCN-06。地理矩形表与地区事件见所属文档。
+circle_vertices: 64
+check_person: { post_holder: null, fallback: admiral }   # 原版提督 fn_140004e17；可改 post: vanilla:lookout
+near_land_required: true
+event_roll_den: 4                    # rand(4)==0 → 地区事件
+supply_check:                        # rand(100) <= rich_mul*rich + skill/skill_div（idiv 0x32 @ 0x1401b5201）
+  roll_max: 100
+  rich_mul: 10
+  skill: vanilla:observation         # 旧稿 skill_id: 9 → key
+  skill_div: 50
+  water: { rand_add: 2, mul: 5 }     # (rand(rich+2)+1)*5*rooms
+  food:  { rand_add: 1, mul: 5 }
+  per_cabin_role: supply_room        # 旧稿 per_cabin_kind: 9 → role（Ships.cabin_count）
+  exp: [10, 5]
+fail: { fatigue: 3, exp: [15, 10] }
+rng_stream: ocean
+richness_rects:
+  default: 1
+  rows:
+    - { value: 4, lat: [-15, 15], lon: [-90, 30] }
+    # … 共 13 行，首个命中（fn_14000f218）

@@ -69,7 +69,7 @@ UI 向人物系统要的是 **ID + 资源键**，不拿 `CPerson*`，不拿 `Wor
 - `[确认]` `fn_1400083fa`（`0x14006fca0`，488 字节）把一个整数（调用点按 `ePerson` 用）映射成逻辑 sheet。来源：反汇编；甲板 `CDeckPersonnelView`、人物信息窗 `fn_1401cb7f0.cpp`、广场 `fn_14016cc40.cpp` 均把返回值送进 `fn_1400123ff`。
 - `[确认]` 规则（`ecx = person_id`）：
 
-  1. `id < 39`（0–38）：返回 `id`。唯一例外：`id == 5` 时对全局对象 `DAT_144296500+0x7c` 做 `fn_14000864d`（`< 4` 则返回 0，否则 1）。返回 0 时 sheet=**40**（`0x28`），否则 sheet=5。
+  1. `id < 39`（0–38）：返回 `id`。唯一例外：`id == 5` 时对全局对象 `DAT_144296500+0x7c` 做 `fn_14000864d`（`< 4` 则返回 0，否则 1）。返回 0 时 sheet=**40**（`0x28`），否则 sheet=5。`+0x7c` 是 `eScenario`、`fn_14000864d` 就是「World1 剧本（4–6）」判定 `[确认]`（`02-protagonists-scenarios.md` §2、`10-narrative/01-scenarios.md`）：World0 剧本里伍丁用 sheet 40，World1 剧本里用 sheet 5；World1 同时把他的 bustup 34 改成 194。这是**世界包内容差**，不是剧本特例。
   2. `39 ≤ id ≤ 214`：`(id-39)` 查 176 字节 jump table（`0x14006fdd8`）。10 个具名出口，其余走 default。
   3. jump table 具名出口（逻辑 sheet，不是文件号）：
 
@@ -120,7 +120,7 @@ UI 向人物系统要的是 **ID + 资源键**，不拿 `CPerson*`，不拿 `Wor
 
 - `[确认]` `fn_14011ea50(index)` 从 `Portrait.dk4` 取第 `index` 张。来源：`0x14011ea50`。
 - `[确认]` `CShowPortrait` 体积 0x268，构造写大量 HD 布局常数，`+0x15c` 初值 `0xffffffff`。合法时用 `+0x15c` 当 Portrait 下标；越界则下标保持 -1 再 load。来源：`CShowPortrait.cpp`、`fn_140115330.cpp`。
-- `[确认]` 选剧本：RTC `aeScenarioPortrait` 168 字节 = **42 个 int**（与 42 个 Chara 包同数），`0x47` 当跳过哨兵。来源：`fn_140008c51`。循环只扫 6 格再额外调一次。
+- `[确认]` 选剧本：RTC `aeScenarioPortrait` 168 字节 = 42 个 int，按 `10-narrative` 第二轮核对是 **7 剧本 × 6 格**的 int32 表（`0x47` = 空槽；循环上界 6），剧本 0 的首条目号是 8。来源：`fn_140008c51`。与 42 个 Chara 包同数只是巧合。
 - `[确认]` `CEventStill` 体积 0x30；`CEventStillManager` 体积 0x18。事件背景文件名在 `fn_140004106` 里写成 `EventBGEX.dk4`（多槽同名）。来源：`CEventStill.cpp`、`fn_1400c8390.cpp`。
 - **未找到** `person_id → Portrait 下标` 或 `person_id → EventBG 下标` 的表。84 张大肖像、8×50 张事件背景是**独立 ID 空间**。
 
@@ -130,11 +130,11 @@ UI 向人物系统要的是 **ID + 资源键**，不拿 `CPerson*`，不拿 `Wor
 
   | 世界偏移 | CPerson | 观察 |
   | --- | --- | --- |
-  | +0x26 | +0x08 | 0/1；World0 182 男 / 53 女 |
+  | +0x26 | +0x08 | 性别，1=女（`fn_140006b90`）；World0 182 男 / 53 女 |
   | +0x27 | +0x09 | 0–20（21 档） |
   | +0x28 | +0x0A | 0–8 |
-  | +0x29 | +0x0B | 若值==13，改成 `person_id % 12` |
-  | +0x2A | +0x0C | 0–21 与 26；186/235 人为 26；**会进存档**（`CPerson::vfunc_06/07` 第一个字节） |
+  | +0x29 | +0x0B | 星座 0–11；==13 时改成 `person_id % 12`（`CPerson::vfunc_11` 返回它，见 `01`） |
+  | +0x2A | +0x0C | 初始隶属 `force_id`，26 = 无所属；186/235 人为 26；**会进存档**（`CPerson::vfunc_06/07` 第一个字节） |
   | +0x2B | +0x28 | bustup，见上 |
   | +0x2C | +0x29 | 0–6（1 占 193/235） |
   | +0x30 | +0x2C（dword） | 世界 +0x30 起 4 字节 |
@@ -143,7 +143,7 @@ UI 向人物系统要的是 **ID + 资源键**，不拿 `CPerson*`，不拿 `Wor
 - `[确认]` `eSEX` / `NUM_SEX` / `INVALID_SEX` 只有符号。来源：`SexID.h`。
 - `[确认]` `eFACELOCATION` / `NUM_FACELOCATION` / `INVALID_FACELOCATION` 只有符号与 World DLL 断言。来源：`FacelocationID.h`、`asserts.txt`。
 - `[确认]` `CFaceView : CPushButton`，方法 5，构造几乎只写 vftable。来源：`CFaceView.cpp`。场景文档把它标成「肖像」控件。来源：`12-ui-save/01-scenes-flow.md`。
-- `[推断]` `NUM_SEX = 2`。依据：世界字节只有 0/1，exe 旁有「女」「男」字串（`01-person-model.md`）。
+- `[确认]` 性别 2 值：`fn_140006b90` 读 `CPerson+0x08`，`== 1` 取「女」（`0x14057fd70`）否则「男」（`0x14057fd74`）。`NUM_SEX` 头文件整数仍未写。
 - **`+0x2A` 不是行走图 sheet。** 0–38 的 sheet 等于 `person_id`，但他们的 `+0x2A` 并不等于 `person_id`（赫德拉姆 sheet=1 而 `+0x2A=2`，丽璐 sheet=2 而 `+0x2A=1`）。禁止把 `+0x2A` 写进 `sheet`。
 
 ### 动画状态（广场 / 甲板 / 状态卡同一套）
@@ -166,7 +166,7 @@ UI 向人物系统要的是 **ID + 资源键**，不拿 `CPerson*`，不拿 `Wor
 - `[确认]` `CHexagonSprite : CSolidSprite`，体积 0xf8。`vfunc_07` 向父控件要 `rcDest`，再 `fn_140013322`。来源：`CHexagonSprite.cpp`、`0x1401d75e0`。
 - `[确认]` `CPlayerStatusView` 体积 0x188。`vfunc_13` 分支 8/9/0xA 改名 / 中间名 / 姓 / 势力名 / 月日（RTC `cFirstName,cMiddleName,cFamilyName,cForceName,nMonth,nDay`）。布局含 `0x780×0x438`（1920×1080）。来源：`CPlayerStatusView.cpp`、`12-ui-save/01-scenes-flow.md`。
 - `[确认]` `CSkillView` / `CSkillValView` / `CPersonInfoButton` / `CPersonButton` 同属 person 功能目录。来源：`class_files.tsv`。
-- `[未知]` 六维雷达的半径公式（`fn_140013322` 未还原）：用哪一档 cap（成长帽 100 还是结算帽 500）、顶点顺序是否就是 `eAbility` 0–5。布局常数在 `CPersonInformationView` 里，公式不在构造函数。
+- `[未知]` 六维雷达的半径公式（`fn_140013322` 未还原）、顶点顺序是否就是 `eAbility` 0–5。注意上限：六维值域 0–100（`fn_1400062da`），500 是**技能值**上限（`03`），旧稿「结算帽 500」不适用于六维。画雷达的 `fn_14000dd69` 同函数里有 `szBufHexagon` 与 `eSkill` 循环，雷达画的是六维还是技能也未钉死。
 
 ### 枚举符号（计数未写出的）
 
@@ -189,7 +189,7 @@ UI 向人物系统要的是 **ID + 资源键**，不拿 `CPerson*`，不拿 `Wor
 | 动画状态 | 主组有效 0–23 | 失败回 0 | `anim.idle`（0） | 本文件 |
 | 脸位 | `NUM_FACELOCATION` 未知 | `INVALID_FACELOCATION=-1` | — | 本文件（占位） |
 | 性别 | 观察 2 | `INVALID_SEX=-1` | `male` / `female` | `persons.yaml` 已有 `sex` |
-| 同时出场 | `NUM_NOWPERSON=4` | — | — | caps |
+| 同时出场 | `NUM_NOWPERSON=4` | — | — | 本文件 `rules.now_person_slots`（语义 `[未知]`，不进 caps） |
 
 **三套不可混用的下标：**
 
@@ -210,18 +210,21 @@ still_id                EventBG*  叙事拥有
 
 ### F-PRES-sheet：`person_id` → 逻辑 sheet
 
-```
-sheet = lookup_sheet(person_id, woodin_alt_flag)
+运行时**只读人物行的 `sheet` 字段**。下面的 `lookup_sheet` 是原版规则，只在导入管线（`ids/legacy_codec` 一侧）对每个世界包跑一次生成该字段；引擎不按 `person_id` 区间（`< 39`、`< 98`）判断（D1）。
 
-lookup_sheet:
+```
+sheet = lookup_sheet(vanilla_index, is_world1)     # 导入期；结果 == sheet_unused 时写 null（D1）
+
+
+lookup_sheet:                          # person_id = vanilla_index
   if person_id < 0 or person_id >= person_count: return sheet_unused
-  if person_id == woodin_person_id and not woodin_alt_flag:
+  if person_id == woodin_person_id and not is_world1:
       return woodin_alt_sheet          # 原版 40
   if person_id < unique_sheet_count:   # 原版 39
       return person_id
   if person_id in sheet_exceptions:    # 原版 10 条，见 §2 表
       return sheet_exceptions[person_id]
-  if person_id < sailor_roster         # 原版 98
+  if person_id < packed_generic_below  # 原版 98（fn_1400083fa cmp 0x62；与存档无关）
       or person_id in packed_extra_ids:  # 原版 {192,199,200,201}
       return packed_generic_sheet      # 原版 48
   return sheet_unused                  # 原版 56
@@ -234,8 +237,9 @@ lookup_sheet:
 | `unique_sheet_count` | 39 |
 | `woodin_person_id` | 5 |
 | `woodin_alt_sheet` | 40 |
-| `woodin_alt_flag` | 全局 `+0x7c >= 4`；语义未还原 |
+| `woodin_alt_flag` | 全局 `+0x7c >= 4` = World1 剧本 `[确认]`；重构写进各世界包的人物行 `sheet`，不留运行时旗 |
 | `packed_generic_sheet` | 48 |
+| `packed_generic_below` | 98 |
 | `sheet_unused` | 56 |
 | `sheet_exceptions` | §2 十行 |
 
@@ -324,13 +328,14 @@ assets:
   evitem_file: EvItem.dk4
   evitem_texture_count: 39
 
-rules:
+rules:                          # 导入规则：只在导入管线生成 sheet 字段时用，运行时不读
   unique_sheet_count: 39
   sheet_slots: 55               # CCharacterManager 0x37
   sheet_unused: 56
   woodin_person_id: 5
   woodin_alt_sheet: 40
   packed_generic_sheet: 48
+  packed_generic_below: 98
   packed_extra_ids: [192, 199, 200, 201]
   packed_ranges:                # logical sheet → file_index
     - {lo: 0,  hi: 39, file: identity}
@@ -354,49 +359,40 @@ rules:
   anim_main_count: 24           # 主组状态 [0,24)
   anim_default: 0               # 构造 31 失败后的回落
   hexagon_full_radius: null     # fn_140013322 未还原；先占位
+  hexagon_value_cap_ref: $caps.ability_cap   # 六维上限 100；不写 500
+  now_person_slots: 4           # NUM_NOWPERSON；槽语义 [未知]
   hexagon_stat_order: [0, 1, 2, 3, 4, 5]  # eAbility
 
-# 实例。sheet 也可省略，由 rules 纯函数生成；写出是为了 World1 对照与模组覆盖。
+persons:
+# 实例。sheet 必填（运行时只读它；null = 无行走图）；原版包由导入管线跑 rules 生成，模组直接写。
 # face_loc / plaza_anim / event_still：原版没有 per-person 表，保持 null。
-- person_id: 0
-  key: raphael_castro
+- person: vanilla:raphael_castro          # 原版 0
   sheet: 0                      # → Chara00.DK4
   bustup: 0                     # bustup.dk4[0]；世界 +0x2B
   face_loc: null
   plaza_anim: 0                 # 回落后的默认状态，不是另一张图
   event_still: null
-- person_id: 5
-  key: woodin
-  sheet: 5                      # 旗未立时规则改成 40 → Chara39
+- person: vanilla:abraham_woodin          # 原版 5
+  sheet: 40                     # world0 包；world1 包同一行写 5（导入规则 fn_14000864d）
   bustup: 34
   face_loc: null
   plaza_anim: 0
   event_still: null
-- person_id: 98
-  key: plaza_shop_europe_m
-  sheet: 56                     # 无行走图
+- person: vanilla:plaza_shop_europe_m     # 原版 98
+  sheet: null                   # 无行走图（原版 56 = sheet_unused，只在导入规则）
   bustup: 107
   face_loc: null
   plaza_anim: null
   event_still: null
-- person_id: 215
-  key: mary_london              # 玛丽·伦敦；sheet 56=无行走图
-  sheet: 56
+- person: vanilla:mary_london             # 原版 215；玛丽·伦敦
+  sheet: null                   # 无行走图（原版 56）
   bustup: 66
   face_loc: null
   plaza_anim: null
   event_still: null
 ```
 
-`caps.yaml` 增补（原版包默认）：
-
-```yaml
-chara_file_count: 42
-character_sheet_slots: 55
-now_person: 4
-bustup_texture_count: 220
-portrait_texture_count: 84
-```
+这些计数不进 `caps.yaml`：`chara_file_count` / `bustup_texture_count` / `portrait_texture_count` / `sheet_slots` / `now_person_slots` 是资源实例计数，已在上面 `assets` / `rules`，运行时读表长（`13-algorithms/02`；caps 键表见 `00-overview/10-key-glossary.md` §7）。
 
 Plaza / EventBG / EvItem 的**使用**分别在 `ui/scenes.yaml` 与 `narrative/`，本表只防止人物系统去 fopen 那些包。
 
@@ -460,16 +456,16 @@ SpriteHidden { person_id }
 | `NUM_BUSTUP` 整数 | `[未知]` | 代码上界 211，文件 220 |
 | `NUM_FACELOCATION` | `[未知]` | 只有符号；`CFaceView` 未露出下标 |
 | 世界 `+0x2C` / `CPerson+0x29`（0–6） | `[未知]` | 7 档，像脸位或动画变体，**未**接到 `eFACELOCATION` |
-| 世界 `+0x2A` / `CPerson+0x0C` | `[未知]` | 进存档；**不是** sheet。World1 改了 4 人 |
-| 世界 `+0x27`–`+0x29` | `[未知]` | 见 `01-person-model.md`；`+0x29==13` 时改 `id%12` |
-| 伍丁 `DAT_144296500+0x7c` | `[未知]` | 何条件把 sheet 5 换成 40 |
+| 世界 `+0x2A` / `CPerson+0x0C` | 已解决 | 初始隶属 `force_id`（`01`）；**不是** sheet |
+| 世界 `+0x27` / `+0x28` | `[未知]` | 见 `01-person-model.md`（`+0x29` 已确认为星座） |
+| 伍丁 `DAT_144296500+0x7c` | 已解决 | `eScenario`；`< 4`（World0）→ sheet 40，否则 5 |
 | 信息窗 `sC8 == 0x42` | `[未知]` | 强制 sheet 53 |
 | Chara39 包内 10 人的纹理基址 | `[未知]` | `fn_140070630` switch 未完整还原 |
 | 六维雷达 `fn_140013322` | `[未知]` | 半径、角度、用哪一档 cap |
 | `person_id → Portrait 下标` | `[未知]` | 84 张与 235 人不是 1:1；选剧本表 42 int |
 | `person_id → event still` | `[未知]` | still 在 EventBG* / EV 脚本，不在人物表 |
 | `NUM_NOWPERSON=4` 的槽语义 | `[未知]` | 同时对话？同时广场？ |
-| `aeScenarioPortrait` 42 个具体值 | `[未知]` | 已确认长度与 `0x47` 哨兵，未对齐到 7 个提督 |
+| `aeScenarioPortrait` 42 个具体值 | 部分 | 7×6 结构与 `0x47` 空槽已确认（`10-narrative/05`）；各格值归叙事 / 画廊 |
 | Plaza.dk4 extra=0x0C 的宽高 | `[未知]` | 头字段读成 0xFFFFFF；用 span 分档即可 |
 | 空闲 sheet=56 却 `fn_14006f980` 返回文件 0 | `[推断]` | 若有人在 unused 时仍 load，会画出 Chara00。应在重构里对 `unused` 直接 no-op |
 

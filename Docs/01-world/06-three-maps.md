@@ -10,14 +10,14 @@
 
 - 三种 `map_kind`：`sailing`、`route`、`blackblock`
 - 每种的资源 key、帧下标、雾/壳参数、交互（点击、选港、是否跟船）
-- 两套（以上）坐标空间的标签与立刻数：原版定位单位、chip 网格环绕
-- `World.dat` 取样事实（尺寸、唯一字节、查找用 nibble）；单元格玩法语义仍标 unknown
+- 投影用的坐标空间标签与像素立刻数（壳 `MulDiv` 分母、UI 布局）
+- `World.dat` 取样事实（尺寸、统计）；网格 schema、`/16` 换算与格值分类归 `01-map-and-sea-areas.md` 的 `map.yaml`
 - 黑块与村落发现位之间的**接口形状**（揭开谓词、每村 2 个壳矩形）
 
 不管：
 
 - `World.dat` 作为世界包单例资源的 schema 头（`config/world/map.yaml`）
-- 25 海域多边形与 `aeSeaAreaTown` / `aeSeaAreaRoute` 成员表（`01-map-and-sea-areas.md`）
+- 七大海域与 `aeSeaAreaTown` / `aeSeaAreaRoute` 成员（factions 注册；`01-map-and-sea-areas.md`）
 - 航线边、已建立状态（`05-routes-navigation.md`）
 - 村落/遗迹实体与存档位的数据形状（`03-villages-discovery.md`）；本文件只订「位为假时画壳」
 - 航行 tick、风向、入港（`config/ocean/sailing.yaml`）
@@ -51,9 +51,9 @@
 - `[确认]` 航线相机是固定布局立刻数，写在 `CRouteMap` ctor：`+0x80=0x210`、`+0x84=0x19`、`+0x88=0x139`、`+0x8c=0x56`、`+0x90=0x15b`、`+0x94=0x54`、`+0x98=0x4d9`、`+0x9c=0x398`、`+0xa0=0x369`、`+0xa4=0x269`、`+0xa8=0x50e`、`+0xac=0x370`、`+0xb0/+0xb8=0x14c`、`+0xb4/+0xbc=0x2c`、`+0xc0=9`、`+0xc4=8`。属 UI，不进玩法公式。
 - `[确认]` 航线输入分发 `CRouteMap::vfunc_13` 按键码区间 `0..5` / `6..0xe` / `0xf..0x16` / `0x16..0x2f` / `0x2f..0x90` / `0x90..0xa8` / `0xa8..0xed` 跳不同 vfunc。航海点击是三块像素矩形 + 相对玩家向量。两套交互表。
 
-### 2.3 坐标空间：原版单位 vs chip 网格（禁止互转公式）
+### 2.3 坐标空间：原版单位 vs chip 网格
 
-两套空间都在仓库里，**换算未钉死**。禁止用伦敦 `x1=20080` 去除 8 或除 16 当成 `World.dat` 下标。
+两套空间都在仓库里。航行坐标 → chip 是**向 0 截断的 `/16`**（`[确认]`，见下；配置落点是 `map.yaml` 的 `coordinate.units_per_chip`）；航行坐标与港口 Locator 是否同一空间仍是 `[推断]`（强依据）。禁止 `/8`。
 
 **空间 A — 原版定位单位**（港口/村落 Locator）
 
@@ -63,17 +63,21 @@
 
 **空间 B — chip / `World.dat` 查找**
 
-- `[确认]` `formats.md`：`World.dat` **6250000** 字节 = **2500 × 2500** `uint8`。
+- `[确认]` `World.dat` 是 **2500 × 1250 的 `uint16` LE**（6250000 字节）。证据：唯一读取函数 `fn_14000ecdc`（body `0x140183740`）= `movzx eax, WORD PTR [buf + (y*0x9c4 + x)*2]`。`formats.md` 写的「2500×2500 `uint8`」是错的（需该文件修正）。
 - `[确认]` `fn_140006d93`（`fn_1401821c0.cpp`）`CFile` 打开 `"World.dat"`，把缓冲指针写入地图对象 `+0x8`（即 `COceanMapData`）。失败不装入。释放 `fn_14000d341`。
 - `[确认]` chip 行走 X 在 `0x9c4=2500` 处环绕（到 2500 归 0，到 −1 写成 `0x9c3=2499`）。Y 合法区间 `[0, 0x4e2)`，`0x4e2=1250`，越界直接放弃。来源：`fn_140007347` `fn_14000a9e8` `fn_1400140d3` `fn_1400140bf`。
-- `[确认]` 查找函数把结果当 **16 位**用（`s34 = ax`，`fn_14000ecdc` 后）。同一点先 `>> 4` 再查格（`fn_14000a9e8` `fn_140014a74`）。该「点」是否等于港口 `x1` **未证明**。
-- `[确认]` 取出的字节按 nibble 用：`& 0xf`、`>> 4`，并和 16 宽子格混算（`fn_14000c874` `fn_14000e354`）。随后 `fn_14000d2c9` / `fn_1400100ff` 用解码后的两个分量做可否通行。
+- `[确认]` 航行坐标 → chip：`fn_140014a74`（body `0x1401846b0`，RTC `ptWorldChip`）、`fn_14000a9e8`（body `0x140183d20`，RTC `ptChipNext,ptChipIn,ptWorldChip`）对点的 x、y 各做 `cdq; and edx,0xf; add; sar 4`，即**向 0 截断的 `/16`**；子格偏移 = `pos - chip*16`（0–15），`fn_14000a9e8` 再判 `< 5` / `>= 0xb`（`0x140183dfa` / `0x140183e5b`，y 同理）决定是否查邻格。`fn_140002a54`（RTC `posPlayerFleet,posChipBase,posChip,posCrust`）把玩家舰队点 `/0x10` 得 chip、`*0x10` 回到世界点。
+- `[推断]` 航行坐标与港口 Locator 同一空间：`2500*16 = 40000`、`1250*16 = 20000`，恰等于黑块 `MulDiv` 分母和经纬全幅（`07-calendar-and-coords.md`：40000 单位 = 360°，20000 = 180°）。伦敦 `(20080,4272)` → chip `(1255,267)`。未在同一函数里看到「舰队点 == 港口 x1」的比较，故不升格。
+- `[确认]` 单元格解码：`v` 是 16 位**贴图编号**，`col = v & 0xf`、`row = v >> 4`（`fn_14000e354` / `fn_140003738` / `fn_140011ec8` 经 `fn_14001214d` 组点）。两个谓词：
+  - `fn_14000d2c9`（`0x140184830`）：`col <= 1 && row <= 1`（即 `v ∈ {0,1,16,17}`）
+  - `fn_1400100ff`（`0x140183cb0`）：`2 <= row <= 12`，或 `row == 13 && (col <= 4 || col >= 13)`
+  - `fn_14000e354` = 两者皆假 → 真；`fn_140014a74` 遇真返回 0（不可进）。
 
-因此：内容表坐标继续标 `space: original`。chip 下标是航行碰撞/贴地用的另一套。实现不得写 `grid_x = town.x1 / 8`。
+因此：内容表坐标继续标 `space: original`。chip 下标由 `chip = trunc(pos / units_per_chip)`（原版 16）得到，参数在 `map.yaml`。实现不得写 `/8`。
 
 ### 2.4 `World.dat` 取样（本机 `Game/World.dat`）
 
-`[确认]` 文件 6250000 字节，MD5 `c917bfa037c410b81c31e403ba48ec8e`。按 `uint8` 读：
+`[确认]` 文件 6250000 字节，MD5 `c917bfa037c410b81c31e403ba48ec8e`。下面先给旧的 `uint8` 读法统计（**错误布局**，仅留作对照）：
 
 | 项 | 值 |
 | --- | --- |
@@ -86,9 +90,9 @@
 
 `0x00/0x01/0x02/0x08/0x09/0x10/0x11/0x18/0x19` 合计约 92%。这**不像**「陆地/浅海/深海/不可航」那种 4～8 档地形枚举。
 
-若把同一文件改读成 **2500×1250 的 uint16 LE**（字节数仍是 6250000，且与 chip Y=1250 同形）：unique **836**，最大 **917**，第 0 行是 `8,9,8,9,…`，末行 `24,25,24,25,…`。这能解释「查找返回 `ax`」和 Y 上限 1250，但 **formats.md 写的是 uint8 2500²**，不得把 uint16 布局写成确认。
+`[确认]` 正确读法 **2500×1250 的 uint16 LE**：unique **836**，最大 **917**（`row` 最大 57），第 0 行 `8,9,8,9,…`，末行 `24,25,24,25,…`。最高频 `0`、`16`、`1`、`17` 各约 46.7 万格（合计 59.8%，正是 `fn_14000d2c9` 集合）；`fn_1400100ff` 集合 1.7%；其余 38.5%。
 
-`[推断]` 原始 `uint8` 是打包字段（高低 4 位），通行判定发生在解码之后（`fn_1400100ff` 比较 2–12、13、≤4）。依据：查找路径与直方图，不是表里的枚举名。
+`[推断]` 三类分别是开阔海 / 沿岸可航带 / 陆地。依据：占比与 `fn_140014a74` 遇「两者皆假」即拒绝进入。谓词名原版未恢复。
 
 `C3DMapData` 体积 `0x450`，ctor 写 `+0x20=0x20`、`+0x24=4`、`+0x28=4`（`C3DMapData.cpp`）。这是 3D 细分立刻数，**不是** `World.dat` 宽高。进 ui，不进世界网格表。
 
@@ -158,9 +162,9 @@
 
 符号：
 
-- `[确认]` RTC `eBlindArea` 两处循环 `>= 2`（`num_from_rtc.json` 计数 2）。函数：`fn_1400018b1`（海域图，且 `*(obj+0x98)==7` 才画壳）、`fn_140011824`（小地图，无此开关）。
-- `[确认]` `eVILLAGEBLINDAREA` / `NUM_VILLAGEBLINDAREA` 头文件整数未恢复（`VillageblindareaID.h`，断言 `0 <= eVal < NUM_VILLAGEBLINDAREA`）。**不能**把 RTC 循环 2 写成 `NUM_VILLAGEBLINDAREA=2`。
-- `[确认]` `sCrustSize` `sCrustPoint` `posCrust` `rcCrustSeaArea` 与 `eVillage` 成对出现。`fn_140014a65` 在海域 id 变化时重算 `rcCrustSeaArea` 再调 `fn_14000c9b4`。
+- `[确认]` RTC `eBlindArea` 两处循环 `>= 2`。函数：`fn_1400018b1`（海域图，且 `*(obj+0x98)==7` 才画壳）、`fn_140011824`（小地图，无此开关）。
+- `[确认]` `eVILLAGEBLINDAREA` / `NUM_VILLAGEBLINDAREA` 头文件整数未恢复（`VillageblindareaID.h`，断言 `0 <= eVal < NUM_VILLAGEBLINDAREA`）。`[推断]` `NUM_VILLAGEBLINDAREA = 2`（证据类型：两处真实循环上界 + 静态村表每条恰 2 块；不是投票值），与 `01` / `03` 一致。
+- `[确认]` `sCrustSize` `sCrustPoint` `posCrust` `rcCrustSeaArea` 与 `eVillage` 成对出现。`fn_140014a65` 在海域图区号（七大海域）变化时重算 `rcCrustSeaArea` 再调 `fn_14000c9b4`。
 
 壳矩形存在村落对象上 `[确认]` `fn_140003553`（body `0x1402a01c0`）：
 
@@ -169,20 +173,20 @@
 # eBlindArea==1：村 +0x30 点、+0x38 尺寸；尺寸<=0 则失败
 ```
 
-`CVillage` 体积 `0x48`，Locator 在 `+8`（`CVillage.cpp`）。`fields.tsv` 只记了 `+0x8/+0x10`，**没覆盖**壳字段；以本函数为准。`fn_1400032c9` 按 `eVillage >= 0x18` 从 exe 静态表拷进运行时村对象（含这些偏移）。
+`CVillage` 体积 `0x48`，Locator 在 `+8`（`CVillage.cpp`）。`[确认]` 两块壳来自 exe 静态村表 `0x140687b40` 记录 `+0x10..+0x2c` 的 8 个 `int32`，`fn_1400032c9` 逐个 `imul 0x10` 后写入 `+0x20..+0x3c`：静态数据按 chip 单位编写、×16 进原版空间，这又一次支持「原版单位 = chip×16」。数值见 `09-remains-oldmaps-catalog.md` §2.3。`fields.tsv` 只记了 `+0x8/+0x10`，**没覆盖**壳字段；以本函数为准。`fn_1400032c9` 按 `eVillage >= 0x18` 从 exe 静态表拷进运行时村对象（含这些偏移）。
 
 **揭开** `[确认]` 控制流，字段名 `[推断]`：
 
 1. `fn_1400100e6(village)` 为真 → 画村落精灵，**跳过**该村全部 `eBlindArea`。
 2. 为假 → 对 `eBlindArea=0,1` 调 `fn_140003553`，成功则把点/尺寸投到屏幕并 `fn_14000d5e9` 画壳。
-3. `fn_1400100e6` → `fn_14000f286`：对某对象 `+0x8` 做位与，非 0 则返回 1。`CVillageElement` 存档只写 `+0x8`（`03-villages-discovery.md`）。
+3. `fn_1400100e6` → `fn_14000f286`：对 `CVillageElement+0x8`（u32，每村一位）做位与，非 0 则返回 1。存档只写这一个 u32（`03-villages-discovery.md`）。
 
 所以黑块揭开绑定**村落发现位**，不是 `World.dat` 格子被「探索过」。海上探索成功发 `VillageDiscovered` 之后，world 翻位，下一帧航线图不再盖壳。
 
 未证实的揭开路径（不得写进公式当默认真）：
 
 - 持有地图道具 155–173：items 外键未还原（`03-villages-discovery.md`）
-- 驶入某 chip / 访问海域 `SEAAREA_BITS`：位宽与「已航行」语义 `[未知]`（`01-sailing.md`）
+- 驶入某 chip / `SEAAREA_BITS`（七大海域位集 `[推断]`，读写方未找到）：「已航行」语义 `[未知]`（`01-sailing.md`）
 - 打开 `OldMap.dk4`：那是古地图 UI，不是黑块表
 - 航海 `fogcolor`：大气雾，不读发现位
 
@@ -193,48 +197,55 @@
 | 实体 | ID | 原版计数 | 哨兵 | 内容在哪 |
 | --- | --- | --- | --- | --- |
 | 地图种类 | `map_kind` | 3（重构） | — | 本表 |
-| 世界网格 | 单例文件 | 2500×2500 uint8 或 chip 2500×1250 | — | `map.yaml` + 本表引用 |
-| 港口 | `town_id` | 97 | 选港 UI 98 | `towns.yaml` |
-| 航线 | `route_id` | 200 | 导航器 201 | `routes.yaml` |
-| 村落 | `village_id` | 24 | 25 | `villages.yaml` |
-| 盲区槽 | `blind_area_id` | RTC 每村 2；`NUM_VILLAGEBLINDAREA` 未知 | −1 | 本表 + 村行 |
-| 海域 | `sea_area_id` | 25 | −1 | `sea_areas.yaml` |
+| 世界网格 | 单例文件 | chip 2500×1250，`uint16` 贴图编号 | — | `map.yaml` + 本表引用 |
+| 港口 | `town_id` | 97 | `null`（原版选港 UI 98，legacy） | `towns.yaml` |
+| 航线 | `route_id` | 200 | `null`（原版导航器 201，legacy） | `routes.yaml` |
+| 村落 | `village_id` | 24 | `null`（原版 25，legacy） | `villages.yaml` |
+| 盲区槽 | 村行 `blind_areas[]` 下标 | 每村 2 `[推断]`（循环上界） | 列表短即可 | `villages.yaml` |
+| 七大海域 | `major_sea_id` | 7（区号 7 = 全世界视图） | — | factions |
 | 势力色（标记帧） | `force_id` 色槽 | 8 | — | factions；本表只引帧公式 |
-| 港口种类标记 | `town_kind_id` | 循环 2 | — | `[未知]` 枚举名 |
+| 港口种类标记 | 由 `is_capital` 派生 | 2（0 非首都 / 1 首都，`fn_14000c71b`） | — | `towns.yaml` |
 
 运行时读表长。原版包：航线图标记帧按上表，模组可加帧但不能假设 `RouteMkr` 只有 15 张。
 
 ## 4. 算法 / 公式
 
-全部立刻数进配置。**没有** `original → chip` 的实现公式。
+全部立刻数进配置。网格与换算参数只在 `map.yaml` 定义一次（`grid.*`、`coordinate.units_per_chip`、`grid.cell_classes`、`grid.sub_cell_probe`），本表引用，不复制：
 
 ```
-chip_wrap_x          = 2500    # 0x9c4
-chip_extent_y        = 1250    # 0x4e2，半开区间
-world_dat_width      = 2500    # formats.md uint8 视图
-world_dat_height     = 2500
-nibble_mask          = 15      # 查找用，不是地形枚举
-chip_shift           = 4       # 查找路径里的 >>4；禁止套到 town.x1
-original_span_x      = 40000   # 0x9c40，壳 MulDiv 分母
+# map.yaml（01 拥有）
+grid.width / height        = 2500 / 1250   # 0x9c4 / 0x4e2；X 环绕，Y 半开
+coordinate.units_per_chip  = 16            # 航行坐标 / 16（向 0 截断）→ chip；子格 0..15
+grid.cell_decode           = col = v & 15, row = v >> 4
+grid.sub_cell_probe        = { lo: 5, hi: 11 }   # 子格 < 5 或 >= 11 才看邻格
+# maps.yaml（本篇拥有）
+original_span_x      = 40000   # 0x9c40，壳 MulDiv 分母（加载期校验 == map.coordinate.world_units）
 original_span_y      = 20000   # 0x4e20
-blind_slots_per_village = 2    # eBlindArea 循环；不是 NUM_VILLAGEBLINDAREA
-town_none            = 98
-village_none         = 25
-route_none           = 201
 fog_mask_mode1       = 0x40
 fog_mask_mode3       = 0x20
 ```
 
-chip 环绕（航行碰撞，ocean 实现、参数在本表/ocean 公式皆可引用一次）：
+chip 环绕与解码（航行碰撞由 ocean 调 `Map.*`；实现只有一份，在 world）：
 
 ```
+def chip_of(pos):                      # fn_140014a74 / fn_14000a9e8
+    return (trunc_div(pos.x, map.units_per_chip), trunc_div(pos.y, map.units_per_chip))
+
+def cell(x, y) -> u16:                 # fn_14000ecdc
+    return world_dat[y * map.grid.width + x]
+
+def tile_class(v):                     # 谓词集合在 map.yaml grid.cell_classes，不写死
+    if matches(v, cell_classes.open_sea): return open_sea   # fn_14000d2c9
+    if matches(v, cell_classes.shore):    return shore      # fn_1400100ff
+    return land                                             # fn_14000e354 为真
+
 def wrap_chip_x(x):
-    if x == chip_wrap_x: return 0
-    if x == -1: return chip_wrap_x - 1
+    if x == map.grid.width: return 0
+    if x == -1: return map.grid.width - 1
     return x
 
 def chip_in_bounds(x, y):
-    return 0 <= y < chip_extent_y
+    return 0 <= y < map.grid.height
 ```
 
 航海雾调色（`CMapSolidSprite`，参数化；模式枚举名未恢复，用原版返回值 0/1/3）：
@@ -254,7 +265,7 @@ fog_pack_hi: 0xb2
 ```
 def village_discovered(village_id) -> bool:
     # fn_1400100e6 / fn_14000f286：对象+0x8 位与
-    return World.village_discovered(village_id)
+    return Village.discovered(village_id)
 
 def blackblock_rects(village_id, map_pixel_size):
     if village_discovered(village_id):
@@ -273,9 +284,10 @@ def blackblock_rects(village_id, map_pixel_size):
 通行（仅 sailing 读网格；结果给 ocean，不在本系统改航速）：
 
 ```
-# fn_14000e354：解码 nibble 后
-#   fn_14000d2c9 真 或 fn_1400100ff 真 → 不可走
-# 谓词字段名未恢复，配置留 passable_decode: unknown
+# fn_14000e354：解码 (col,row) 后
+#   fn_14000d2c9 真 或 fn_1400100ff 真 → e354 返回 0；两者皆假 → 1
+#   fn_140014a74：e354 为 1 → 不可进（返回 0）
+# 见上 tile_class（open_sea / shore / land 三名与 01 一致；原版谓词名未恢复）
 ```
 
 ## 5. 耦合分析
@@ -295,9 +307,9 @@ def blackblock_rects(village_id, map_pixel_size):
 
 | 数据 | 系统 |
 | --- | --- |
-| 网格文件、原版坐标、海域成员 | world `map.yaml` / `sea_areas.yaml` / `towns.yaml` |
+| 网格文件、原版坐标、`/16`、格值分类 | world `map.yaml` / `towns.yaml`；七大海域成员归 factions |
 | 三种投影的 art、雾、交互 | world `maps.yaml`（本文件） |
-| 发现位 | world 存档（村/遗迹/或许海域 bits） |
+| 发现位 | world 存档（村 u32 位、遗迹 u8 位；`SEAAREA_BITS` 未证） |
 | 跟船移动、碰撞读格 | ocean 查 `Map.cell` + `Maps.kind("sailing")` |
 | 选港、无航线句子 | ui；边是否存在问 `Routes` |
 | 市价钉 | economy 查询 + ui 用 `kind: route` 的相机 |
@@ -309,37 +321,21 @@ def blackblock_rects(village_id, map_pixel_size):
 
 ```yaml
 schema: dk4.world.maps
-version: 1
-pack: vanilla-world0
+version: 2
+pack: vanilla-core
 
-# 坐标只打标签。禁止在本文件写 original→chip 公式。
+# 网格、/16 换算、格值分类只在 map.yaml（01）。本文件只引用并给投影用的比例尺。
 coordinate_spaces:
   original:
     note: "港口/村落 Locator；伦敦示例不是网格下标"
-    example: { town_id: 0, x: 20080, y: 4272 }
-    span_x: 40000          # MulDiv 分母 0x9c40
+    example: { town: vanilla:london, x: 20080, y: 4272 }
+    span_x: 40000          # MulDiv 分母 0x9c40；加载期校验 == map.coordinate.world_units.width
     span_y: 20000          # 0x4e20
-  chip:
-    wrap_x: 2500           # 0x9c4
-    extent_y: 1250         # 0x4e2 半开
-    lookup_shift: 4        # 查找路径 >>4；不得套用到 town.x1
-    nibble_mask: 15
-  world_dat:
-    file: packs/vanilla-world0/World.dat
-    width: 2500
-    height: 2500
-    cell: uint8
-    bytes: 6250000
-    unique_uint8: 256
-    cell_meanings: unknown
-    alt_uint16_2500x1250: unverified   # 同文件另一读法，禁止当确认布局
+  chip: { ref: map.grid }  # 2500×1250，X 环绕；units_per_chip 见 map.coordinate
   ui_pixel:
     note: "各 kind.layout 立刻数；改分辨率只改这里"
 
-sentinels:
-  town_none: 98
-  village_none: 25
-  route_none: 201
+# 原版哨兵 98 / 25 / 201 不进本表，只在 config/ids/legacy_codec.yaml
 
 kinds:
   - kind: sailing
@@ -347,7 +343,7 @@ kinds:
     name_i18n: { zh-CN: 航海地图 }
     camera: follow_fleet
     view_base: rect_view          # 原版 CMapView : CRectView
-    grid: world_dat               # 只 sailing 读网格
+    grid: map.grid                # 只 sailing 读网格（01 map.yaml）
     art:
       tiles: { file: Chip.DK4, frames: [1, 2, 3, 4, 5], g1t_count_inferred: 6 }
       land_surface: CLandTextureSurface
@@ -384,7 +380,7 @@ kinds:
       route_id: false             # 原版航海不画航线折线 [推断]
       village_id: true
       blackblock: unknown         # 反编译未见 eBlindArea
-    passable_decode: unknown
+    passable_decode: map.grid.cell_classes
 
   - kind: route
     name: 航线地图
@@ -462,8 +458,7 @@ kinds:
         map_item: unknown         # items 155–173 外键未还原
         old_map_window: false     # 那是另一套 UI
     blind:
-      slots_per_village: 2
-      num_village_blind_area: unknown
+      slots_per_village: 2        # 原版；[推断] NUM_VILLAGEBLINDAREA=2（循环上界）
       village_fields:             # CVillage 体积 0x48
         - { id: 0, point_off: 0x20, size_off: 0x28 }
         - { id: 1, point_off: 0x30, size_off: 0x38 }
@@ -479,7 +474,7 @@ kinds:
 
 # 市价不是 kind。UI 在 route 相机上叠 Economy.quote(town_id)。
 projections:
-  - key: market_price
+  - key: vanilla:market_price
     uses_kind: route
     class_original: CMarketPriceRouteMap
     marker_frame: 12
@@ -487,9 +482,9 @@ projections:
     owns_prices: false
 ```
 
-`config/world/map.yaml` 继续只描述网格文件（见 `01-map-and-sea-areas.md`）。`maps.yaml` 用 `grid: world_dat` 引用，不复制一份 2500² 表。
+`config/world/map.yaml` 是网格文件、`/16` 换算与格值分类的唯一定义处（见 `01-map-and-sea-areas.md`）。`maps.yaml` 用 `grid: map.grid` 引用，不复制一份 2500×1250 表或谓词。
 
-`config/world/villages.yaml` 已有 `blind_area_id` 槽；提取器按 `+0x20..+0x38` 填 `blind_areas: [{point, size}, …]`，坐标 `space: original`。
+`config/world/villages.yaml`（schema 见 `03`）的 `blind_areas: [{x,y,w,h}, …]` 已是原版单位（exe 源 chip 单位 ×16），本篇直接投影。
 
 `config/ui/scenes.yaml` 只登记场景边：`ocean.sailing` 订 `Maps.kind("sailing")`，`ocean.sea_area` 订 `kind("route")+kind("blackblock")`。禁止 Scene 直接 new `CRouteMap`。
 
@@ -501,7 +496,7 @@ projections:
 - 航海雾调色板、mask 标志、是否启用大气雾
 - 黑块揭开谓词（只发现村 / 将来可加海域 bits / 道具）；默认原版包 = 仅 `village_discovered`
 - 每村盲区槽数（原版 2；模组可加）
-- `original_span_*`、chip 环绕、`World.dat` 宽高（引擎硬顶另写 `engine_limits.yaml`）
+- `original_span_*`（本表）；`units_per_chip`、chip 环绕、`World.dat` 宽高、格值三类集合在 `map.yaml`（引擎硬顶另写 `engine_limits.yaml`）
 - 航线图 ctor 布局立刻数、小地图像素框
 - `RouteMkr` 帧与 `town_kind` / `force_color` 的映射
 - 航海 HUD 点击矩形
@@ -517,8 +512,7 @@ projections:
 Maps.kind(kind) -> MapKindDef
 Maps.art(kind) -> { files, frames, fog }
 Maps.layout(kind) -> pixel table | follow_fleet
-Map.cell_raw(grid_x, grid_y) -> u8 | u16 | None     # 换算未知时拒绝 original 输入
-Map.chip_wrap(x, y) -> (x', y') | out_of_range
+# Map.chip_of / Map.cell / Map.cell_raw / Map.tile_class 见 01 §8（唯一定义）；类名 open_sea | shore | land
 Blackblock.rects(village_id, kind_pixel_size) -> [rect]
 Blackblock.visible_crust(village_id) -> bool        # not discovered && size>0
 ```
@@ -526,14 +520,14 @@ Blackblock.visible_crust(village_id) -> bool        # not discovered && size>0
 命令：
 
 ```
-World.mark_village_discovered(village_id)   # 已在 03；本系统只订阅
+World.mark_village_discovered(village_id, via, fleet_id?, item_id?)   # 已在 03；本系统只订阅 VillageDiscovered
 Maps.reload_pack(pack_id)                   # 换 World.dat / 贴图 key
 ```
 
 事件：
 
 ```
-MapKindOpened { kind, sea_area_id | null }
+MapKindOpened { kind, major_sea_id | null }   # 海域图区号；null = 全世界
 BlackblockCleared { village_id }            # 发现位翻转后 UI 重画
 FogModeChanged { sailing_mode }             # 0/1/3，语义未知
 # 不发 EnteredSeaArea — 那是 Ocean 的
@@ -545,17 +539,16 @@ Ocean 问 `Map.cell` 做碰撞；UI 问 `Maps.kind` 做绘制。Economy 只向 r
 
 | 项 | 来源 | 等级 |
 | --- | --- | --- |
-| `World.dat` 单元格语义 | 6250000 字节，256 种 uint8 | `[未知]`；不像小地形枚举 |
-| uint8 2500² vs uint16 2500×1250 | 同文件两种读法 | uint16 为 `[推断]`，禁止当确认 |
-| 港口 `x1=20080` → chip 下标 | 查找有 `>>4`，调用点未证是 `x1` | `[未知]`，禁止写公式 |
-| `fn_14000d2c9` / `fn_1400100ff` 字段名 | 解码后 2–12、13、≤4 | `[未知]` 通行种类 |
-| `NUM_VILLAGEBLINDAREA` | 头文件 | `[未知]`；RTC 每村 2 槽不能当此宏 |
-| 发现位精确存档偏移 | `+0x8` 位与 | 位宽/哪一对象 `[未知]` |
+| `World.dat` 布局 | `fn_14000ecdc` 读 WORD | `[确认]` 2500×1250 uint16；`formats.md` 需改 |
+| 单元格三类的设计名 | 59.8% / 1.7% / 38.5% | `[推断]` 海 / 沿岸 / 陆 |
+| 港口 `x1=20080` → chip 下标 | 航行点 trunc `/16`；全幅 40000×20000 吻合 | `[推断]` 同空间 |
+| `NUM_VILLAGEBLINDAREA` | 头文件无整数 | `[推断]` 2（循环上界 + 静态表） |
+| 村落发现位存档 | `CVillageElement+0x8` u32 | `[确认]`（03） |
 | 访问海域 / 走格子 / 古地图是否揭壳 | `SEAAREA_BITS` `OldMap.dk4` | `[未知]` |
 | sailing 是否叠黑块 | 无 `eBlindArea` | `[未知]`，默认否 |
 | `Route.dk4` | 非 G1T，无加载字符串 | `[未知]` |
 | `CSeaAreaScene +0x118` 0/1/2 | 模式分支 | `[未知]` |
-| `eTownKind` 两个名字 | 循环 `>= 2` | `[未知]` |
+| `eTownKind` 两个值 | `fn_14000c71b` = `is_capital ? 1 : 0` | `[确认]` |
 | `fn_140012e4f` 雾模式含义 | 返回 0/1/3 | `[未知]`（天气？时刻？） |
 | `C3DMapData +0x20/24/28` | 渲染 | 不进玩法 |
 | `aszMapPointName` 12 名 | 城镇点 | 不进本表 |
@@ -566,9 +559,9 @@ Ocean 问 `Map.cell` 做碰撞；UI 问 `Maps.kind` 做绘制。Economy 只向 r
 
 ### 已确认
 
-- 三种投影：航海 `COceanScene`+`CMapView`+`Chip`/`Sky`/`World.dat`；航线 `CRouteMap` 族 + `RouteMap`/`RouteFrm`/`RouteMkr`；黑块 = 村未发现时的 crust，RTC `eBlindArea` 每村 2 槽。
+- 三种投影：航海 `COceanScene`+`CMapView`+`Chip`/`Sky`/`World.dat`；航线 `CRouteMap` 族 + `RouteMap`/`RouteFrm`/`RouteMkr`；黑块 = 村未发现时的 crust，每村 2 槽。
 - 共享 `town_id`/`route_id`/`village_id`/原版坐标；相机、资源、雾、点击分离。
-- `World.dat` 6250000 字节；uint8 取满 0–255；chip X 环绕 2500、Y 上限 1250。
+- `World.dat` 6250000 字节 = 2500×1250 uint16 贴图编号；chip X 环绕 2500、Y 上限 1250；航行点 trunc `/16` → chip。
 - 伦敦坐标是原版单位，不是 2500 下标。
 - 航海雾 = `CMapSolidSprite`+Chip 帧 5+四档 RGB；黑块揭开 = `fn_1400100e6` 发现位。
 - `CMarketPriceRouteMap` 是经济投影，不是第四种世界图。
@@ -576,7 +569,7 @@ Ocean 问 `Map.cell` 做碰撞；UI 问 `Maps.kind` 做绘制。Economy 只向 r
 
 ### 未知
 
-- 网格字节含义、原版坐标↔chip 公式、uint16 布局是否为真。
-- `NUM_VILLAGEBLINDAREA`、发现位布局、海域 bits / 道具 / 走访是否揭壳。
+- 三类贴图的设计名；港口 Locator 与航行坐标是否严格同一空间（强推断）。
+- 海域 bits / 道具 / 走访是否揭壳。
 - `Route.dk4`、雾模式 0/1/3 的设计名、航线图 `+0x118` 模式。
 - sailing 要不要画黑块（原版未见，配置默认 false）。

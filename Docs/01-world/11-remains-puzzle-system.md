@@ -5,21 +5,25 @@
 | 层 | 拥有者 | 配置 |
 | --- | --- | --- |
 | 1 遗迹实体 | world | `config/world/remains.yaml` |
-| 2 发现条件 | discovery | `config/discovery/old_maps.yaml` 的 `discover` + ocean 搜索圈 |
+| 2 发现条件 | discovery | `config/discovery/old_maps.yaml` 的 `target` / `discover`（全仓唯一的「地图 → 发现点」声明表）+ ocean 搜索圈 |
 | 3 解谜模块 | discovery | `config/discovery/puzzles.yaml` |
 | 4 奖励 | items / progression 兑现 | `puzzles.yaml` 的 `reward` 只引用 `item_id` / `title_id` |
 | 5 UI | ui 读表 | `old_maps.yaml` 的 `ui`（`SearchEx1/2/End`、读字迹） |
 
 村落坐标与发现位仍见 [03-villages-discovery.md](03-villages-discovery.md)。海上点「要探索吗？」见 [06-ocean/02-search-encounters.md](../06-ocean/02-search-encounters.md)。道具目录见 [09-items/01-item-catalog.md](../09-items/01-item-catalog.md)。倒水三桶是港口小游戏，见 [08-town-life/03-minigames.md](../08-town-life/03-minigames.md)，**不是**本系统的谜题类型。
 
-禁止拿环状石柱、竞技场、吴哥去补百科。名称只采用道具名 / mesfile 句子。
+遗迹 25 个显示名已从 SC exe 指针表 `0x1405b2f80` 抽出（见 [09-remains-oldmaps-catalog.md](09-remains-oldmaps-catalog.md) §2.2），本篇直接引用；百科式补充仍禁止。
+
+术语：本篇的 0–6 即势力文档的**七大海域** `major_sea_id`（`CCulture+0x10`、`CForce+0x10` 七格影响力；原版 RTC 名 `eSeaArea`），不是 21 个文化圈。注册表是 `config/world/major_seas.yaml`（`02-factions/06`），本篇只引用 key。旧稿叫「七文化圈 / `culture_circle_id`」，已统一改名。
 
 ## 1. 职责边界
 
 本系统管：
 
 - `eRemains` 的稳定 ID、表长、存档状态形状（`CRemains` / `REMAINSSTATE_BITS`）
-- 遗迹与 **七文化圈** `0–6`（北海…新大陆）的静态归属——有证据才填，没有就 `null`
+- 遗迹与 **七大海域** `0–6`（北海…新大陆）的静态归属：由所在港推出（港 → 文化圈 → `major_sea_id`）
+- 遗迹 ↔ 港口挂载（原版 `STown+0x26`）与港内入口（地图点 kind 9/10/11）
+- 首访奖励：七大海域影响力（表 `0x140686650`）
 - 发现条件：持有哪张地图、是否要先解谜、是否走海上探索、是否走事件
 - 解谜模块注册表（`none` / `combine_halves` / `symbol_weave` / `search_ex` / `mystery_hunt`）
 - 半图配对 `puzzle_pairs`（文案「只有这一半」「有什么关系」）
@@ -37,7 +41,7 @@
 | 倒水 / 石墙 / 硬币 / 捉鼠 | `town/minigames.yaml` |
 | `CDiscoverTitleView` 缩放动画 | ui / progression |
 | 七个剧本 EV 脚本何时塞地图 | narrative 订阅本系统事件 |
-| 21 档港口 `region`、9 个 NPC 形象圈 | factions；**不是**本篇的 7 圈 |
+| 21 个文化圈 `culture_id`（旧称 region）、9 个 NPC 形象圈 | factions；**不是**本篇的七大海域 |
 
 World0 / World1 是两份内容包，同一 schema。地点地图 `+0x18` 的锚点港两包不同，只覆盖那一列，不写 `if world==1`。
 
@@ -49,23 +53,25 @@ World0 / World1 是两份内容包，同一 schema。地点地图 `+0x18` 的锚
 | --- | --- | --- |
 | `enum eRemains { NUM_REMAINS, INVALID_REMAINS = -1 }`，头文件注释 integer not recovered | `[确认]` | `srcdata/source/RemainsID.h` |
 | `CRemains : CSaveObject`；`Remains.h` 点名 `REMAINSSTATE_BITS` | `[确认]` | `Remains.h` `class_hierarchy.txt` |
-| `CRemains` 体积观察：字段 `+0x8` 宽 8 字节；`vfunc_07/06` 存/读该槽；`vfunc_05` 把它清 0 | `[确认]` | `CRemains.cpp` `fields.tsv` |
+| `CRemains` 体积 `0x10`；状态 `+0x8` 是 **u8**（字节存档器 `fn_14000c6da`；测试 `fn_1400c5fa0` `movzx` 字节）；`vfunc_07/06` 存/读该槽；`vfunc_05` 把它清 0 | `[确认]` | `CRemains.cpp`、反汇编 |
+| 位 0 = 已发现：测 `fn_14000c6f3`，置 `fn_14000f27c → fn_1401ef750(&+8,0,1)` | `[确认]` | 反汇编 `0x1400c8790` `0x1401eefc0` |
+| 遗迹挂港：`remains_id = STown[town]+0x26`（`fn_140002450`），`0x1a`=无。24 港各挂一座，木造教堂（1）无港 | `[确认]` | `0x1402611b0`、`world_tables.json`；表见 09 §2.2 |
 | `CRemainsElement` 在 `CWorld +0xf0d0` | `[确认]` | `CWorld.cpp` ctor 调 `fn_1402a63e0` |
 | 构造 `fn_140007dce((this+8), 0x10, 0x19, …)`：分配 **0x19** 个步长 **0x10** 的槽 | `[确认]` | `CRemainsElement.cpp` |
 | 析构 / 存档 `vfunc_01` / 读档 `vfunc_02` 均 `s20 >= 0x19` 就停 | `[确认]` | 同上 |
 | 存档扫描 `fn_14000a321`：先 `eItem >= 0xe7`（231），再 `eRemains >= 0x19` | `[确认]` | `fn_1402aad20.cpp` RTC `eRemains,sItemOwner,eItem` |
 | `Game/Remains.dk4` 是 G1T，`ntex = 0x19 = 25`，文件 7680928 字节 | `[确认]` | 本机读文件头 `GT1G4600` + `u32[+0x10]=25` |
 | 遗迹静帧 `fn_14001233c` 先铺 `EvFrame.dk4`，再 `fn_140010e6f(..., "Remains.dk4", sB8, rcSrc)`，`rcSrc` 为 HD `0×0–0x780×0x438`（1920×1080） | `[确认]` | `fn_1401eb2a0.cpp` |
-| `sB8` 即贴图下标，与 `eRemains` 对齐 | `[推断]` | 25 槽 × 25 张；未在 cpp 看到 `eRemains` 局部名 |
-| `NUM_REMAINS = 25` | `[推断]` | 循环 `0x19`、贴图 25、Still 100=25×4 三处独立对齐；头文件仍未写死 |
-| 遗迹坐标、海域多边形 | `[未知]` | `CRemains` **不是** `CLocator`（村落才是）；World DLL 五个 `GetFix*` 没有遗迹表 |
-| `REMAINSSTATE_BITS` 位宽与各位 | `[未知]` | 断言 `0 <= eData < _GetBitTotal_BYTE2DWORD(sizeof(REMAINSSTATE_BITS))`；`sizeof` 未恢复 |
+| `sB8` 即贴图下标 = `remains_id` | `[确认]` | `fn_14000f803` 把 `STown+0x26` 直接传给 `fn_14001233c` |
+| `NUM_REMAINS = 25`（原版实例计数） | `[确认]` | 名字指针表 25 条后接 NULL；循环 `0x19`；贴图 25；头文件整数仍未恢复 |
+| 遗迹坐标 | `[确认]` 无独立坐标，继承所在港 | `CRemains` **不是** `CLocator`；入口是港内地图点 |
+| `REMAINSSTATE_BITS` | u8；位 0 已发现 `[确认]`，位 1–7 `[未知]` | `sizeof=1` `[推断]` |
 
 村落近港筛选的哨兵 `0x19` 是 `NUM_VILLAGE+1=25`，和遗迹循环 `0x19=NUM_REMAINS` **不是**同一个 25。不要混。
 
-### 2.2 七文化圈 `0–6`（霸者之证七区）
+### 2.2 七大海域 `0–6`（霸者之证七区）
 
-不是 25 海域，不是 21 个港口 `region`，不是 9 个 NPC 形象圈。势力表 `+0x10` 的 7×uint16 与 mesfile 七区同序，见 [02-factions/01-forces.md](../02-factions/01-forces.md)。
+不是 21 个文化圈，不是 9 个 NPC 形象圈（原版也没有「25 海域」，见 `01` §2）。势力表 `+0x10` 的 7×uint16 与 mesfile 七区同序，见 [02-factions/01-forces.md](../02-factions/01-forces.md)。下表 key 与 `config/world/major_seas.yaml` 一致：
 
 | id | key | 文案 |
 | ---: | --- | --- |
@@ -83,7 +89,7 @@ World0 / World1 是两份内容包，同一 schema。地点地图 `+0x18` 的锚
 
 | 对象 | `+0x15` | 等级 |
 | --- | --- | --- |
-| kind 8 古宝 148–154、192–198 | 恰好 0–6 各一件（两套） | `[确认]` hex；语义 `[推断]` = 文化圈 |
+| kind 8 古宝 148–154、192–198 | 恰好 0–6 各一件（两套） | `[确认]` hex；语义 `[推断]` = 七大海域 |
 | kind 9 贤者地图 155–161 | 恰好 0–6 | 同上 |
 | kind 10 地点地图 162–173 | 一律 `8` | `[确认]` 与「未绑」哨兵同形，**不是**文化圈下标 |
 
@@ -99,7 +105,7 @@ World0 `+0x18`（锚点港，`[推断]` 航线/出发提示，不是遗址坐标
 
 | item_id | key | 道具名 | mesfile 目标（摘） | 锚点港 W0 | W1 若不同 |
 | ---: | --- | --- | --- | --- | --- |
-| 162 | `map_ring_stones` | 去环状石柱遗址的地图 | 英国南部；未知记号 | 2 阿姆斯特丹 | 7 斯德哥尔摩 |
+| 162 | `map_stonehenge` | 去环状石柱遗址的地图 | 英国南部；未知记号 | 2 阿姆斯特丹 | 7 斯德哥尔摩 |
 | 163 | `map_colosseum` | 去古代竞技场的地图 | 古罗马帝国首都；意大利几乎尽收 | 5 汉堡 | 22 伊斯坦布尔 |
 | 164 | `map_cave_village` | 去岩窟村庄的地图 | 小亚细亚；基督教徒藏身的**村落** | 19 雅典 | 同 |
 | 165 | `map_sahara` | 撒哈拉大沙漠地图 | 廷巴克图商队 | 29 圣乔治 | 同 |
@@ -112,9 +118,9 @@ World0 `+0x18`（锚点港，`[推断]` 航线/出发提示，不是遗址坐标
 | 172 | `map_ancient_city` | 去古代城市遗址的地图 | 废墟的古代城市与远岛往来 | 65 委拉克鲁斯 | 同 |
 | 173 | `map_aztec` | 阿斯帝加王国彩绘地图 | 王国文化发源的图画书 | 61 哈瓦那 | 13 塞维利亚 |
 
-164 的目标是村落不是遗迹 `[确认]` 文案「村落」。`village_id` 仍 `[未知]`，YAML 写 `target: { kind: village, id: null }`。
+164 的目标是村落不是遗迹 `[确认]` 文案「村落」。`village_id` 仍 `[未知]`，YAML 写 `target: { kind: village, key: null }`。
 
-其余 11 张的 `remains_id` **全部 `[未知]`**。可以给 `remain_key` 作策划别名（`ring_stones`），导入器不得按别名填整数。
+其余 11 张的 `remains_id` **全部 `[未知]`**。可以在 `inferred_name_match` 里给遗迹 key 作注释，导入器不得据此填 `target.key`。
 
 171 World0 锚在卡利卡特、文案却是日本寺院：这正是「`+0x18` ≠ 遗址」的反例 `[确认]`。
 
@@ -122,7 +128,7 @@ World0 `+0x18`（锚点港，`[推断]` 航线/出发提示，不是遗址坐标
 
 ### 2.4 贤者地图、碎片、神秘狩猎
 
-kind 9（155–161）说明在 `0x1be2b`–`0x1beeb`：纸 / 布 / 石板 / 荷叶 / 货币图案 / 劈开的竹子 / 刀尖。`+0x15` = 0–6，与 2.2 同序 `[推断]`。
+kind 9（155–161）说明在 `0x1be2b`–`0x1beeb`：纸 / 布 / 石板 / 荷叶 / 货币图案 / 劈开的竹子 / 刀尖。`+0x15` = 0–6，与 2.2 七大海域同序 `[推断]`。
 
 kind 6 碎片 174–187，标价一律 100，`+0x18=98`（未绑港）`[确认]` hex。成对名称 + 与贤者地图原料同形 `[推断]`：
 
@@ -203,7 +209,7 @@ kind 6 碎片 174–187，标价一律 100，`+0x18=98`（未绑港）`[确认]`
 
 `Game/OldMapStill.dk4`：G1T `ntex=0x64=100` `[确认]`。`100 / 25 = 4` `[推断]` `stills_per_remain=4`，与上面 4 flag / 4 槽同形。
 
-读字迹文案 `[确认]` exe `0x14056f6ac` 起：「读字迹」「没有地图」「地图所示的位置」「？？？？？？？」。前一句 DAT「古老地图」。再前面是 NPC 给图：「不知道和哪批货物一起混进来的…你拿走也不要紧的。」给图事件归 narrative，本系统只收 `AcquireItem`。
+读字迹文案 `[确认]` exe `0x14056f6ac` 起：「读字迹」「没有地图」「地图所示的位置」「？？？？？？？」。前一句 DAT「古老地图」。再前面是 NPC 给图：「不知道和哪批货物一起混进来的…你拿走也不要紧的。」给图事件归 narrative（发命令 `Items.acquire`），本系统只读持有状态。
 
 ### 2.9 奖励：古宝 / 霸者之证 / 不是倒水奖金
 
@@ -256,19 +262,42 @@ SearchEx2 的「古老财宝」指向这批 kind 8 `[推断]`，不是 105 件�
 | 温泉 / 绿洲 / 兽袭 | 探险队同一段 mesfile | ocean happening |
 | 教会仪式「来遗迹这里有事吗？」`0xbe2f` | 句子含「遗迹」 | 与巡礼/绝食同一文案块；是否遗迹内 NPC `[未知]`，不注册成 puzzle type |
 
-### 2.11 城镇里的 `cRemains`
+### 2.11 城镇里的 `cRemains`：原版唯一已证的遗迹入口
 
-`CTownScene::vfunc_02` RTC 把 `cRemains` 和造船/公会/旅馆并列 `[确认]` 场景流文档。`CMpRemains` 体积 `0x18`，港口地图点 `[确认]` `CMpRemains.cpp`。
+`[确认]` `CTownScene::vfunc_02` 的 kind 跳表把 9 遗址 / 10 教会 / 11 城门**都**分发到 `CMpRemains` → `fn_14000f803(obj, scene, kind)`（`10-mappoint-kinds.md` 2.3）。
 
-这**不**等于 97 港每港一座可进遗迹。更像世界遗迹对象挂在入港场景上，或 12 种 `eMapPointKind` 之一。kind 名未还原。重构：城镇设施表不默认开放 `remains`；只有 `remains.yaml` 里 `town_map_point: true` 的点才出现。
+`[确认]` 流程：
+
+1. `remains_id = STown[当前港]+0x26`
+2. `fn_14001233c` 画 `EvFrame.dk4` + `Remains.dk4[remains_id]`
+3. 已发现 → `fn_14000eacf`（重访）；否则 `fn_14000c4d2`（首访）
+4. 首访：播曲 `0x32`；消息 `0x129`（遗迹名）；`fn_14000f27c` 置位 0 并给玩家势力加七大海域影响力（表见下）；再按 `fn_140010f46()`（= `game+0x7c` 即 `eScenario`，`[确认]`，见 09 §2.6）为 0 时 ×2 后**第二次**加到同一势力；消息 `0x12a` 显示数值
+
+影响力表 `0x140686650`（列按 `major_sea(town)`：北海·地中海 / 非洲 / 印度洋·新大陆 / 东南亚·东亚）：
+
+| kind | 列 0 | 列 1 | 列 2 | 列 3 |
+| --- | ---: | ---: | ---: | ---: |
+| 9 遗址 | 3 | 5 | 10 | 15 |
+| 10 教会 | 1 | 1 | 1 | 1 |
+| 11 城门 | 5 | 10 | 15 | 20 |
+
+`game+0x7c == 0`（`eScenario` 剧本 0）时表值 ×2；累加后夹到 9999。重构：倍数是 factions 修正器 `factions.influence_gain`（`source: remains`，剧本包注入），上限是 factions 的影响力 cap，本系统都不持有。
+
+`[确认]` 已发现后再进入走 `fn_14000eacf`（重访）：按 kind 9/10/11 分到三支按日期的仪式（`0x140008e9a` / `0x140002171` / `0x14000e840`），玩法见 `08-town-life/05-inn-church-palace.md`。
+
+`[确认]` 哪港出现入口由港位域 `CTown+0x14` 决定：World1 初值给 24 个遗迹港各置 9/10/11 之一；World0 初值全不置，需运行时开（`fn_140001f87`，`[推断]` 剧本改港数据）。
+
+`[确认]` 叙事侧：`fn_14001393a`（`0x1400c7e80`，事件条件族）读一个 `0..0x18` 的遗迹号并返回其「已发现」。
+
+**未见**海上搜索直接置遗迹位的代码路径；海上搜索区域判定（`fn_14000f218`/`fn_140009aca`）属道具搜索。
 
 ## 3. 实体与 ID
 
 | 实体 | 原版 | 空 / 非法 | 重构 key | 拥有者 |
 | --- | --- | --- | --- | --- |
-| `eRemains` | `[推断]` 25（0–24） | `-1` | `remain_id` | world |
-| `REMAINSSTATE_BITS` | 位域，宽未知 | — | `remain_flags`（按 id 存，不复用原版位布局） | world 存档 |
-| 文化圈 | 7（0–6） | 无；道具 `8` = 未绑 | `culture_circle_id` | factions 定义，本表引用 |
+| `eRemains` | `[确认]` 25（循环上界 + 名字表，非投票） | `null`（原版 -1；港口表空 26，legacy） | `remains` key | world |
+| `REMAINSSTATE_BITS` | `CRemains+0x8` u8，位 0 已发现 | — | `remains_flags`（按 key 存，不复用原版位布局） | world 存档 |
+| 七大海域 | 7（0–6） | `null`（道具 `+0x15=8` = 未绑，legacy） | `major_sea` key | factions 定义，本表引用 |
 | 地点地图 | item 162–173 | — | `item_id` kind 10 | items |
 | 贤者地图 | item 155–161 | — | `item_id` kind 9 | items |
 | 碎片 | item 174–187 | — | `item_id` kind 6 | items |
@@ -277,17 +306,17 @@ SearchEx2 的「古老财宝」指向这批 kind 8 `[推断]`，不是 105 件�
 | 半图对 | 文案 2 对确认 | — | `puzzle_pair_id` | discovery |
 | 读图层 | 每遗迹 4 张 `[推断]` | flag 0 = 缺层 | `still_layer` 0–3 | ui / discovery |
 | 搜索阶段 | SearchEx1/2/End | — | `search_ex_stage` | ui |
-| 叙事遗址别名 | 12 张地图目标 | 不是 ID | `remain_key` / `site_key` | 内容注释 |
+| 叙事遗址别名 | 12 张地图目标 | 不是 ID | `remains_key` / `site_key` | 内容注释 |
 
 禁止：
 
-- 用 `+0x18` 城镇 id 当 `remain_id`
+- 用 `+0x18` 城镇 id 当 `remains_id`
 - 用 `0` 当空遗迹（0 是合法下标）
 - 把 164 岩窟村写成 remain
-- 把 9 个 NPC 圈或 21 个 region 填进 `culture_circle_id`
+- 把 9 个 NPC 圈或 21 个文化圈填进 `major_sea_id`
 - 为 25 个槽发明「金字塔 / 长城」这种仓库里没有的名字
 
-模组追加 `remain_id >= 1000` 或独立包，不覆盖 0–24。引擎按表长循环，禁止再写 `0x19`。
+模组追加遗迹用自己命名空间的 key（`mymod:atlantis`），加载器顺序分配整数，不覆盖原版条目。引擎按表长循环，禁止再写 `0x19`。
 
 ## 4. 算法 / 公式
 
@@ -297,10 +326,9 @@ SearchEx2 的「古老财宝」指向这批 kind 8 `[推断]`，不是 105 件�
 
 ```
 # caps / formulas/discovery.yaml
-remain_count_vanilla          = 25          # 循环 0x19；运行时 len(remains)
-remain_invalid                = -1
-culture_circle_count          = 7
-item_unbound_town_id          = 98          # +0x18 哨兵
+remains_count_vanilla          = 25          # 循环 0x19；运行时 len(remains)
+major_sea_count               = 7           # 读 factions major_seas 表长
+# 原版哨兵（遗迹 -1 / 26、道具 +0x18 未绑港 98）只在 legacy_codec
 stills_per_remain             = 4           # OldMapStill 100/25 [推断]
 oldmap_tex_count              = 6
 remains_tex_count             = 25          # Remains.dk4 ntex
@@ -314,12 +342,12 @@ hd_frame_h                    = 1080        # 0x438
 ### 4.2 层 1 — 实体只回答定义
 
 ```
-function Remain.def(remain_id) -> RemainDef | none:
-    if remain_id is none or remain_id < 0: return none
-    if remain_id >= len(remains): return none
-    return remains[remain_id]          # 含 coords（可 null）、circle（可 null）
+function Remains.def(remains_id) -> RemainsDef | none:
+    if remains_id is none or remains_id < 0: return none
+    if remains_id >= len(remains): return none
+    return remains[remains_id]          # 位置 = LocatorRef(town, Remains.town(id))，可 null；major_sea 由该港派生
 
-function Remain.flags(remain_id) -> FlagSet:
+function Remains.flags(remains_id) -> FlagSet:
     # 存档按 id 映射；导入原版时再展开 REMAINSSTATE_BITS
 ```
 
@@ -328,11 +356,11 @@ function Remain.flags(remain_id) -> FlagSet:
 ### 4.3 层 2 — 发现条件
 
 ```
-function can_discover(remain_id, fleet_id) -> { ok, reason }:
-    row = Remain.def(remain_id)
+function can_discover(remains_id, fleet_id) -> { ok, reason }:
+    row = Remains.def(remains_id)
     if row is none: return { false, missing_def }
-    if Remain.discovered(remain_id): return { false, already }
-    cond = Discover.for_remain(remain_id)      # old_maps.yaml
+    if Remains.discovered(remains_id): return { false, already }
+    cond = Discover.for_remain(remains_id)      # old_maps.yaml
     if cond is none: return { false, no_condition }
 
     if cond.needs_map_item:
@@ -348,22 +376,34 @@ function can_discover(remain_id, fleet_id) -> { ok, reason }:
     # 原版世界半径 [未知]；点击盒 16px 是 UI，见 ocean 文档
     return { true, ok }
 
-function on_ocean_search_hit(kind=remains, remain_id, fleet_id):
+function on_enter_town_map_point(town_id, kind, fleet_id):     # 原版唯一已证路径；world 订阅 FacilityEntered（kind 9/10/11）
+    remains_id = Remains.at_town(town_id)                       # STown+0x26
+    if remains_id is none: return
+    if Remains.discovered(remains_id):
+        emit RemainsRevisited { remains_id, town_id, kind }       # town-life 据此跑仪式（fn_14000eacf）
+        return
+    set_discovered(remains_id)                                  # world 内部置位；事件在末尾发一次
+    sea = MajorSea.of_town(town_id)
+    v = influence.table[kind][influence.col_by_major_sea[sea]]
+    v = Influence.add(player_force, sea, v, reason: remains)   # 倍数与 cap 在 factions；返回修正后、夹紧前的加值
+    if influence.apply_twice:
+        Influence.add(player_force, sea, v, reason: remains)   # 剧本 0 的 ×2 由同一修正器给出（09 §4）
+    emit RemainsDiscovered { remains_id, via: town_map_point, town_id, fleet_id, item_id: null }
+
+function on_ocean_search_hit(kind=remains, remains_id, fleet_id):   # 重构扩展；原版未见
     r = can_discover(...)
     if not r.ok: emit SearchNothing; return
-    World.mark_remains_discovered(remain_id)
-    emit RemainDiscovered { remain_id, fleet_id, via: ocean_search }
-    # 若 cond.open_search_ex: 再发 Puzzle.open { type: search_ex }
+    World.mark_remains_discovered(remains_id, via: ocean_search, fleet_id: fleet_id)   # world 置位并发 RemainsDiscovered
 
-function on_use_place_map(item_id, fleet_id):
+function on_use_place_map(item_id, fleet_id):      # items 侧 UseItem 调用；world 只收命令
     row = OldMaps.place_map(item_id)
-    if row.target.kind == village and row.target.id is not none:
-        emit UnlockVillage { village_id: row.target.id, item_id }
-    elif row.target.kind == remain and row.target.id is not none:
-        emit UnlockRemain { remain_id: row.target.id, item_id }
-    else:
+    if row.target.key is none:
         emit UnlockRejected { item_id, reason: target_unspecified }
-        # vanilla 12 张里 remain_id 全 null → 只给读字迹，不改发现位
+        return   # vanilla 12 张全 null → 只给读字迹，不改发现位
+    if row.target.kind == village:
+        World.mark_village_discovered(row.target.key, via: item, fleet_id: fleet_id, item_id: item_id)   # world 发 VillageDiscovered{via: item, item_id}
+    elif row.target.kind == remains:
+        World.mark_remains_discovered(row.target.key, via: item, fleet_id: fleet_id, item_id: item_id)   # world 发 RemainsDiscovered{via: item, item_id}
 ```
 
 164 走 village 支。引擎不得 `if item_id==164: village=??`。
@@ -397,8 +437,8 @@ function Puzzle.solve(puzzle_id, fleet_id, input) -> Result:
         if recipe.output_item_id is none:
             return output_unspecified  # vanilla 多行如此
         if recipe.consume_inputs:
-            for id in recipe.inputs: DiscardItem(id)
-        AcquireItem(recipe.output_item_id)
+            for id in recipe.inputs: Items.discard(fleet_id, id)
+        Items.acquire(fleet_id, recipe.output_item_id)
         emit ItemsCombined { recipe_key, output_item_id }
 
     search_ex:
@@ -406,7 +446,7 @@ function Puzzle.solve(puzzle_id, fleet_id, input) -> Result:
         stage = session.search_ex_stage + 1
         if stage > end: return already
         session.search_ex_stage = stage
-        emit SearchExAdvanced { remain_id, stage }
+        emit SearchExAdvanced { remains_id, stage }
         if stage == end: return ok
 ```
 
@@ -417,13 +457,13 @@ function Puzzle.solve(puzzle_id, fleet_id, input) -> Result:
 ### 4.5 层 4 — 奖励
 
 ```
-function grant_puzzle_reward(puzzle_id, fleet_id, remain_id):
+function grant_puzzle_reward(puzzle_id, fleet_id, remains_id):
     r = puzzles[puzzle_id].reward
     if r.item_id is not none:
-        AcquireItem(fleet_id, r.item_id)
-        emit RelicGranted { remain_id, item_id: r.item_id }   # kind 8 时即霸者之证
+        Items.acquire(fleet_id, r.item_id)
+        emit RelicGranted { remains_id, item_id: r.item_id }   # kind 8 时即霸者之证
     if r.gold:
-        emit GrantGold { amount: r.gold }                    # vanilla null
+        Force.add_gold(player_force, r.gold, reason: puzzle_reward)   # 命令；vanilla null
     if r.title_id is not none:
         emit TitleUnlocked { title_id }                      # vanilla 空表
 ```
@@ -434,12 +474,12 @@ SearchEx 播完「并获得了古老财宝」之后才 `grant`。item 已持有�
 
 ```
 # 读字迹
-still_index(remain_id, layer) =
-    remain_id * stills_per_remain + layer     # [推断]；layer 0–3
+still_index(remains_id, layer) =
+    remains_id * stills_per_remain + layer     # [推断]；layer 0–3
 # flag[layer]==0 → 不载该 still（fn_14000f290）
 
 # 遗迹静帧
-remains_tex_index = remain_id                 # [推断]
+remains_tex_index = remains_id                 # [推断]
 
 # search_ex 文案
 stage 1 → ui.discovery.search_ex1    # 你终于解开了传说的谜团
@@ -471,55 +511,28 @@ world.remains.yaml        只定义点
 discovery.old_maps.yaml   地图 → 条件 / 读图层
 discovery.puzzles.yaml    类型 → 输入输出
 items.items.yaml          只提供 item_id
-ocean.search.yaml         只发 DiscoveryFound { remains }
-progression.fame.yaml     只订阅 RelicGranted / RemainDiscovered
+ocean.search.yaml         只调 World.mark_*_discovered（重构扩展）
+progression.fame.yaml     只订阅 RelicGranted / RemainsDiscovered
 ui                        只读阶段与资源 key
 town.minigames            倒水不出现在 puzzles.types
 ```
 
-ID 是唯一共享词汇：`remain_id` `item_id` `village_id` `culture_circle_id` `puzzle_id` `fleet_id`。
+ID 是唯一共享词汇：`remains_id` `item_id` `village_id` `major_sea_id` `puzzle_id` `fleet_id`。
 
 ## 6. 解耦后的配置
 
 ### 6.1 `config/world/remains.yaml`
 
-```yaml
-schema: dk4.world.remains
-version: 1
-pack: vanilla-world0
-count_original_inferred: 25      # 循环 0x19；头文件未写死
-invalid: -1
-state_bits: unknown              # REMAINSSTATE_BITS
-texture_pack: Remains.dk4        # ntex=25
-texture_index_equals_id: true    # [推断]
-remains:
-  - id: 0
-    key: remain_00
-    name: null                   # 未抽出；禁止填环状石柱
-    name_i18n: remain.00.name
-    coords:
-      space: original
-      x: null
-      y: null
-    sea_area_id: null            # 25 海域，未还原
-    culture_circle_id: null      # 0–6；无证据保持 null
-    town_map_point: false        # CMpRemains 是否出现 [未知]
-    discovered_by_default: false
-    stills:
-      layers: 4                  # [推断]
-      flags: [1, 1, 1, 1]        # 0=缺层
-    unknown_bytes: []
-  # id 1..24 同形，全部 name: null
-```
-
-World1 覆盖文件只改需要改的行；没有坐标差可覆。
+schema 与全表只在 `09-remains-oldmaps-catalog.md` §6（含 `stills`、`influence_reward`、`apply_twice`）。本篇要的字段都在那里：遗迹 key、名字、读图层 `stills`、首访影响力表。挂港只在 `towns.yaml` 的 `remains` 字段；`major_sea` 由所挂港派生，不手填。
 
 ### 6.2 `config/discovery/old_maps.yaml`
 
+全仓唯一的「地图道具 → 发现点」声明表（旧稿 `09` 的 `config/world/unlock_maps.yaml` 并入此处）。外键一律写 key。
+
 ```yaml
 schema: dk4.discovery.old_maps
-version: 1
-pack: vanilla-world0
+version: 2
+pack: vanilla-world0             # 锚点港随世界包不同；World1 覆盖文件只改 anchor_town
 assets:
   old_map: { file: OldMap.dk4, ntex: 6 }
   old_map_still: { file: OldMapStill.dk4, ntex: 100 }
@@ -529,51 +542,63 @@ assets:
   ev_item: { file: EvItem.dk4, ntex: 39, owner: ui }   # 教会也用
 stills_per_remain: 4             # [推断]
 hd_frame: { w: 1920, h: 1080 }
-
-culture_circles:
-  - { id: 0, key: north_sea, name: 北海 }
-  - { id: 1, key: mediterranean, name: 地中海 }
-  - { id: 2, key: africa, name: 非洲 }
-  - { id: 3, key: indian_ocean, name: 印度洋 }
-  - { id: 4, key: se_asia, name: 东南亚 }
-  - { id: 5, key: east_asia, name: 东亚 }
-  - { id: 6, key: new_world, name: 新大陆 }
+# 七大海域注册在 config/world/major_seas.yaml，本表只引用 key
 
 # 贤者地图：材料图，不是地点图
 sage_maps:
-  - item_id: 155
-    key: thales_paper_map
-    culture_circle_id: 0         # +0x15 [推断]
-  - { item_id: 156, key: cleobulus_cloth_map, culture_circle_id: 1 }
-  - { item_id: 157, key: periander_stone_map, culture_circle_id: 2 }
-  - { item_id: 158, key: solon_leaf_map, culture_circle_id: 3 }
-  - { item_id: 159, key: bias_coin_map, culture_circle_id: 4 }
-  - { item_id: 160, key: chilon_bamboo_map, culture_circle_id: 5 }
-  - { item_id: 161, key: pittacus_blade_map, culture_circle_id: 6 }
+  - { item: vanilla:thales_paper_map,    major_sea: vanilla:north_sea }      # 原版 155；+0x15 [推断]
+  - { item: vanilla:cleobulus_cloth_map, major_sea: vanilla:mediterranean }  # 156
+  - { item: vanilla:periander_stone_map, major_sea: vanilla:africa }         # 157
+  - { item: vanilla:solon_leaf_map,      major_sea: vanilla:indian_ocean }   # 158
+  - { item: vanilla:bias_coin_map,       major_sea: vanilla:se_asia }        # 159
+  - { item: vanilla:chilon_bamboo_map,   major_sea: vanilla:east_asia }      # 160
+  - { item: vanilla:pittacus_blade_map,  major_sea: vanilla:new_world }      # 161
 
-# 地点地图：发现条件。target.id 未还原则 null
+# 地点地图：发现条件。target.key 未从代码钉死则 null；inferred_name_match 只是注释，引擎不读
 place_maps:
-  - item_id: 162
-    key: map_ring_stones
-    name: 去环状石柱遗址的地图
-    site_key: ring_stones        # 策划别名，不是 remain_id
-    anchor_town_id: 2            # W0 阿姆斯特丹；W1=7
-    target: { kind: remain, id: null }
-    discover:
-      needs_map_item: true
-      needs_puzzle: false
-      open_search_ex: true       # 进遗迹后是否弹 SearchEx [未知]，先可配
-  - item_id: 164
-    key: map_cave_village
-    name: 去岩窟村庄的地图
-    site_key: cave_village
-    anchor_town_id: 19
-    target: { kind: village, id: null }   # 文案确认是村落
-    discover:
-      needs_map_item: true
-      open_search_ex: false
-  # 163,165–173 同 162 形：target.kind=remain, id=null
-  # 完整锚点见第 2.3 节表；W1 覆盖文件只改 b18 不同的 162/163/170/171/173
+  - item: vanilla:map_stonehenge         # 原版 162
+    anchor_town: vanilla:amsterdam       # +0x18；W1 = stockholm
+    target: { kind: remains, key: null }
+    inferred_name_match: { remains: vanilla:stonehenge, strength: strong }   # 环状石柱 ↔ 巨石阵；英国南部（09 §2.5）
+    discover: { needs_map_item: true, needs_puzzle: false, open_search_ex: true }   # 进遗迹后是否弹 SearchEx [未知]
+  - item: vanilla:map_colosseum          # 163
+    anchor_town: vanilla:hamburg         # W1 = istanbul
+    target: { kind: remains, key: null }
+    inferred_name_match: { remains: vanilla:colosseum, strength: strong }
+  - item: vanilla:map_cave_village       # 164
+    anchor_town: vanilla:athens
+    target: { kind: village, key: null }   # 文案确认是村落；24 村无「岩窟」
+    inferred_name_match: { remains: vanilla:cave_monastery, strength: medium }
+    discover: { needs_map_item: true, open_search_ex: false }
+  - item: vanilla:map_sahara             # 165
+    anchor_town: vanilla:saint_george
+    target: { kind: remains, key: null }
+    inferred_name_match: { remains: vanilla:mud_mosque, strength: strong }   # 廷巴克图
+  - { item: vanilla:map_imperial_mosque, anchor_town: vanilla:sofala,     target: { kind: remains, key: null } }   # 166
+  - item: vanilla:map_mughal             # 167
+    anchor_town: vanilla:basra
+    target: { kind: remains, key: null }
+    inferred_name_match: { remains: vanilla:taj_mahal, strength: strong }
+  - item: vanilla:map_ancient_temple     # 168
+    anchor_town: vanilla:jakarta
+    target: { kind: remains, key: null }
+    inferred_name_match: { remains: vanilla:angkor, strength: strong }
+  - item: vanilla:map_beijing            # 169
+    anchor_town: vanilla:seoul           # 汉城，不是遗迹下标
+    target: { kind: remains, key: null }
+    inferred_name_match: { remains: vanilla:forbidden_city, strength: strong }
+  - item: vanilla:map_royal_tomb         # 170
+    anchor_town: vanilla:hangzhou        # W1 = osaka
+    target: { kind: remains, key: null }
+    inferred_name_match: { remains: vanilla:muryeong_tomb, strength: medium }
+  - item: vanilla:map_golden_temple      # 171
+    anchor_town: vanilla:calicut         # W1 = malacca
+    target: { kind: remains, key: null }
+    inferred_name_match: { remains: vanilla:kinkaku, strength: strong }
+  - { item: vanilla:map_ancient_city, anchor_town: vanilla:veracruz, target: { kind: remains, key: null } }   # 172
+  - { item: vanilla:map_aztec,        anchor_town: vanilla:havana,   target: { kind: remains, key: null } }   # 173；W1 = seville
+# 缺省 discover = { needs_map_item: true, needs_puzzle: false, open_search_ex: true }
+# 把 inferred_name_match 升成 target.key 前，必须先在 exe / 事件脚本里钉到整数并升 version
 
 ui:
   read_inscription:
@@ -601,9 +626,9 @@ ui:
       win1: { asset: old_map, index: 2 }
       win2: { asset: old_map, index: 3 }
     modes: [1, 2, 3]                               # 语义 [未知]
-  remain_interior:
+  remains_interior:
     fn: fn_14001233c
-    frame: { asset: remains_still, index_formula: remain_id }
+    frame: { asset: remains_still, index_formula: vanilla_index }
     ev_frame: EvFrame.dk4
 ```
 
@@ -616,116 +641,102 @@ pack: vanilla-world0
 
 # 倒水不在此列
 types:
-  - key: none
+  - key: vanilla:none
     solve: auto
-  - key: combine_halves
+  - key: vanilla:combine_halves
     inputs: 2
     consume_inputs: false          # [未知] 默认不消耗
-  - key: symbol_weave
+  - key: vanilla:symbol_weave
     isa: unknown                   # 只有图案串
-  - key: search_ex
+  - key: vanilla:search_ex
     stages: [ex1, ex2, end]
-  - key: mystery_hunt
+  - key: vanilla:mystery_hunt
     site: item_mystery_hunting
     match: unordered_set
 
 puzzle_pairs:
-  - id: 0
-    key: africa_indian_ocean
+  - key: vanilla:africa_indian_ocean
     type: combine_halves
-    culture_circle_ids: [2, 3]
-    item_ids: [157, 158]           # [推断] 石地图+叶地图
+    major_seas: [vanilla:africa, vanilla:indian_ocean]
+    items: [vanilla:periander_stone_map, vanilla:solon_leaf_map]   # [推断] 原版 157+158
     evidence: mesfile_0x1e6ff
     reward:
-      item_id: null                # 对应圈的 kind 8 未钉哪一件
+      item: null                   # 对应海域的 kind 8 未钉哪一件
       gold: null
-      title_id: null
-  - id: 1
-    key: se_asia_east_asia
+      title: null
+  - key: vanilla:se_asia_east_asia
     type: combine_halves
-    culture_circle_ids: [4, 5]
-    item_ids: [159, 160]           # [推断] 货币地图+竹地图
+    major_seas: [vanilla:se_asia, vanilla:east_asia]
+    items: [vanilla:bias_coin_map, vanilla:chilon_bamboo_map]      # [推断] 原版 159+160
     evidence: mesfile_0x1e643
-    reward: { item_id: null, gold: null, title_id: null }
+    reward: { item: null, gold: null, title: null }
 
 related_unpaired:                  # 「有什么关系」但不是半图
-  - { culture_circle_id: 0, text: mesfile_0x1e6bb }
-  - { culture_circle_id: 1, text: mesfile_0x1e6bb }
-  - { culture_circle_id: 6, text: mesfile_0x1e76b }
+  - { major_sea: vanilla:north_sea,     text: mesfile_0x1e6bb }
+  - { major_sea: vanilla:mediterranean, text: mesfile_0x1e6bb }
+  - { major_sea: vanilla:new_world,     text: mesfile_0x1e76b }
 
 symbol_weave:
-  - id: 0
-    key: tribal_pattern
+  - key: vanilla:tribal_pattern
     type: symbol_weave
     pattern: "○◇　﹡□　﹟□　﹢○　◇﹡"
-    item_ids_inferred: [175, 190]  # 图案布、昆毕斗篷 [推断]
+    items_inferred: [vanilla:patterned_cloth, vanilla:cumbi_cloak]  # 原版 175、190 [推断]
     isa: unknown
 
 mystery_hunt:
   consume_inputs: true             # [推断]
-  recipes:
-    - key: slate_halves
-      inputs: [176, 183]
-      output: 157                  # [推断]；不想猜就改 null
-      type: mystery_hunt
-    - key: bamboo_diagram
-      inputs: [179, 186]
-      output: 160                  # [推断]
-    - key: knife_sheath
-      inputs: [180, 187]
-      output: 161                  # [推断]
-    - key: parchment_to_paper
-      inputs: [174]
-      output: 155                  # [推断]
-    - key: cloth_to_cloth_map
-      inputs: [175]
-      output: 156                  # [推断]
-    - key: lotus_to_leaf
-      inputs: [177]
-      output: 158                  # [推断]
-    - key: coin_to_coin_map
-      inputs: [178]
-      output: 159                  # [推断]
-    # 181,182,184,185：无配对，不写
+  recipes:                         # output 全部 [推断]；不想猜就改 null
+    - { key: vanilla:slate_halves,       inputs: [vanilla:mystery_slate_top, vanilla:mystery_slate_bottom], output: vanilla:periander_stone_map }  # 176+183 → 157
+    - { key: vanilla:bamboo_diagram,     inputs: [vanilla:tang_bamboo_craft, vanilla:bamboo_craft_diagram], output: vanilla:chilon_bamboo_map }    # 179+186 → 160
+    - { key: vanilla:knife_sheath,       inputs: [vanilla:ritual_knife, vanilla:sun_pattern_sheath],        output: vanilla:pittacus_blade_map }   # 180+187 → 161
+    - { key: vanilla:parchment_to_paper, inputs: [vanilla:old_parchment],        output: vanilla:thales_paper_map }     # 174 → 155
+    - { key: vanilla:cloth_to_cloth_map, inputs: [vanilla:patterned_cloth],      output: vanilla:cleobulus_cloth_map }  # 175 → 156
+    - { key: vanilla:lotus_to_leaf,      inputs: [vanilla:unwithering_lotus],    output: vanilla:solon_leaf_map }       # 177 → 158
+    - { key: vanilla:coin_to_coin_map,   inputs: [vanilla:ancient_kingdom_coin], output: vanilla:bias_coin_map }        # 178 → 159
+    # red_dye / brass_oil_lamp / kushan_platter / lotion_jar（181/182/184/185）：无配对，不写
 
-# 进遗迹后的结算谜。remain_id 未绑定时挂在 site_key 上
+# 进遗迹后的结算谜。遗迹未绑定时挂在 site 上
 search_ex_puzzles:
-  - key: remain_generic_search_ex
+  - key: vanilla:remains_generic_search_ex
     type: search_ex
-    remain_id: null
+    remains: null
     reward:
-      item_id: null                # 运行时按 culture_circle 查 kind 8 [未知]
+      item: null                   # 运行时按 major_sea 查 kind 8 [未知]
       gold: null
-      title_id: null
+      title: null
 
-rewards_kind8_by_circle:           # 查询表，不是自动掉落
+rewards_kind8_by_major_sea:        # 查询表，不是自动掉落；按 major_sea key
   vanilla:
-    0: 148
-    1: 149
-    2: 150
-    3: 151
-    4: 152
-    5: 153
-    6: 154
+    vanilla:north_sea: vanilla:ullr_bow
+    vanilla:mediterranean: vanilla:cambyses_crown
+    vanilla:africa: vanilla:aksum_gold_seal
+    vanilla:indian_ocean: vanilla:vedas
+    vanilla:se_asia: vanilla:kediri_amulet
+    vanilla:east_asia: vanilla:qin_palace_lamp
+    vanilla:new_world: vanilla:crystal_skull
   pk:
-    0: 192
-    1: 193
-    2: 194
-    3: 195
-    4: 196
-    5: 197
-    6: 198
+    vanilla:north_sea: vanilla:hallstatt_offering_cart
+    vanilla:mediterranean: vanilla:agamemnon_mask
+    vanilla:africa: vanilla:ram_headed_sphinx
+    vanilla:indian_ocean: vanilla:sargon_bust
+    vanilla:se_asia: vanilla:trung_tracs_crown
+    vanilla:east_asia: vanilla:shang_square_ding
+    vanilla:new_world: vanilla:chimu_axe
 ```
 
 `config/formulas/discovery.yaml`：
 
 ```yaml
 schema: dk4.formulas.discovery
-version: 1
-stills_per_remain: 4
-search_ex_button_slots: 3
-oldmap_flag_slots: 4
-remain_tex_equals_id: true
+version: 2
+# D3 形状（14-config-schemas README「公式层」）
+oldmap_layout:
+  impl: vanilla.oldmap_layout
+  params:
+    stills_per_remain: 4
+    search_ex_button_slots: 3
+    oldmap_flag_slots: 4
+    remain_tex_equals_id: true
 # 海上半径不在这里，见 formulas/ocean.yaml
 ```
 
@@ -736,13 +747,13 @@ remain_tex_equals_id: true
 | 旋钮 | 文件 | 改了不必动引擎 |
 | --- | --- | --- |
 | 遗迹条数 | `remains.yaml` 表长 | 是 |
-| 某点坐标 / 圈 / 默认已发现 | 同行 | 是 |
-| 哪张地点地图揭示哪个点 | `old_maps.yaml` `target.id` | 外键校验失败则拒绝导入 |
+| 默认已发现 / 挂哪座港 | `remains.yaml` / `towns.yaml` | 是 |
+| 哪张地点地图揭示哪个点 | `old_maps.yaml` `target.key` | 外键校验失败则拒绝导入 |
 | 半图对、是否消耗 | `puzzle_pairs` | 是 |
 | 碎片配方与产出 | `mystery_hunt.recipes` | output 可长期 null |
 | SearchEx 三句文案、帧下标 | `old_maps.yaml` `ui` | 是 |
 | `stills_per_remain` | formulas | 改 4 不必改 C++ |
-| kind 8 哪套当奖励 | `rewards_kind8_by_circle` | World0/1 换包 |
+| kind 8 哪套当奖励 | `rewards_kind8_by_major_sea` | World0/1 换包 |
 | 倒水是否存在 | **不在本表** | 城镇小游戏开关 |
 
 加一种谜题 = 在 `types` 加 key + 一个 `solve` 插件。加一座遗迹 = `remains` 加行 + 可选 `place_maps` 行。禁止为了对齐 25 去编造遗址名。
@@ -754,46 +765,46 @@ remain_tex_equals_id: true
 查询：
 
 ```
-Remain.def(remain_id) -> RemainDef | none
-Remain.discovered(remain_id) -> bool
-Remain.flags(remain_id) -> FlagSet
-Remain.at_map(x, y, radius) -> [remain_id]     # 坐标全 null 时恒 []
-Discover.can_discover(remain_id, fleet_id) -> { ok, reason }
+Remains.def(remains_id) -> RemainsDef | none
+Remains.discovered(remains_id) -> bool
+Remains.flags(remains_id) -> FlagSet
+Remains.at_town(town_id) -> remains_id | none    # 原版 STown+0x26（02）
+Remains.town(remains_id) -> town_id | none        # 反查；位置 = LocatorRef(town, …)
+Discover.can_discover(remains_id, fleet_id) -> { ok, reason }
 OldMap.place_map(item_id) -> PlaceMapRow | none
 OldMap.sage_map(item_id) -> SageMapRow | none
 Puzzle.def(puzzle_id) -> PuzzleDef
 Puzzle.solved(puzzle_id) -> bool
 Puzzle.match_hunt(item_ids) -> recipe | none
-Reward.kind8(circle_id, pack) -> item_id | none
+Reward.kind8(major_sea_id, pack) -> item_id | none
 ```
 
 命令：
 
 ```
-World.mark_remains_discovered(remain_id)
-World.clear_remains_discovered(remain_id)      # 仅导入回滚
-Puzzle.open { puzzle_id | remain_id, type }
+World.mark_remains_discovered(remains_id, via, town_id?, fleet_id?, item_id?)   # 形状见 03 §8；items 用 via: item
+World.clear_remains_discovered(remains_id)      # 仅导入回滚
+Puzzle.open { puzzle_id | remains_id, type }
 Puzzle.submit { puzzle_id, fleet_id, input }
-OldMap.read_inscription { item_id | remain_id, fleet_id }
-SearchEx.advance { remain_id }
+OldMap.read_inscription { item_id | remains_id, fleet_id }
+SearchEx.advance { remains_id }
 ```
 
 事件：
 
 ```
-RemainDiscovered { remain_id, fleet_id, via: ocean_search|map|event|puzzle, item_id? }
-UnlockRemain { remain_id, item_id }
-UnlockVillage { village_id, item_id }          # 164
+RemainsDiscovered / VillageDiscovered         # 形状见 03 §8（world 发）
+RemainsRevisited { remains_id, town_id, kind }   # town-life 据此跑仪式
 UnlockRejected { item_id, reason }
-PuzzleSolved { puzzle_id, remain_id? }
+PuzzleSolved { puzzle_id, remains_id? }
 PuzzleBlocked { puzzle_id, reason: isa_unknown|need_other_half|... }
 ItemsCombined { recipe_key, output_item_id }
-RelicGranted { remain_id?, item_id, culture_circle_id? }
-SearchExAdvanced { remain_id, stage }
+RelicGranted { remains_id?, item_id, major_sea_id? }
+SearchExAdvanced { remains_id, stage }
 OldMapOpened { item_id }
 ```
 
-ocean 只发 `DiscoveryFound { kind: remains, remain_id }`。world 订阅后置位，再决定是否 `Puzzle.open { search_ex }`。items 的 `UseItem` 对 kind 10 发 `Unlock*`，不直接改遗迹位。
+原版入口是 town-life 发 `FacilityEntered { town_id, map_point_kind: 9|10|11 }`；world 订阅它（06 的订阅方含 world），在 `on_enter_town_map_point` 内查 `Remains.at_town`：未发现则置位、加首访影响力并发 `RemainsDiscovered`，已发现则发 `RemainsRevisited`（§4.3）。ocean 海上搜索命中遗迹是重构扩展（原版未见），同样走 world 置位。items 的 `UseItem` 对 kind 10 查 `old_maps.yaml` 的 `target`，不直接改遗迹位，而是发命令 `World.mark_*_discovered(id, via: item, item_id)`，事件由 world 发（旧 `UnlockRemain` / `UnlockVillage` 作废）。
 
 不暴露 `CRemains*`、`CRemainsElement`、`SItem*`。
 
@@ -801,16 +812,16 @@ ocean 只发 `DiscoveryFound { kind: remains, remain_id }`。world 订阅后置�
 
 | 项 | 依据 | 状态 |
 | --- | --- | --- |
-| 头文件 `NUM_REMAINS` 整数 | 注释 not recovered | `[未知]`；运行时按 25 推断 |
-| 25 个遗迹的显示名 | 无抽出表 | `[未知]` |
-| 坐标 / `sea_area_id` | 非 Locator、非 GetFix | `[未知]` |
-| `REMAINSSTATE_BITS` 的 `sizeof` 与各位（发现 / 进过 / 领过奖 / …） | 断言只有位计数 | `[未知]` |
-| `CRemains+0x8` 8 字节是位域还是指针 | 存档槽 | `[未知]` |
-| `fn_14001233c` 的 `sB8` 是否就是 `eRemains` | 贴图数吻合 | `[推断]` |
+| 头文件 `NUM_REMAINS` 整数 | 注释 not recovered | 实例计数 25 `[确认]`（名字表） |
+| 25 个遗迹的显示名 | exe `0x1405b2f80` | `[确认]` 见 09 |
+| 坐标 | 挂港 `STown+0x26` | `[确认]`；木造教堂无港 |
+| `REMAINSSTATE_BITS` 位 1–7 | u8，位 0 = 已发现 | `[未知]` |
+| `fn_140010f46` / 首访加两次 | 反汇编 | 谓词 `[确认]` = `eScenario`（剧本 0 ×2，见 09）；加两次是否有意 `[未知]` |
+| World0 何时开 9/10/11 位 | `fn_140001f87` 港数据更新 | `[推断]` 剧本 |
 | `OldMapStill` 下标闭合式 | 反编译把对象指针乘进去了 | `[未知]`；配 `id*4+layer` |
-| 12 张地点地图 → `remain_id` / `village_id` | 只有文案目标 | `[未知]` 禁止手填 |
+| 12 张地点地图 → `remains_id` / `village_id` | 只有文案目标 | `[未知]` 禁止手填 |
 | `+0x18` 锚点港在玩法里做什么（出发？最近港？） | 171 反例已排除「等于遗址」 | `[未知]` |
-| 贤者 `+0x15` = 文化圈 | 0–6 双射 | `[推断]` |
+| 贤者 `+0x15` = 七大海域 | 0–6 双射 | `[推断]` |
 | kind 8 菜单名 =「霸者之证」 | 8 词连着 kind 5–12 | `[推断]` |
 | 哪一件 kind 8 从哪一座遗迹掉 | 无表 | `[未知]` |
 | `+0x19` 8↔10 在 W0/W1 对调 | hex | `[未知]` |
@@ -820,12 +831,11 @@ ocean 只发 `DiscoveryFound { kind: remains, remain_id }`。world 订阅后置�
 | 188/189/190 纪念品是否解谜钥匙 | 布钱诗句、斗篷织法 | `[未知]` |
 | `fn_140006429` 模式 1/2/3 的玩法差 | 只有摆件循环 | `[未知]` |
 | `CItemMysteryHunting` 是否就是 SearchEx 窗 | 地址相邻、共享 `+0x208` | `[推断]` |
-| `cRemains` 是否可从 97 港点进去 | RTC 名字 | `[未知]` |
-| `CMpRemains` ↔ `eMapPointKind` | 仅类 | `[未知]` |
+| `CMpRemains` 内 kind 9/10/11 除奖励表外的差异 | 重访 `fn_14000eacf` 分三支仪式 | `[确认]`；仪式奖励细节归 town-life |
 | 海上探索半径（世界单位） | 点击 16px 是 UI | `[未知]` 见 ocean |
 | 开局是否已发现若干遗迹（剧本差） | 无 | `[未知]` |
 | 称号与遗迹的 `requires` | 名声篇空表 | `[未知]` |
 | `EvItem.dk4` 39 帧与 14 古宝+地图的对齐 | 只有 ntex | `[未知]` |
 | 「来遗迹这里有事吗」是否遗迹内对话 | 与教会仪式同一块 | `[未知]` |
 
-算术备忘（**不是**命名方案）：11 张非村落地点图 + 7 圈证明地 + 7 件 PK 古宝 = 25。没有坐标表之前，禁止按这个式子给 `remain_00` 起名叫环状石柱。
+遗迹名与挂港已从 exe / 港口表钉死（09 §2.2）。12 张地点地图 → `remains_id` 仍无代码连接，`target.key` 保持 `null`。

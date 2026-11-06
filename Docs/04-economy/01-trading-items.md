@@ -7,12 +7,12 @@
 本系统管：
 
 - `eTradingItem` / `eTradingItemKind` 的稳定 ID、别名、显示名、种类归属
-- 交易品静态属性（基础价 `data_price`、种类、百科文案 key）
-- 空货格哨兵 `trading_item.empty`
+- 交易品静态属性（目录底价 `data_price`、种类、等级步长 `grade_step`、开局发现位、解锁发现物外键、百科文案 key）
+- 空货格：运行时 `Option<TradingItemId>` / `null`；原版 106 只在 `ids/legacy_codec.yaml`
 
 不管：
 
-- 某港口此刻卖什么、供给多少（特产品槽，world 只存 item id，economy 管供给）
+- 某港口产什么、供给多少（特产品槽，整行归 `04`）
 - 市价、报价、金币（`02`）
 - 货舱格子、堆叠、会话（`03`）
 - 装备 / 发现物 `eItem`（`09-items`，231 件，不是交易品）
@@ -24,36 +24,63 @@
 | --- | --- | --- |
 | `NUM_TRADINGITEM = 105`，合法 id 0–104 | [确认] | `srcdata/source/TradingItemID.h` |
 | `INVALID_TRADINGITEM = -1` | [确认] | 同上；`constants.json` `INVALID_` |
-| 空货格 / 空特产品 = `0x6A` = 106，**不在** 0–104 内 | [确认] | `Constants.h` `ITEM_EMPTY`；`num_values.json` `ITEM_EMPTY: 106` |
+| 空货格 / 空特产品 = `0x6A` = 106，**不在** 0–104 内 | [确认] | `Constants.h` `ITEM_EMPTY`；`num_values.json` `ITEM_EMPTY: 106`；`fn_14000680c` 等处 `cmp …,0x6a` |
 | `NUM_TRADINGITEMKIND = 19`，循环上界 `0x13` | [确认] | `TradingItemKindID.h`；`CTrade::CommitDeal` RTC `eTradingItemKind` |
+| 目录是 exe 内置表，**不在** World DLL | [确认] | `.data` VA `0x140688190` 起 105×16 B；World DLL 只导出 fleet/item/person/town/force（`srcdata/source/world/DllMain.cpp`） |
+| 运行时 `CTradingItem` = `CTradingItemElement + 8 + id*0x40` | [确认] | `fn_140006884`（`imul 0x40` / `+8`）；取对象入口 `fn_140001c94(id)` |
+| 对象 `+0x10` u16 = 目录 `data_price` | [确认] | `fn_140007022` → `fn_140127020`（`movzx word`） |
+| 对象 `+0x12` u16 = `grade_step` | [确认] | `fn_140005da8` |
+| 对象 `+0x14` u8 = `kind_id` | [确认] | `fn_14000c2f2` → `fn_1400ff2a0`（`movzx byte`） |
+| 对象 `+0x16` = 已发现位（开局取目录 +14） | [确认] | `fn_14000f9e3`；见 `05` §2.2 |
 | `TRADINGITEM_DATAPRICE` 是 `USHORT`，有 MIN/MAX 符号 | [确认] | `Price.h` 注释；`asserts.txt` `sizeof(USHORT)` |
-| `TRADINGITEMGRADE` 是独立 ID 类型，有 MIN/MAX | [确认] | `constants.json` `TRADINGITEMGRADE_ID/MIN/MAX` |
-| `TRADINGITEMSTATE_BITS` 存在 | [确认] | `constants.json`；语义未还原 |
-| 百科文案在 mesfile `0x11fb`–`0x2d9b`，按种类连写 | [确认] | `srcdata/catalog/mesfile_sc.txt` |
+| 等级取值 1–5，6 = 不可买 | [确认] | `fn_140015168` 末尾 `fn_1400103d4(1, 6-q, 5)`；不可上架返回 6。`TRADINGITEMGRADE_MIN/MAX` 整数未写进头文件 |
+| `TRADINGITEMSTATE_BITS` 存在 | [确认] 符号 | `constants.json`、`asserts.txt:133`；与 +0x16 的对应 `[推断]` |
+| 种类短名 19 条 | [确认] | `fn_14000c522` / `fn_140007c8e`（RTC `as_szTradingItemKindName`）；串在 VA `0x1405aa064` 起，「武器」与别处共用 `0x140557524` |
+| 种类归属 = 目录 +10 | [确认] | 与百科 19 组、下表 id 区间一致 |
+| 百科文案在 mesfile `0x11fb`–`0x2d9b`，按 id 连写 | [确认] | `srcdata/catalog/mesfile_sc.txt` |
 | 世界表 5 个特产品槽的 `item_id` 覆盖 0–104 **全部** 105 个 id | [确认] | `Docs/_data/towns_world0.json` |
-| 伦敦槽 `(99,47,51,90,91)` = 煤 / 羊毛 / 毛织品 / 洋枪 / 大炮 | [确认] | 上表 + 百科顺序；与汉堡 `(5,6,7,36,94)` 鱼肉/牛肉/南瓜/白兰地/铁矿石 交叉一致 |
-| 因此：**百科连写顺序 = `eTradingItem` 0–104** | [确认] | 上两条 |
-| 种类顺序与百科分组一致，共 19 组 | [推断] | 分组数 = `NUM_TRADINGITEMKIND`；短名未在 mesfile 单独成表 |
-| `CTradingItem` / `CTradingItemElement` 是运行时对象，不是目录 | [确认] | `srcdata/source/game/trade/CTradingItem.cpp`；world 侧 `CTradingItemElement` 扫 0x69 件 |
+| `CTradingItem` / `CTradingItemElement` 是运行时对象，目录是 exe 静态表 | [确认] | `srcdata/source/game/trade/CTradingItem.cpp` |
 
 禁止用 0 当空格：0 是小麦。
+
+### 2.1 exe 目录行布局（16 B）
+
+| 偏移 | 宽 | 字段 | 观察 |
+| --- | --- | --- | --- |
+| +0 | QWORD | 名称指针 | GBK 短名 |
+| +8 | u16 | `data_price` | 1000–9500 |
+| +10 | u8 | `kind_id` | 0–18 |
+| +11 | u8 | 解锁发现物 `eItem` | 0–19；`0xE8`=无 |
+| +12 | u16 | `grade_step` | 300–1900 |
+| +14 | u8 | 开局已发现 | 12 件为 0 |
+| +15 | u8 | — | 全 0 |
+
+`[确认]` 逐行读 `Game/DK4HD_sc.exe`；与 `05-goods-art-spawn-display.md` §2.2 同表。
+
+`data_price` 的三处用途 `[确认]`：
+
+1. `fn_14000a691` 在该货**不是**本港特产品时的底价（`fn_140007022` 分支）。玩家买货栏只列特产品，所以这条路径主要服务下一条
+2. 种类指数滑动时的参考价（`fn_1400108b6` 对同种类全部已发现货按等级 4 报 `fn_14000a691` 取平均）
+3. 文化圈卖价回升的上限（`CommitDeal` 同一货卖 ≥15 件；见 `02` §2.6）
+
+本港特产品买价**不用**它，用港口槽价（`04`）；卖价**不用**它，用文化圈价（`02`）。
 
 ## 3. 实体与 ID
 
 | 实体 | 原版枚举 | 原版计数 | 非法 | 空哨兵 | 重构 key |
 | --- | --- | --- | --- | --- | --- |
-| 交易品 | `eTradingItem` | 105 | -1 | — | `trading_item.<alias>` |
-| 种类 | `eTradingItemKind` | 19 | -1 | — | `trading_item_kind.<alias>` |
-| 空货格 | 非枚举成员 | 106 | — | `0x6A` | `trading_item.empty` |
-| 交易品等级 | `TRADINGITEMGRADE_ID` | [未知] | — | — | `trading_item_grade` |
+| 交易品 | `eTradingItem` | 105 | -1 | — | `vanilla:<alias>`（域 `trading_item`） |
+| 种类 | `eTradingItemKind` | 19 | -1 | — | `vanilla:<alias>`（域 `trading_item_kind`） |
+| 空货格 | 非枚举成员 | 106 | — | `0x6A` | 运行时 `null`；106 只在 `legacy_codec` |
+| 交易品等级 | `TRADINGITEMGRADE_ID` | 1–5 | — | 6 = 不可买 | `trading_item_grade` |
 
 运行时以表长循环，不写死 105。原版包实例计数是 105 / 19。
 
-模组追加交易品：`id >= 1000`，或独立命名空间。不要占用 106。
+模组追加交易品用命名空间 key（`mymod:saffron`），整数下标由加载器紧凑分配、只在运行时用。原版 106 只是导入 / 导出编码：模组顺序分配到第 2 件就会撞上 106，所以运行时空货一律 `null`，导出原版格式时下标 ≥105 拒绝（DECISIONS D1）。
 
-### 3.1 种类 0–18 `[推断]`
+### 3.1 种类 0–18 `[确认]`
 
-短名取百科分组 + HD 中文攻略常用译；mesfile 没有 19 条种类标题。引擎只依赖 `id` 与 `item.kind_id`。
+短名取 exe `as_szTradingItemKindName`（§2）。id 区间取目录 +10。引擎只依赖 `id` 与 `item.kind_id`。
 
 | id | key | name | 交易品 id 范围 | 件数 |
 | --- | --- | --- | --- | --- |
@@ -79,116 +106,120 @@
 
 ### 3.2 交易品 0–104
 
-`name` 能在 mesfile 百科里直接读到的标 `[确认]`；只能靠描述 + 特产品交叉还原短名的标 `[推断]`。`key` 是稳定英文别名，不是原版符号。
+`[确认]` 全表取自 exe 目录 `.data` VA `0x140688190`（文件偏移 `0x686b90`），步长 16，105 行（布局见 §2.1）。`name` 是 +0 指针指向的 GBK 短名；`kind` 是 +10；`data_price` 是 +8；`grade_step` 是 +12；`开局已发现` 是 +14；`发现物 eItem` 是 +11（`232`=`0xE8` 无，记作 —）。`key` 是稳定英文别名，不是原版符号。
 
-| id | key | name | kind | 名称标记 | mesfile 依据（摘） |
-| --- | --- | --- | --- | --- | --- |
-| 0 | wheat | 小麦 | 0 | [确认] | 「与米（稻）﹑玉米并称为世界三大谷物。原产于地中海」 |
-| 1 | rice | 米 | 0 | [确认] | 「去掉稻壳的稻的果实」 |
-| 2 | corn | 玉米 | 0 | [确认] | 「与小麦﹑米（稻）并称为世界三大谷物」 |
-| 3 | potato | 马铃薯 | 0 | [推断] | 「地下茎的块茎…原产于新大陆」；里加/雅加达槽 id=3 |
-| 4 | soybean | 大豆 | 0 | [确认] | 「大豆的种子，是豆腐﹑味噌的原料」 |
-| 5 | fish | 鱼肉 | 0 | [确认] | 「鱼，生吃或者烤着吃」；汉堡槽 id=5 |
-| 6 | beef | 牛肉 | 0 | [确认] | 「牛肉，可煮或烤食用」；布里斯托尔槽 id=6 |
-| 7 | pumpkin | 南瓜 | 0 | [推断] | 「蔬菜的一种，原产于新大陆。富含淀粉」；汉堡槽 id=7 |
-| 8 | cheese | 乳酪 | 0 | [推断] | 「牛奶和山羊奶…乳酸菌发酵」；阿姆斯特丹槽 id=8 |
-| 9 | tomato | 番茄 | 0 | [确认] | 「茄科的植物，别名红茄子」 |
-| 10 | banana | 香蕉 | 0 | [推断] | 「芭蕉科的大型多年生草本植物」；德尔纳特槽 id=10 |
-| 11 | sugar | 砂糖 | 1 | [确认] | 「甜味料，主要成份是蔗糖」；哈瓦那槽 id=11 |
-| 12 | honey | 蜂蜜 | 1 | [确认] | 「蜜蜂采自花，贮藏在蜂巢里的蜜」 |
-| 13 | salt | 盐 | 1 | [确认] | 「调味料的一种。也是人体生理上不可欠缺的成份」 |
-| 14 | olive_oil | 橄榄油 | 1 | [确认] | 「地中海沿岸橄榄树的果实中提炼出来的油」 |
-| 15 | coconut_oil | 椰子油 | 1 | [确认] | 「用椰子果实的胚乳榨的油，别名椰子油」 |
-| 16 | ginger | 生姜 | 1 | [推断] | 「根茎可以食用和药用…独特的芳香和辣味」；马六甲槽 id=16 |
-| 17 | lychee | 荔枝 | 2 | [推断] | 「果实呈白色胶状，味道酸甜，原产于中国南方」 |
-| 18 | hazelnut | 榛子 | 2 | [确认] | 「别名榛果」；汉城槽 id=18 |
-| 19 | raisin | 葡萄干 | 2 | [确认] | 「晒干的葡萄」 |
-| 20 | caviar | 鱼子酱 | 2 | [推断] | 「鲟鱼的卵巢腌制而成，是珍品」；伊斯坦布尔槽 id=20 |
-| 21 | shark_fin | 鱼翅 | 2 | [推断] | 「大型鲨鱼的鳍干燥而成」 |
-| 22 | pepper | 胡椒 | 3 | [确认] | 「胡椒科的果实…辛香料」；亚历山大/德尔纳特槽 id=22 |
-| 23 | clove | 丁香 | 3 | [确认] | 「蒲桃科丁香的花蕾」 |
-| 24 | nutmeg | 豆蔻 | 3 | [确认] | 「肉豆蔻科…果实的核」；卡利卡特槽 id=24 |
-| 25 | cinnamon | 肉桂 | 3 | [确认] | 「肉桂的树皮等干燥而成」；马六甲槽 id=25 |
-| 26 | allspice | 甜椒 | 3 | [推断] | 文案是「豆蔻的种子磨成粉末…丁香﹑肉桂﹑肉豆蔻混合的香味」（多香果）；委拉克鲁斯槽 id=26。SC 短名取「甜椒」 |
-| 27 | tamarind | 罗望子 | 3 | [推断] | 「豆科的常绿乔木的果实…辛香料」 |
-| 28 | saffron | 藏红花 | 3 | [确认] | 「番红花的雄蕊干燥而成」；里斯本槽 id=28 |
-| 29 | vanilla | 香草 | 3 | [确认] | 「香草的果实发酵而成，原产于新大陆」 |
-| 30 | chili | 辣椒 | 3 | [确认] | 「辣椒的果实干燥而成…别名红辣椒」 |
-| 31 | coffee | 咖啡 | 4 | [确认] | 「将咖啡树的种子（咖啡豆）炒熟」 |
-| 32 | tea | 茶 | 4 | [确认] | 「用茶树的嫩芽﹑嫩叶制作的饮料」 |
-| 33 | cacao | 可可 | 4 | [确认] | 「可可豆…是可可和巧克力的原料」 |
-| 34 | tobacco | 烟草 | 4 | [确认] | 「将烟草的叶子干燥，剪细，点火吸其烟」 |
-| 35 | wine | 葡萄酒 | 5 | [确认] | 「以葡萄的果实和果汁为原料发酵而成」 |
-| 36 | brandy | 白兰地 | 5 | [确认] | 「蒸馏葡萄酒制作的白兰地」；汉堡槽 id=36 |
-| 37 | rum | 朗姆酒 | 5 | [推断] | 「以甘蔗的榨汁或糖蜜为原料」；哈瓦那槽 id=37 |
-| 38 | sake | 清酒 | 5 | [确认] | 「日本固有的酿造酒…也称为日本酒」；大阪槽 id=38 |
-| 39 | gold | 金 | 6 | [确认] | 「有美丽的黄色光泽的金属」 |
-| 40 | silver | 银 | 6 | [推断] | 「有青白色美丽光泽的金属」；吕贝克槽 id=40 |
-| 41 | platinum | 白金 | 6 | [确认] | 「别名白金」；索法拉槽 id=41 |
-| 42 | glassware | 玻璃 | 7 | [确认] | 「玻璃工艺品」；阿姆斯特丹槽 id=42 |
-| 43 | ceramics | 陶瓷器 | 7 | [确认] | 「陶器﹑瓷器等陶瓷的总称」 |
-| 44 | lacquerware | 漆器 | 7 | [确认] | 「用漆树的树液涂的器具，也叫漆器」；大阪槽 id=44 |
-| 45 | inlay | 象牙制品 | 7 | [推断] | 文案是镶嵌工艺；大阪槽 id=45。SC 短名取「象牙制品」 |
-| 46 | goldwork | 黄金艺品 | 7 | [推断] | 「雕刻金属的大师傅用铁槌錾打」 |
-| 47 | wool | 羊毛 | 8 | [确认] | 「从羊或山羊身上剪下的毛」；伦敦槽 id=47 |
-| 48 | cotton | 棉花 | 8 | [确认] | 「棉花生产成的纤维」 |
-| 49 | silk | 丝绸 | 8 | [推断] | 「以蚕茧中抽出的纤维」；热那亚/大阪槽 id=49 |
-| 50 | hemp | 麻 | 8 | [确认] | 「从泰麻﹑亚麻﹑马尼拉麻等的茎提炼的纤维」；布鲁日槽 id=50 |
-| 51 | woolen | 毛织品 | 9 | [确认] | 「用绵羊﹑安哥拉兔﹑开司米等兽毛加工…纺织物」；伦敦槽 id=51 |
-| 52 | cotton_cloth | 棉织品 | 9 | [确认] | 「以绵线为原料的纺织物」；塞维利亚槽 id=52 |
-| 53 | silk_cloth | 丝织品 | 9 | [确认] | 「用丝线制成的纺织物」 |
-| 54 | linen | 麻织品 | 9 | [确认] | 「用麻的纤维制成的纺织物」；布鲁日槽 id=54 |
-| 55 | pile_cloth | 绒织品 | 9 | [推断] | 「作垫子用的毛织物…波斯地毯」；伊斯坦布尔槽 id=55 |
-| 56 | muslin | 纱布 | 9 | [推断] | 「将人物﹑乌兽﹑花草等图案染上各种颜色而成的绵布」；卡利卡特槽 id=56 |
-| 57 | velvet | 天鹅绒 | 9 | [推断] | 「绢的纵丝上起毛的纺织品」；塞维利亚槽 id=57 |
-| 58 | antique | 古董 | 10 | [确认] | 「数量稀少，有美术价值的古美术品」 |
-| 59 | fur | 毛皮 | 10 | [推断] | 「剥下哺乳动物的皮，连着毛制成的东西」 |
-| 60 | painting | 绘画 | 10 | [推断] | 「平面上画出的视觉表现」；雅典槽 id=60 |
-| 61 | sculpture | 雕刻 | 10 | [推断] | 「立体表现形像的造型艺术」；雅典槽 id=61 |
-| 62 | musk | 麝香 | 11 | [确认] | 「从…麝的分泌物中提取的」；杭州槽 id=62 |
-| 63 | frankincense | 乳香 | 11 | [确认] | 「焚香料，点着即冒出白烟」；索法拉槽 id=63 |
-| 64 | ambergris | 龙涎香 | 11 | [推断] | 「从抹香鲸的肠内提取」 |
-| 65 | sandalwood | 白檀 | 11 | [确认] | 「被制成白檀油，原产于印度」 |
-| 66 | jadeite | 翡翠 | 12 | [确认] | 「别名硬玉，暗绿色」；杭州槽 id=66 |
-| 67 | ivory | 象牙 | 12 | [确认] | 「象的门牙」；圣乔治槽 id=67 |
-| 68 | coral | 珊瑚 | 12 | [确认] | 「将海中生物珊瑚加工而成」 |
-| 69 | tortoiseshell | 玳瑁甲 | 12 | [确认] | 「海龟的一种玳瑁的甲壳」 |
-| 70 | amber | 琥珀 | 12 | [推断] | 「古代的树脂在地下形成的化石」 |
-| 71 | crystal | 水晶 | 12 | [确认] | 「酸化矿物石英…紫水晶﹑烟水晶﹑红水晶」 |
-| 72 | nephrite | 软玉 | 12 | [确认] | 「别名软玉」；卡利卡特槽 id=72 |
-| 73 | pearl | 珍珠 | 13 | [确认] | 「在珍珠贝等的体内形成的圆珠」；大阪槽 id=73 |
-| 74 | diamond | 金刚石 | 13 | [推断] | 「无色透明的宝石，折光率高」 |
-| 75 | sapphire | 蓝宝石 | 13 | [确认] | 「别名青玉，青宝玉」 |
-| 76 | emerald | 绿宝石 | 13 | [确认] | 「鲜艳的绿色宝石，日本叫作翠玉」 |
-| 77 | ruby | 红宝石 | 13 | [推断] | 「红色的宝石，日本叫作和玉」 |
-| 78 | lapis | 天青石 | 13 | [确认] | 「别名青金石，日本也叫作琉璃」 |
-| 79 | rhinoceros_horn | 犀牛角 | 14 | [确认] | 「以犀牛角的尖端磨碎而成」 |
-| 80 | ginseng | 人参 | 14 | [确认] | 「将朝鲜人参树的根干燥而成」；汉城槽 id=80 |
-| 81 | quinine | 奎宁 | 14 | [推断] | 「用奎树的皮精制而成，用于解热」；雅加达槽 id=81 |
-| 82 | apricot_kernel | 杏仁 | 14 | [确认] | 「杏树果实的核」；里斯本槽 id=82 |
-| 83 | cordyceps | 冬虫夏草 | 14 | [推断] | 「寄生在昆虫等的菌类，被当作强壮剂」；杭州槽 id=83 |
-| 84 | turmeric | 郁金 | 15 | [确认] | 「将郁金的根茎加热提炼出的液体」；雅加达槽 id=84 |
-| 85 | indigo | 靛蓝 | 15 | [确认] | 「蓝的叶子发酵制成的染料」 |
-| 86 | cochineal | 胭脂红 | 15 | [确认] | 「将…胭脂虫干燥后制成的粉末」 |
-| 87 | catechu | 槟榔 | 15 | [确认] | 「煮槟榔的果实制成」；马六甲槽 id=87 |
-| 88 | rhubarb | 大黄 | 15 | [确认] | 「用大黄的根茎制成的黄色染料」 |
-| 89 | mangosteen | 山竹果 | 15 | [确认] | 「用山竹果的皮制成的染料」；马六甲槽 id=89 |
-| 90 | musket | 洋枪 | 16 | [推断] | 「以火药之力发射子弹的武器」；伦敦槽 id=90 |
-| 91 | cannon | 大炮 | 16 | [推断] | 「发射大子弹的兵器」；伦敦槽 id=91 |
-| 92 | sword | 刀剑 | 16 | [确认] | 「刀和剑，战斗期间销售良好」；布里斯托尔槽 id=92 |
-| 93 | armor | 甲胄 | 16 | [确认] | 「铠甲和头盔，战斗期间卖得很好」 |
-| 94 | iron_ore | 铁矿石 | 17 | [确认] | 「含有铁的石头」；汉堡槽 id=94 |
-| 95 | copper_ore | 铜矿石 | 17 | [确认] | 「含有铜的石头」 |
-| 96 | tin_ore | 锡矿石 | 17 | [确认] | 「含有锡的矿石」；布里斯托尔槽 id=96 |
-| 97 | saltpeter | 硝石 | 17 | [推断] | 「火药﹑火柴﹑焰火的原料」；巴士拉槽 id=97 |
-| 98 | sulfur | 硫磺 | 17 | [推断] | 「黄色的非金属固体…一点火就发出蓝色火焰」；伊斯坦布尔槽 id=98 |
-| 99 | coal | 煤 | 17 | [推断] | 「古代的植物堆积在地里…变成可燃物」；伦敦槽 id=99 |
-| 100 | lumber | 木材 | 18 | [确认] | 「砍伐树木，加工成适当的尺寸」；斯德哥尔摩槽 id=100 |
-| 101 | leather | 皮草 | 18 | [确认] | 「皮革制品，除去皮上的毛制成的革」 |
-| 102 | wax | 蜡 | 18 | [确认] | 「构成蜜蜂窝的蜡，别名蜜蜡」 |
-| 103 | gum | 糖胶 | 18 | [推断] | 「橡胶的原料，煮橡胶树的树汁而成」；马六甲槽 id=103 |
-| 104 | guano | 鸟粪石 | 18 | [确认] | 「别名鸟粪石」 |
-| 106 | empty | （空） | — | [确认] | 哨兵，不是目录行 |
+百科长文（mesfile `0x11fb`–`0x2d9b`，按 id 连写）只作 `encyclopedia_key`，不再用来推短名。旧版用百科反推的两条短名改正：id 1 是「稻米」不是「米」，id 2 是「玉蜀黍」不是「玉米」。id 26「甜椒」百科讲的是多香果、id 45「象牙制品」百科讲镶嵌、id 55「绒织品」百科讲地毯——短名以 exe 为准，百科不一致照原样保留。
+
+| id | key | name（exe） | kind | data_price | grade_step | 开局已发现 | 发现物 eItem |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 0 | wheat | 小麦 | 0 | 1100 | 500 | 1 | — |
+| 1 | rice | 稻米 | 0 | 1200 | 300 | 1 | — |
+| 2 | corn | 玉蜀黍 | 0 | 1100 | 400 | 1 | — |
+| 3 | potato | 马铃薯 | 0 | 1000 | 300 | 1 | — |
+| 4 | soybean | 大豆 | 0 | 1000 | 500 | 1 | — |
+| 5 | fish | 鱼肉 | 0 | 1100 | 600 | 1 | — |
+| 6 | beef | 牛肉 | 0 | 1200 | 700 | 1 | — |
+| 7 | pumpkin | 南瓜 | 0 | 1300 | 500 | 1 | 0 |
+| 8 | cheese | 乳酪 | 0 | 1200 | 600 | 1 | — |
+| 9 | tomato | 番茄 | 0 | 1300 | 800 | 1 | 1 |
+| 10 | banana | 香蕉 | 0 | 1400 | 700 | 1 | 2 |
+| 11 | sugar | 砂糖 | 1 | 1700 | 900 | 1 | — |
+| 12 | honey | 蜂蜜 | 1 | 1800 | 1000 | 0 | 3 |
+| 13 | salt | 盐 | 1 | 1600 | 800 | 1 | — |
+| 14 | olive_oil | 橄榄油 | 1 | 1200 | 900 | 1 | — |
+| 15 | coconut_oil | 椰子油 | 1 | 1100 | 600 | 1 | — |
+| 16 | ginger | 生姜 | 1 | 2000 | 600 | 1 | — |
+| 17 | lychee | 荔枝 | 2 | 2000 | 1000 | 1 | — |
+| 18 | hazelnut | 榛子 | 2 | 1600 | 800 | 1 | — |
+| 19 | raisin | 葡萄干 | 2 | 1200 | 300 | 1 | — |
+| 20 | caviar | 鱼子酱 | 2 | 5200 | 1000 | 0 | 4 |
+| 21 | shark_fin | 鱼翅 | 2 | 5200 | 1000 | 0 | 4 |
+| 22 | pepper | 胡椒 | 3 | 4200 | 700 | 1 | 5 |
+| 23 | clove | 丁香 | 3 | 4200 | 900 | 1 | 6 |
+| 24 | nutmeg | 豆蔻 | 3 | 3500 | 800 | 1 | — |
+| 25 | cinnamon | 肉桂 | 3 | 4200 | 700 | 1 | 7 |
+| 26 | allspice | 甜椒 | 3 | 3500 | 800 | 1 | 8 |
+| 27 | tamarind | 罗望子 | 3 | 2500 | 600 | 0 | — |
+| 28 | saffron | 藏红花 | 3 | 2400 | 700 | 1 | — |
+| 29 | vanilla | 香草 | 3 | 3200 | 700 | 1 | — |
+| 30 | chili | 辣椒 | 3 | 3800 | 600 | 1 | — |
+| 31 | coffee | 咖啡 | 4 | 3500 | 600 | 1 | 9 |
+| 32 | tea | 茶 | 4 | 3500 | 700 | 1 | 10 |
+| 33 | cacao | 可可 | 4 | 3300 | 700 | 1 | 11 |
+| 34 | tobacco | 烟草 | 4 | 4000 | 500 | 1 | 12 |
+| 35 | wine | 葡萄酒 | 5 | 1900 | 1000 | 1 | — |
+| 36 | brandy | 白兰地 | 5 | 2100 | 1100 | 1 | — |
+| 37 | rum | 朗姆酒 | 5 | 1750 | 600 | 1 | — |
+| 38 | sake | 清酒 | 5 | 2000 | 900 | 1 | — |
+| 39 | gold | 金 | 6 | 9000 | 1800 | 1 | — |
+| 40 | silver | 银 | 6 | 5200 | 1300 | 1 | — |
+| 41 | platinum | 白金 | 6 | 9500 | 1900 | 0 | 13 |
+| 42 | glassware | 玻璃 | 7 | 2600 | 900 | 1 | 14 |
+| 43 | ceramics | 陶瓷器 | 7 | 4200 | 1200 | 1 | — |
+| 44 | lacquerware | 漆器 | 7 | 2700 | 800 | 1 | — |
+| 45 | inlay | 象牙制品 | 7 | 2200 | 600 | 1 | — |
+| 46 | goldwork | 黄金艺品 | 7 | 3000 | 800 | 0 | — |
+| 47 | wool | 羊毛 | 8 | 1500 | 600 | 1 | — |
+| 48 | cotton | 棉花 | 8 | 1400 | 500 | 1 | — |
+| 49 | silk | 丝绸 | 8 | 3500 | 900 | 1 | 15 |
+| 50 | hemp | 麻 | 8 | 1100 | 300 | 1 | — |
+| 51 | woolen | 毛织品 | 9 | 2200 | 800 | 1 | 16 |
+| 52 | cotton_cloth | 棉织品 | 9 | 2100 | 600 | 1 | 16 |
+| 53 | silk_cloth | 丝织品 | 9 | 5000 | 1100 | 1 | 16 |
+| 54 | linen | 麻织品 | 9 | 1600 | 400 | 1 | 16 |
+| 55 | pile_cloth | 绒织品 | 9 | 4200 | 900 | 1 | — |
+| 56 | muslin | 纱布 | 9 | 3500 | 500 | 1 | — |
+| 57 | velvet | 天鹅绒 | 9 | 3200 | 700 | 1 | — |
+| 58 | antique | 古董 | 10 | 5500 | 1400 | 1 | — |
+| 59 | fur | 毛皮 | 10 | 2900 | 1000 | 1 | — |
+| 60 | painting | 绘画 | 10 | 6000 | 1200 | 1 | — |
+| 61 | sculpture | 雕刻 | 10 | 5900 | 1300 | 1 | — |
+| 62 | musk | 麝香 | 11 | 3500 | 900 | 0 | — |
+| 63 | frankincense | 乳香 | 11 | 3800 | 800 | 1 | — |
+| 64 | ambergris | 龙涎香 | 11 | 4000 | 1000 | 0 | — |
+| 65 | sandalwood | 白檀 | 11 | 3400 | 800 | 1 | — |
+| 66 | jadeite | 翡翠 | 12 | 4000 | 1000 | 1 | — |
+| 67 | ivory | 象牙 | 12 | 4400 | 900 | 1 | — |
+| 68 | coral | 珊瑚 | 12 | 3200 | 700 | 1 | — |
+| 69 | tortoiseshell | 玳瑁甲 | 12 | 2750 | 900 | 1 | — |
+| 70 | amber | 琥珀 | 12 | 3400 | 700 | 1 | — |
+| 71 | crystal | 水晶 | 12 | 2600 | 1000 | 1 | — |
+| 72 | nephrite | 软玉 | 12 | 2000 | 700 | 1 | — |
+| 73 | pearl | 珍珠 | 13 | 5200 | 1200 | 1 | 17 |
+| 74 | diamond | 金刚石 | 13 | 9500 | 1800 | 0 | — |
+| 75 | sapphire | 蓝宝石 | 13 | 7500 | 1500 | 1 | — |
+| 76 | emerald | 绿宝石 | 13 | 6900 | 1400 | 1 | — |
+| 77 | ruby | 红宝石 | 13 | 7200 | 1300 | 1 | — |
+| 78 | lapis | 天青石 | 13 | 3400 | 700 | 1 | — |
+| 79 | rhinoceros_horn | 犀牛角 | 14 | 4300 | 900 | 1 | — |
+| 80 | ginseng | 人参 | 14 | 5200 | 600 | 1 | — |
+| 81 | quinine | 奎宁 | 14 | 3100 | 500 | 1 | — |
+| 82 | apricot_kernel | 杏仁 | 14 | 2000 | 300 | 1 | — |
+| 83 | cordyceps | 冬虫夏草 | 14 | 6100 | 1300 | 0 | 18 |
+| 84 | turmeric | 郁金 | 15 | 2300 | 500 | 1 | — |
+| 85 | indigo | 靛蓝 | 15 | 3400 | 600 | 1 | — |
+| 86 | cochineal | 胭脂红 | 15 | 2300 | 500 | 1 | — |
+| 87 | catechu | 槟榔 | 15 | 2300 | 500 | 1 | — |
+| 88 | rhubarb | 大黄 | 15 | 2200 | 800 | 1 | — |
+| 89 | mangosteen | 山竹果 | 15 | 2200 | 700 | 0 | 19 |
+| 90 | musket | 洋枪 | 16 | 3400 | 1000 | 1 | — |
+| 91 | cannon | 大炮 | 16 | 5200 | 1200 | 1 | — |
+| 92 | sword | 刀剑 | 16 | 1700 | 700 | 1 | — |
+| 93 | armor | 甲胄 | 16 | 1900 | 800 | 1 | — |
+| 94 | iron_ore | 铁矿石 | 17 | 2100 | 600 | 1 | — |
+| 95 | copper_ore | 铜矿石 | 17 | 1750 | 500 | 1 | — |
+| 96 | tin_ore | 锡矿石 | 17 | 1750 | 400 | 1 | — |
+| 97 | saltpeter | 硝石 | 17 | 2100 | 400 | 1 | — |
+| 98 | sulfur | 硫磺 | 17 | 2500 | 300 | 1 | — |
+| 99 | coal | 煤 | 17 | 2000 | 700 | 1 | — |
+| 100 | lumber | 木材 | 18 | 1550 | 400 | 1 | — |
+| 101 | leather | 皮草 | 18 | 1700 | 300 | 1 | — |
+| 102 | wax | 蜡 | 18 | 1700 | 500 | 1 | 3 |
+| 103 | gum | 糖胶 | 18 | 1700 | 400 | 1 | — |
+| 104 | guano | 鸟粪石 | 18 | 4800 | 300 | 0 | — |
+| 106 | empty | （空） | — | — | — | — | — |
+
+106 是哨兵，不是目录行。
 
 `name_i18n` 进 `config/ui/strings.*.yaml`，本表只留 `name` 作原版包缺省中文。
 
@@ -198,18 +229,18 @@
 
 ```
 kind_id(item) = trading_items[item_id].kind_id
-is_empty(item_id) = item_id == caps.trading_item_empty
-is_catalog(item_id) = 0 <= item_id < len(trading_items)
+is_empty(item) = item is null                  # 运行时 Option<TradingItemId>
+is_catalog(item) = item in trading_items       # 按 key 查表，不比下标区间
 ```
 
-`data_price` 的使用见 `02-market-price.md` 的 `quote()`。原版世界表特产品槽里的价格整数（100–6000）按 `TRADINGITEM_DATAPRICE` 解释，见 `04`。
+`data_price` 的使用见 `02-market-price.md` 的 `quote()`。世界表特产品槽里 100–6000 那列是**商业发展门槛**，不是价格；港口槽自己的底价在城镇记录 `+0x62+slot*6`（伦敦煤 550），见 `04` §2.1。`grade_step` 的使用见 `05` §2.4。
 
 ## 5. 耦合分析
 
 原版硬编码：
 
 - `CommitDeal` 栈上 `anSellTradingItemNum[105]`、`anBuyTradingItemKindNum[19]`
-- 空值同时用 `0x6A` 与 hold `+2=0x62`（清空记录）
+- 空货用 `0x6A`；hold `+2` 是买入港 `town_id`，清空写 `0x62`（无港哨兵，不是货物哨兵）
 - 港口特产品、流行品、委托扣货都直接拿 `eTradingItem`
 - `CTradingItemElement` 对象数组长度 `0x69`，末槽写 `0x6A`
 
@@ -221,47 +252,46 @@ is_catalog(item_id) = 0 <= item_id < len(trading_items)
 # config/economy/trading_item_kinds.yaml
 schema: dk4.economy.trading_item_kinds
 version: 1
-kinds:
-  - id: 0
-    key: food
-    name: 食品
-  - id: 3
-    key: spice
-    name: 香辣料
+kinds:                       # 主键 = 命名空间 key；vanilla_index 只供导入导出对照
+  - key: vanilla:food
+    vanilla_index: 0
+    name_key: trading_item_kind.food.name     # 缺省中文「食品」在语言包
+  - key: vanilla:spice
+    vanilla_index: 3
+    name_key: trading_item_kind.spice.name
   # ... 共 19 条，原版包
 ```
 
 ```yaml
-# config/economy/trading_items.yaml
+# config/economy/trading_items.yaml   （本篇拥有；05 只在同一行追加 icon / spawn 字段）
 schema: dk4.economy.trading_items
 version: 1
-empty_id: 106
 items:
-  - id: 0
-    key: wheat
-    name: 小麦
-    kind_id: 0
-    data_price: 0          # 目录缺省；港口特产品价在 special_products
-    encyclopedia_key: mes.trade.wheat
-  - id: 22
-    key: pepper
-    name: 胡椒
-    kind_id: 3
-    data_price: 0
-    encyclopedia_key: mes.trade.pepper
+  - key: vanilla:wheat
+    vanilla_index: 0
+    name_key: trading_item.wheat.name
+    kind: vanilla:food
+    data_price: 1100       # exe 目录 +8
+    grade_step: 500        # +12
+    initially_discovered: true   # +14
+    unlock_item: null      # +11；原版 0xE8 = 无 → null
+    encyclopedia_key: trading_item.wheat.desc
+  - key: vanilla:pepper
+    vanilla_index: 22
+    name_key: trading_item.pepper.name
+    kind: vanilla:spice
+    data_price: 4200
+    grade_step: 700
+    initially_discovered: true
+    unlock_item: vanilla:peppercorn    # eItem 5（胡椒粒），key 同 09-items/01 目录；见 05 §2.7
+    encyclopedia_key: trading_item.pepper.desc
 ```
 
-```yaml
-# config/ids/ 由内容表生成，不手写
-trading_item:
-  wheat: 0
-  empty: 106
-trading_item_kind:
-  food: 0
-  spice: 3
-```
+没有 `empty_id` 字段：空货是 `null`。原版 106 / 0xE8 只出现在 `config/ids/legacy_codec.yaml`（`00-overview/04-id-registry.md`）。整数下标由加载器分配，存档头 `id_map` 存 key↔下标，不手写 `config/ids/` 映射表。
 
-`data_price` 在原版更常出现在**港口特产品槽**而不是全局目录。目录字段保留为缺省；港口覆盖见 `04`。未从独立「交易品定义表」还原的全局 `data_price` 标 `[未知]`，不要填编造值。
+原版包 105 行全部从 exe 目录生成（§3.2），不手填。目录 `data_price` 与港口槽 `data_price`（`04`）、文化圈卖价（`02`）是三张表，各管一条报价路径，不要合并成一个「基础价」。
+
+World0 / World1 共用这张目录（exe 内置）。模组换包时目录也是内容包的一部分，不是引擎常量。
 
 ## 7. 独立旋钮
 
@@ -270,33 +300,30 @@ trading_item_kind:
 - 加种类、加交易品（表长变了，循环跟表）
 - 改某件的 `kind_id`（市价按种类存，改归属会换那条 kind-rate）
 - 改显示名 / 百科
-- 把空哨兵从 106 改成别的（只动 `caps.yaml` 与内容包，引擎读配置）
+- 空货永远是 `null`；原版 106 只在 `legacy_codec` 里改
 
 ## 8. 对外接口
 
 查询（只读）：
 
 ```
-Economy.item(trading_item_id) -> { id, key, kind_id, data_price }
+Economy.item(trading_item_id) -> { id, key, kind_id, data_price, grade_step }
+Economy.is_discovered(trading_item_id) -> bool          # 运行时位；写入见 05
 Economy.kind(trading_item_kind_id) -> { id, key }
-Economy.is_empty(trading_item_id) -> bool
+Economy.is_empty(trading_item_id | null) -> bool
 Economy.catalog_size() -> int
 ```
 
 不暴露 `CTradingItem*`、mesfile 偏移、世界表 hex。
 
-事件：本篇不发事件。货物进出由 `03` 发 `CargoCommitted`。
+事件：本篇不发事件。货物进出由 `03` 发 `TradeCommitted`。
 
 ## 9. 未核实字段
 
 | 字段 | 现状 |
 | --- | --- |
-| 全局「交易品定义」除百科外的二进制表 | 未找到与 `GetFixTownProc` 同级的 GetFixTradingItem；目录从 mesfile + 特产品槽还原 |
-| 每件全局 `data_price` | 只在港口槽看到 100–6000；是否另有底表 `[未知]` |
-| `TRADINGITEMGRADE_MIN/MAX` 的整数、与 UI「%s等级」的对应 | 符号有，值无 |
-| `TRADINGITEMSTATE_BITS` | 只有符号 |
-| 种类短名的原版字符串表 | mesfile 无独立 19 条标题；上表种类名为 `[推断]` |
-| id 26 短名「甜椒」vs 文案「多香果」 | 描述与 SC 短名不一致，保留短名并注明 |
-| id 45 / 55 短名 | 文案是镶嵌 / 地毯，SC 短名取象牙制品 / 绒织品 `[推断]` |
-| hold `+1/+2` 与目录哪一列对应 | `03` 再列；目录不解释舱位字节 |
-| World1 交易品是否同一 105 件 | 未对照 World1.dll |
+| `TRADINGITEMGRADE_MIN/MAX` 的整数 | 符号有，值无；代码夹 1–5、6 = 不可买 |
+| `TRADINGITEMSTATE_BITS` | 只有符号；是否就是对象 +0x16 发现位 `[推断]` |
+| 目录 +15 | 全 0，未见读取 |
+| hold `+1/+2` | 已钉：+1 等级，+2 买入港（见 `03` §2.2） |
+| World1 交易品是否同一 105 件 | 目录在 exe，两包共用 `[确认]`；World1 槽内容另见 `04` |

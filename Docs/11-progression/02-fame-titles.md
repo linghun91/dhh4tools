@@ -1,20 +1,20 @@
 # 名声与发现称号
 
-原版没有还原出独立的「名声值」字段。能钉住的是发现物 UI（`CDiscoverTitleView`）和一批与「发现」相关的状态位、文案。本系统把这些收成可配置的发现进度，不为原版补一个仓库里不存在的数值。
+原版没有「名声值」，也没有爵位。能钉住的是发现物 UI（`CDiscoverTitleView`，更像发现时的标题卡）和一批与「发现」相关的状态位、文案。本系统把这些收成可配置的发现进度，不为原版补一个仓库里不存在的数值。
 
 ## 1. 职责边界
 
 本系统管：
 
 - 发现进度：村落、遗迹、古地图、发现物是否已被玩家记录
-- 发现称号的**展示定义**（称号 id、解锁条件、文案 key、小地图）
+- 发现称号的**展示定义**（称号 id、解锁条件、文案 key、小地图）——重构新增玩法，vanilla 包为空表
 - 若日后还原出名声标量：其上下限、增减命令、查询接口
 
 不管：
 
 - 村落/遗迹在世界地图上的坐标与外观（`world`）
 - 发现物作为 `item_id` 的装备效果（`items`）
-- 探险队遇温泉、绿洲、兽袭的航海随机事件（`ocean`，只在结算时对本系统发 `Discover*`）
+- 探险队遇温泉、绿洲、兽袭的航海随机事件（`ocean`）；村落 / 遗迹发现由 world 发 `VillageDiscovered` / `RemainsDiscovered`
 - 海域「知名度」文案（`%s在本海域的知名度还是低的`）——这是势力/商品知名度，归 `factions` / `economy`
 - 人物传记里出现的「名声」二字（mesfile 传记，不是玩法字段）
 - `CDiscoverTitleView` 的绘制与缩放动画（`ui`，只读本系统快照）
@@ -25,22 +25,26 @@
 | --- | --- | --- |
 | 无 `eFame` / `CFame` / `NUM_FAME` 符号 | `[确认]` | `constants.json` `rtti_names.txt` `*ID.h` 全表检索 |
 | mesfile 里「名声」只出现在人物传记，不是 HUD 数值 | `[确认]` | `mesfile_sc.txt` 两处传记 |
-| 「称号」一词只出现在德雷克传记「爵士称号」，不是玩家称号系统 | `[确认]` | `mesfile_sc.txt` `0x224de` |
-| `CDiscoverTitleView`：发现称号画面，体积 `0x100`，继承 `CView` | `[确认]` | `class_hierarchy.txt` `CDiscoverTitleView.cpp` |
+| 「称号」「爵」各只出现在德雷克传记「爵士称号」，不是玩家称号/爵位系统 | `[确认]` | `mesfile_sc.txt` `0x224de` |
+| exe `.rdata` GBK 串里「爵」「名声」「称号」「名望」「声望」零命中；RTC/RTTI/常量里无 `Fame`/`Reput`/`Rank`/`Peer`/`Noble`/`Honor` | `[确认]` | 对 `DK4HD_sc.exe` `.rdata` 与 `rtc_names.txt` `rtti_names.txt` `constants.json` 全文检索 |
+| 原版**没有爵位系统**；本篇不设 `peerage` | `[确认]` | 上两条 |
+| `CDiscoverTitleView`：体积 `0x100`，继承 `CView` | `[确认]` | `class_hierarchy.txt` `CDiscoverTitleView.cpp`（`fn_14000750e(this, 0x100)`） |
+| `CDiscoverTitleView` 是「称号」画面 | `[推断]`，倾向**否** | 原版 RTC 里 `Title` 普遍指 UI 标题栏（`rcTitle` `rcSubTitle` `rcFleetTitle` `rcKindTitle` `cWriterTitle`）；本类只见小地图 + 缩放动画，更像「发现了%s」时弹出的**发现标题卡**（名称 + 小地图定位）。在找到列表数据源前，不当称号系统用 |
 | `CDiscoverTitleMiniMap`：称号画面内小地图 | `[确认]` | 同上；`vfunc_04` RTC `rcMiniMap`，有缩放（`+0x40` 右移减半）与 0x14 帧插值 |
 | 村落 24 个，`INVALID_VILLAGE=-1` | `[确认]` | `VillageID.h` `NUM_VILLAGE=24` |
-| 遗迹枚举存在，`NUM_REMAINS` 整数未还原；有 `REMAINSSTATE_BITS` | `[确认]` | `RemainsID.h` `Remains.h` `asserts.txt` |
+| 遗迹 25 个（`NUM_REMAINS=25`）；有 `REMAINSSTATE_BITS` | `[确认]` | 名字指针表 25 条（`0x1405b2f80`）、`Remains.dk4` 帧数 `0x19`、`fn_14000a321` 循环 `< 0x19`；见 `01-world/09`、`10-narrative/05` |
 | 遗迹是 `CSaveObject`，可进存档 | `[确认]` | `Remains.h` `CRemains -> CSaveObject` |
 | 村庄是 `CSaveObject`（`CVillage` 体积 `0x48`） | `[确认]` | `CVillage.cpp` |
 | 城镇场景会挂 `cRemains` | `[确认]` | `CTownScene::vfunc_02` RTC：`cShipyard,cRemains,cGuild,cInn,cPalace,cBar,cPort,cTrade,cPlazaView` |
 | `CMpRemains` 是港口地图上的遗迹点 | `[确认]` | `CMpRemains.cpp` |
 | 古地图窗口 `CGetOldMapWindow`、`COldMapInfomationView`、`COldMapSprite`、`COldMapButton` | `[确认]` | RTTI / `class_files.tsv` |
 | 文案：「发现了村庄」「没有被发现的遗迹」「发现了%s」「重大发现」「霸者之证」 | `[确认]` | `mesfile_sc.txt` `0xb3f` `0xca27` `0x318b` `0x1024b` `0x112ab` |
-| 「霸者之证」按文化圈检索（东南亚 / 东亚 / 新大陆） | `[确认]` | mesfile `0x1e643` `0x1e76b` `0x112ab` 一带 |
+| 「霸者之证」按**七大海域**各一件（北海…新大陆），是道具 kind 8 子集 + 7 槽出生点状态 | `[确认]` | mesfile `0x1e247` 起七句、`0x112ab`；`09-items/04-ancient-treasures-hd.md` §2 |
+| 跨存档图鉴：`savedata.dk4` sidecar `+0x14` 道具位图（231 位）、`+0x34` 遗迹位图（25 位），由 `fn_14000a321` 从当前局写入 | `[确认]` | `10-narrative/05-gallery-unlock.md` §2；重构归 `profile.encyclopedia`（D7），不是本系统的局内状态 |
 | 道具表 231 项，含发现物/地图，不是交易品 | `[确认]` | `04-id-registry.md` `GetFixItemProc` |
 | 玩家侧有 `PLAYERSTATE_BITS` | `[确认]` | `PlayerFleetData.h` `asserts.txt`；**位含义未还原** |
 | 发现称号的完整名单、解锁阈值、是否消耗名声 | `[未知]` | 无表、无公式、无枚举 |
-| 个人「名声」标量是否存在于存档某处 | `[未知]` | 已还原的存档头/名册/主角体均无此字段名 |
+| 个人「名声」标量是否存在于存档某处 | `[未知]` | 已还原的存档头 / 人物记录 / 主角 `CPlayerPerson` 记录均无此字段名 |
 | `CDiscoverTitleView` 的数据源（读遗迹位？读道具？读独立表？） | `[未知]` | 反编译只见绘制与小地图动画 |
 
 因此：本篇把「发现称号」做成**配置化的解锁规则 + UI 投影**，把「名声」留成可选标量接口，默认 vanilla 包可以不启用标量。
@@ -50,9 +54,9 @@
 | ID | 原版计数 | 空/非法 | 备注 |
 | --- | --- | --- | --- |
 | `village_id` | 24 | `invalid` = -1 | 定义在 `world` |
-| `remains_id` | `[未知]` | `invalid` = -1 | `NUM_REMAINS` 未还原，运行时读表长 |
+| `remains_id` | 25 | `invalid` = -1 | 运行时读表长 |
 | `item_id` | 231 | `invalid` = -1 | 发现物/古地图/霸者之证 |
-| `title_id` | `[未知]` | `invalid` = -1 | 重构新增稳定 id；vanilla 包在还原名单前可为空表 |
+| `title` | `[未知]` | `null` | 重构新增，主键是命名空间 key；vanilla 包在还原名单前为空表 |
 | `discovery_kind` | 配置 | — | `village` `remains` `item` `old_map` `gold_road` … |
 | `fame_id` | 可选 | 不使用时不注册 | 原版无；模组若加「商会名声」走此 id |
 
@@ -67,15 +71,15 @@
 重构默认规则（vanilla 包）：
 
 ```
-on DiscoverVillage(village_id):
+on VillageDiscovered { village_id }:            # world
   if already: no-op
   else mark discovered
   emit DiscoveryUnlocked { kind: village, id: village_id }
 
-on DiscoverRemains(remains_id):
+on RemainsDiscovered { remains_id }:            # world
   同上，kind: remains
 
-on AcquireDiscoveryItem(item_id) where item.flags.discovery:
+on ItemAcquired { item_id } where item.flags.discovery:   # items
   mark item discovered
   emit DiscoveryUnlocked { kind: item, id: item_id }
 
@@ -108,7 +112,7 @@ fame' = saturate(fame + delta, fame_min, fame_max)
 - 发现状态可能散落在 `CVillage` / `CRemains` / `ITEMSTATE_BITS` / `PLAYERSTATE_BITS` / 道具背包
 - 称号画面直接画小地图，坐标来自世界表
 - 城镇场景把 `cRemains` 当设施挂在 `CTownScene` 上
-- 「霸者之证」同时是道具、剧情钥匙、发现物
+- 「霸者之证」同时是道具、剧情钥匙、发现物；道具 / 遗迹的「见过」又另写进跨存档 sidecar
 - 海域知名度文案容易被误当成人物名声
 
 重构：
@@ -117,6 +121,7 @@ fame' = saturate(fame + delta, fame_min, fame_max)
 - items 只提供 `item_id` 与 `discovery: true`
 - narrative 可查询 `title_unlocked` / `discovered`
 - ui 只读 `DiscoverySnapshot`
+- 跨存档图鉴是 `profile.encyclopedia`（`12-ui-save`），订阅 `DiscoveryUnlocked` 自己记；本系统不写 profile
 - 本系统不持有 `Location` / `World*`
 
 ## 6. 解耦后的配置
@@ -149,8 +154,7 @@ discovery_kinds:
 
 ```yaml
 # 仅说明 schema，禁止当内容用
-- id: 0
-  key: example_only
+- key: mymod:example_only      # 主键写全命名空间（词表 §14-4）
   name_key: title.example
   requires:
     - { kind: village, count: 24 }
@@ -161,8 +165,7 @@ discovery_kinds:
 
 ```yaml
 fame_enabled: false
-# fame_max 在 enabled 之后才校验
-village_count: 24            # 原版包实例数；运行时读表长
+# fame_max 在 enabled 之后才校验；村落 / 遗迹数读表长，不进 caps
 ```
 
 文案全部走 `ui/strings.*.yaml`（`title.*` `discovery.*`），本文件不写中文句子。
@@ -213,10 +216,9 @@ UI：`OpenDiscoverTitleView` 是场景命令，不写本系统状态。小地图
 
 - 个人名声标量：有无、偏移、上下限、增减来源
 - `title_id` 名单与文案（`CDiscoverTitleView` 的列表数据源）
-- `NUM_REMAINS` 与每条遗迹的 `REMAINSSTATE_BITS` 位语义
+- 每条遗迹的 `REMAINSSTATE_BITS` 位语义（`NUM_REMAINS=25` 已钉）
 - `PLAYERSTATE_BITS` / `ITEMSTATE_BITS` 是否含「已发现」
 - 古地图与遗迹、道具 id 的对应表
-- 「霸者之证」是 `item_id` 子集还是独立枚举
 - `CDiscoverTitleView+0xb8/0xe0/0xe8` 指针、`+0x40/0x44` 缩放帧以外的字段
 - `CDiscoverTitleMiniMap` 字段（`fields.tsv` 一堆偏移未命名）
 - 发现称号是否影响交涉、投资、剧情触发（narrative 查询接口预留，默认不读）

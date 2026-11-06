@@ -1,0 +1,18 @@
+schema: dk4.save
+version: 1
+# 存档旋钮（不是内容包）。所属：Docs/12-ui-save/02-save-session.md；D7。
+magic: DK4HDSAVE1
+slots: 50                      # 原版选择框条数；扫描 52
+rows_per_page: 5
+checksum: crc32                # 原版是字段值求和
+on_checksum_mismatch: ask
+on_pack_mismatch: remap        # 按 id_map 重映射（原版 EV 版本不等即拒绝）
+orphan_policy:                 # 按 ID 域（D1）：drop | replace_with:<key> | refuse_load
+  default: refuse_load
+  person: drop
+  item: drop
+  town: { replace_with: vanilla:lisbon }
+legacy_codec: ids/legacy_codec.yaml
+unknown_sections: keep         # 未注册节（含缺席模组的 mod:<id>）原样保留
+rng_state: save                # save | reseed；原版等价于 reseed
+profile: profile.dk4p          # 跨存档数据（原版 savedata.dk4）独立文件

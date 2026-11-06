@@ -1,14 +1,14 @@
 # HD 古宝与霸者之证
 
-配置落点：`config/items/ancient_treasures.yaml` `config/discovery/hegemony_proofs.yaml`。目录与种类见 [01-item-catalog.md](01-item-catalog.md)；装备效果见 [02-equipment-effects.md](02-equipment-effects.md)；发现称号镜头见 [11-progression/02-fame-titles.md](../11-progression/02-fame-titles.md)；遗迹/古地图目录见 [01-world/09-remains-oldmaps-catalog.md](../01-world/09-remains-oldmaps-catalog.md)；七文化圈见 [02-factions/01-forces.md](../02-factions/01-forces.md)。
+配置落点：`config/items/ancient_treasures.yaml` `config/discovery/hegemony_proofs.yaml`。目录与种类见 [01-item-catalog.md](01-item-catalog.md)；装备效果见 [02-equipment-effects.md](02-equipment-effects.md)；发现称号镜头见 [11-progression/02-fame-titles.md](../11-progression/02-fame-titles.md)；遗迹/古地图目录见 [01-world/09-remains-oldmaps-catalog.md](../01-world/09-remains-oldmaps-catalog.md)；七大海域见 [02-factions/06-seven-culture-circles.md](../02-factions/06-seven-culture-circles.md)（`config/world/major_seas.yaml`）。
 
-HD 版**还有**这套收集：七个文化圈各一件「证」，证本身是 `eItem` kind 8 行，位置却是独立的 7 槽状态。mesfile 没有「古宝」二字。exe 筛选名把 kind 8 叫 **霸者之证**。本篇用「古宝」指收集内容包（14 件 kind 8 + 7 张贤者地图 + 生成规则），用「霸者之证七槽」指 `CItemElement+0x39c8` 那 7 字节与 7×8 出生点表。
+HD 版**还有**这套收集：七大海域各一件「证」，证本身是 `eItem` kind 8 行，位置却是独立的 7 槽状态。mesfile 没有「古宝」二字。exe 筛选名把 kind 8 叫 **霸者之证**。本篇用「古宝」指收集内容包（14 件 kind 8 + 7 张贤者地图 + 生成规则），用「霸者之证七槽」指 `CItemElement+0x39c8` 那 7 字节与 7×8 出生点表。
 
 三套东西不要混：
 
 | 玩家口头 | 原版是什么 | 本系统 |
 | --- | --- | --- |
-| 古宝 / 遗物 | kind 8 的 14 件 `eItem`（两套 × 7 圈） | `ancient_treasures.yaml` |
+| 古宝 / 遗物 | kind 8 的 14 件 `eItem`（两套 × 7 海域） | `ancient_treasures.yaml` |
 | 霸者之证 | 同上 kind 名；另有 **7 槽** 出生点/收集状态 | `hegemony_proofs.yaml` |
 | 普通装备 | kind 2/3/4（含 214–230 金币、星粉水晶、普利德温…） | 仍走 `items.yaml` + `effects.yaml`，**不进**本两表 |
 
@@ -18,8 +18,8 @@ HD 版**还有**这套收集：七个文化圈各一件「证」，证本身是 
 
 管：
 
-- kind 8 十四件收集物的**系列、文化圈、与七槽的绑定**
-- 七槽本身：圈 id、World0/World1 各绑哪件 `item_id`、每槽 8 个世界坐标候选、开局如何抽一个
+- kind 8 十四件收集物的**系列、大海域、与七槽的绑定**
+- 七槽本身：`major_sea` 外键、各系列绑哪件道具、每槽 8 个世界坐标候选、开局如何抽一个
 - kind 9 七张贤者地图作为「标有××霸者之证位置」的线索外键
 - 海上搜索命中 kind 8 时发哪类事件（文案走 `ui/strings`）
 - 上述状态哪些进存档（7 字节 + 231 槽持有位）
@@ -32,16 +32,16 @@ HD 版**还有**这套收集：七个文化圈各一件「证」，证本身是 
 - 遗迹 25 个名字/发现位、地点地图 → 遗迹声明（[09-remains-oldmaps-catalog.md](../01-world/09-remains-oldmaps-catalog.md)）
 - 搜索圈半径、测量士掷骰（ocean）
 - `CDiscoverTitleView` 小地图缩放（ui；本系统只说「该播发现镜头」）
-- 势力 7×uint16 影响力（factions 只**共用**圈 id 0–6）
+- 势力 7×uint16 影响力（factions 与本表只**共用** `major_sea` 注册表）
 - 发现称号名单（progression；本系统只发 `ProofDiscovered`，不发明「七证侯爵」）
 
-ID 只共享 `item_id`、`culture_circle_id`、`remain_id`（可空）。禁止把 kind 8 写成 `remain_id`，禁止把七槽写成第三套 `eItem`。
+ID 只共享 `item`、`major_sea`、`remains`（可空），全部是 key。禁止把 kind 8 写成 `remains`，禁止把七槽写成第三套 `eItem`。
 
 ## 2. 原版事实
 
 ### 2.1 种类名：kind 8 = 「霸者之证」
 
-`[确认]` SC exe `.rdata` 连续 13 个种类名，指针表 VA `0x140682ea0`，字符串 `0x14055750c` 起。`CItemKindMenuData` 把 `eItemKind` 从 0 扫到 `< 0xd`（13 档）。来源：`DK4HD_sc.exe`；`CItemKindMenuData.cpp`。
+`[确认]` SC exe 13 个种类名，指针表 `.data` VA `0x140682ea0`（文件偏移 = VA − `0x140001600`），「霸者之证」串 VA `0x140557568`（`.rdata` 文件偏移 = VA − `0x140001200` = `0x556368`）。`CItemKindMenuData` 把 `eItemKind` 从 0 扫到 `< 0xd`（13 档）。来源：`DK4HD_sc.exe`；`CItemKindMenuData.cpp`。
 
 | id | exe 原文 | 01 里的 key | 件数 |
 | ---: | --- | --- | ---: |
@@ -53,7 +53,7 @@ ID 只共享 `item_id`、`culture_circle_id`、`remain_id`（可空）。禁止�
 | 5 | 船首像 | `figurehead` | 12 |
 | 6 | 神秘小物件 | `fragment` | 14 |
 | 7 | 礼物 | `gift` | 21 |
-| 8 | **霸者之证** | `relic`（01 目录名） | **14** |
+| 8 | **霸者之证** | `hegemony_proof`（别名 `relic`） | **14** |
 | 9 | 地图 | `sage_map` | 7 |
 | 10 | 遗址的地图 | `place_map` | 12 |
 | 11 | 纪念品 | `plot_set` | 3 |
@@ -63,17 +63,17 @@ ID 只共享 `item_id`、`culture_circle_id`、`remain_id`（可空）。禁止�
 
 `[确认]` 种类名和 `Item32.dk4` / `Item56.dk4` 字符串写在同一带（`0x5563a8`）。筛选 UI 按 kind 分档，kind 8 的中文就是「霸者之证」。
 
-01 用 `relic` 当 kind_key 可以保留作别名；本系统稳定 key 用 `hegemony_proof`，`id` 仍是 8。
+稳定 key 用 `hegemony_proof`（01 已同步），旧名 `relic` 只作别名；`vanilla_index` 8。
 
-### 2.2 十四件 kind 8：两套 × 七圈
+### 2.2 十四件 kind 8：两套 × 七大海域
 
-`SItem+0x14=8`。`+0x15` 恰为 0–6，与势力表 7 文化圈、mesfile 七区同一套下标 `[确认]` 值域；语义「圈号」`[推断]`（与 01 里「kind 8/9 即使 +0x0C==-1 也走 0–6」一致）。
+`SItem+0x14=8`。`+0x15` 恰为 0–6，与势力影响力 7 格、mesfile 七句同一套下标 `[确认]` 值域；语义 `major_sea_id`（七大海域）`[推断]`（与 01 里「kind 8/9 即使 +0x0C==-1 也走 0–6」一致；读者未找到）。
 
 `+0x16=24`，`+0x17=0`（没有装备效果量），`+0x18=98`（未绑港）。`+0x19`：第一套全是 8，第二套全是 10。
 
 **套 A（原版包，World0 海上放置）** `+0x19=8`：
 
-| id | key | name | 圈 `+0x15` | 圈名 | base_price |
+| id | key | name | 海域 `+0x15` | 海域名 | base_price |
 | ---: | --- | --- | ---: | --- | ---: |
 | 148 | ullr_bow | 狩猎之神乌勒尔的弓箭 | 0 | 北海 | 90000 |
 | 149 | cambyses_crown | 肯毕西斯的王冠 | 1 | 地中海 | 110000 |
@@ -85,7 +85,7 @@ ID 只共享 `item_id`、`culture_circle_id`、`remain_id`（可空）。禁止�
 
 **套 B（哈尔舒塔一套，World1 海上放置）** `+0x19=10`，标价一律 100000：
 
-| id | key | name | 圈 |
+| id | key | name | 海域 |
 | ---: | --- | --- | ---: |
 | 192 | hallstatt_offering_cart | 哈尔舒塔的供品车 | 0 |
 | 193 | agamemnon_mask | 阿葛曼侬的面具 | 1 |
@@ -114,7 +114,7 @@ ID 只共享 `item_id`、`culture_circle_id`、`remain_id`（可空）。禁止�
 
 `[确认]` 155–161：`+0x14=9`，`+0x15=0..6` 与上表同序，`+0x18=98`，标价 1000。exe 种类名「地图」。
 
-mesfile 在赠礼口味之后、紧挨着七句「这是××的霸者之证」，再接「标有××霸者之证的位置」（`0x1e247`–`0x1e41b`）。后一段按圈对齐 155–161 `[推断]`。
+mesfile 在赠礼口味之后、紧挨着七句「这是××的霸者之证」，再接「标有××霸者之证的位置」（`0x1e247`–`0x1e41b`）。后一段按海域对齐 155–161 `[推断]`。
 
 碎片 174–187（kind 6「神秘小物件」）的解谜句也指向「北海/地中海…之证的地图」（`0x1e52f`–`0x1e76b`）。配方仍在 `hunting.yaml`，本系统只承认：碎片合成**不得**直接产出 kind 8（01/03 已禁止手填 output）。
 
@@ -125,7 +125,7 @@ mesfile 在赠礼口味之后、紧挨着七句「这是××的霸者之证」�
 `[确认]` `fn_14000d346`（`0x140128f90`）：
 
 ```
-if player+0x7c >= 4:   # fn_14000864d(DAT_144296500)；剧本 4–6 = World1
+if game+0x7c >= 4:     # fn_14000864d(DAT_144296500 = CDk4Game)；+0x7c = 剧本号；剧本 4–6 = World1
     base = 0xC0        # 192
 else:
     base = 0x94        # 148
@@ -134,11 +134,11 @@ for slot in 0..6:
     item+0x30 = coord_table[slot][ byte_at_39c8[slot] ]
 ```
 
-`fn_14000864d`：`*(obj+0x7c) < 4` 则 0，否则 1。与「`scenario>=4` 用 World1」同一刀 `[确认]` 阈值；对象是玩家/世界块 `[推断]`。
+`fn_14000864d`：`*(obj+0x7c) < 4` 则 0，否则 1。与「`scenario>=4` 用 World1」同一刀 `[确认]`。对象是 `CDk4Game`（`DAT_144296500`），`+0x7c` = 剧本号 `[确认]`（`fn_140004a1b`；见 `10-narrative/03-event-commands.md`、`04-economy/07`）。重构不比较剧本号（D5）：系列由剧本包选定的世界包决定。
 
-`[确认]` 坐标表 `DAT_1405575d0`（exe `0x1405575d0`）：7 条，步长 `0x44=68`。每条：`uint32 item_id`（148…154）+ **8 对** `(x, y)` uint32。值域与港口同一空间（伦敦 `20080,4272`）。圈 0 候选落在不列颠附近，圈 6 落在新大陆西侧。
+`[确认]` 坐标表 `DAT_1405575d0`（exe `0x1405575d0`）：7 条，步长 `0x44=68`。每条：`uint32 item_id`（148…154）+ **8 对** `(x, y)` uint32。值域与港口同一空间（伦敦 `20080,4272`）。海域 0 候选落在不列颠附近，海域 6 落在新大陆西侧。
 
-| 槽 | 圈 | 表内 item | 8 个候选 (x, y) |
+| 槽 | 海域 | 表内 item | 8 个候选 (x, y) |
 | ---: | --- | ---: | --- |
 | 0 | 北海 | 148 | (20936,2920) (20920,4088) (21912,3928) (22552,3512) (20568,3096) (19656,4360) (21336,3624) (22328,3704) |
 | 1 | 地中海 | 149 | (23624,6152) (20808,5880) (24072,5704) (22984,5672) (22248,6536) (23592,6536) (21112,6216) (24360,5416) |
@@ -156,7 +156,9 @@ World1 仍读**同一张**坐标表（记录头写的是 148–154），只把�
 
 ### 2.5 海上搜索：kind==8 走「证」演出
 
-`[确认]` `fn_14001266b`（`Search.DK4`，RTC `apfnSearchEvent, cptItem, eItem, posPlayerFleet`）：扫 `eItem` 0–230，取 Locator，距离平方与搜索半径比。`fn_14000598e`（读 kind）`== 8` 时走专用分支：`fn_14018b880(0xc8, 0xc8)`；否则普通发现 `fn_14018b880(0xa, 5)` 并 `fn_14000cf1d(..., 0x31, 2, 1)`。来源：`fn_1401b0e80.cpp`。
+`[确认]` `fn_14001266b`（`Search.DK4`，RTC `apfnSearchEvent, cptItem, eItem, posPlayerFleet`）：扫 `eItem` 0–230，取 Locator，距离平方与搜索半径比。`fn_14000598e`（读 kind）`== 8` 时走专用分支：`fn_14018b880(0xc8, 0xc8)`（`0x1401b4f3a`）；否则普通发现 `fn_14018b880(0xa, 5)` 并 `fn_14000cf1d(..., 0x31, 2, 1)`。来源：`fn_1401b0e80.cpp`。
+
+`[确认]` `fn_14018b880(a, b)`（body `0x14018b880`）是**全员经验**：遍历 235 人，属玩家势力（`fn_140013f2f`）者调 `fn_140011c34(p, a, b, 0)`。所以搜到证 = 全体玩家势力人物两轨各 +200，普通发现 = 轨 A +10、轨 B +5，不提示。增量写在 `11-progression/01` 的 `grant_routes`，本系统只发 `ProofDiscovered` / `ItemFound`。
 
 未找到 / 坐标非法（`cptItem < 0`）则跳过。故只有 Locator 有效且尚未被摘走的点能被搜到。
 
@@ -166,21 +168,21 @@ World1 仍读**同一张**坐标表（记录头写的是 148–154），只把�
 | --- | --- |
 | `0x1024b`–`0x102f7` | 「重大发现。探险队发现了这种东西。」（泛用，不写「证」） |
 | `0x112ab`–`0x113c3` | 「这是%s的霸者之证%s」「这是%s的称霸者的标志：%s。要探索吗？」 |
-| `0x1e247`–`0x1e2e7` | 「这是北海的霸者之证。」…七句（圈名写死） |
+| `0x1e247`–`0x1e2e7` | 「这是北海的霸者之证。」…七句（海域名写死，顺序 = `major_sea_id` 0–6，`02-factions/06` §2） |
 | `0x1e313`–`0x1e41b` | 「标有北海霸者之证的位置。颜色深的部位是海 / 发白的部位是陆地。」 |
 | `0x318b` | 委托句里的「发现了%s！」 |
 
-两个 `%s`：第一段文化圈名、第二段道具名 `[推断]`。七句写死圈名的串给「已鉴定」说明用。
+两个 `%s`：第一段海域名、第二段道具名 `[推断]`。七句写死海域名的串给「已鉴定」说明用。文案 key 按 exe 消息号表定（D10），偏移只作出处。
 
 ### 2.6 遗迹报酬 ≠ 七证
 
 `[确认]` `NUM_REMAINS=25`，名字在 exe 指针表（巨石阵…阿瑜陀耶），贴图 `Remains.dk4` 帧数 `0x19=25`。`CRemains` 体积 `0x10`，**没有** Locator。来源：[09-remains-oldmaps-catalog.md](../01-world/09-remains-oldmaps-catalog.md)。
 
-`[确认]` 不存在 `item_id → remain_id` 整数表。kind 8 与 25 遗迹不是 1:1。地点地图 162–173 只覆盖一部分遗迹，且走 kind 10。
+`[确认]` 不存在 `item_id → remains_id` 整数表。kind 8 与 25 遗迹不是 1:1。地点地图 162–173 只覆盖一部分遗迹，且走 kind 10。
 
 `fn_14000a321`：先扫 231 道具（按 `SItemOwner` 类型 0–3 决定是否清/记），再扫 25 遗迹置发现位。这是读档/同步，不是「遗迹掉落表」。
 
-遗迹内部究竟给不给 kind 8：函数未还原 `[未知]`。vanilla 包 `remain_id: null`，禁止为填表把水晶头骨写成蒂卡尔。
+遗迹内部究竟给不给 kind 8：函数未还原 `[未知]`。vanilla 包 `remains: null`，禁止为填表把水晶头骨写成蒂卡尔。
 
 ### 2.7 收集 UI 与发现镜头
 
@@ -190,11 +192,11 @@ World1 仍读**同一张**坐标表（记录头写的是 148–154），只把�
 
 **事件静画** `[确认]`：`EvItem.dk4` 头 `GT1G4600`，`tex_count=0x27=39`。`Item32.dk4` / `Item56.dk4` 才是 231 件库存图标。`EvItem` 被教会小游戏、硬币台、事件框、`EvFrame.dk4` 路径加载，**不是**种类 8 专用图集。`25 遗迹 + 14 证 = 39` 算术好看，下标规则未还原 `[推断]`，禁止当引擎映射。
 
-### 2.8 与七文化圈
+### 2.8 与七大海域
 
-`[确认]` 势力 World 表 `+0x10` 起 7×uint16，格号 0–6 = **七大海域**（北海 / 地中海 / 非洲 / 印度洋 / 东南亚 / 东亚 / 新大陆）。kind 8 / kind 9 的 `+0x15` 用同一 0–6。本系统**不写**影响力；外键是 `major_sea_id`，不是文化圈。21 文化圈见 `02-factions/06-seven-culture-circles.md`。
+`[确认]` 势力 World 表 `+0x10` 起 7×uint16，格号 0–6 = **七大海域**（北海 / 地中海 / 非洲 / 印度洋 / 东南亚 / 东亚 / 新大陆）。kind 8 / kind 9 的 `+0x15` 用同一 0–6。本系统**不写**影响力；外键是 `major_sea`（key，注册表 `config/world/major_seas.yaml`，由 factions 统一维护；BGM、遗迹首访奖励、影响力共用），不是 21 文化圈。21 文化圈见 `02-factions/06-seven-culture-circles.md`。
 
-不是：25 `eSeaArea`、9 个 NPC 形象圈、21 个港口 `region`。
+不是：25 `eSeaArea`、9 个 NPC 形象圈、21 个港口文化 `culture`（港口 `+0x25`）。
 
 ### 2.9 相邻但不是古宝
 
@@ -202,7 +204,7 @@ World1 仍读**同一张**坐标表（记录头写的是 148–154），只把�
 | --- | ---: | --- | --- |
 | 127–147 | 7 | 礼物 | 村落赠礼，[03](03-discovery-planting.md) |
 | 155–161 | 9 | 地图 | 本表 `clue_map_item_id` |
-| 162–173 | 10 | 遗址的地图 | world `unlock_maps.yaml` |
+| 162–173 | 10 | 遗址的地图 | world `config/discovery/old_maps.yaml`（词表 §14-10；旧路径 `world/unlock_maps.yaml` 作废） |
 | 174–187 | 6 | 神秘小物件 | `hunting.yaml` |
 | 188–190 | 11 | 纪念品 | 剧情三件，narrative |
 | 191 | 12 | 宝物地图 | 藏宝事件 |
@@ -211,9 +213,9 @@ World1 仍读**同一张**坐标表（记录头写的是 148–154），只把�
 
 ### 2.10 HD 多出来的 214–230：不是证
 
-本仓库只有 HD 的 World DLL（`NUM_ITEM=231`），没有 1999 PK 光盘对照。214–230 **已经在** 这份 231 表里，种类全是 2/3/4，`+0x15=8`（哨兵，不是圈号），`+0x17` 有装备量，岗位口味在 `0x1ebe7` 起（金币给会计长、海盗徽章给冲锋队长、星粉水晶给炮手）。
+本仓库只有 HD 的 World DLL（`NUM_ITEM=231`），没有 1999 PK 光盘对照。214–230 **已经在** 这份 231 表里，种类全是 2/3/4，`+0x15=8`（哨兵，不是海域号），`+0x17` 有装备量，岗位口味在 `0x1ebe7` 起（金币给会计长、海盗徽章给冲锋队长、星粉水晶给炮手）。
 
-| id | name | kind | `+0x16` 轨 | `+0x17` |
+| id | name | kind | `+0x16` 舱室 | `+0x17` 效果量 |
 | ---: | --- | ---: | ---: | ---: |
 | 214 | 金币 | 4 | 20 | 54 |
 | 215 | 金块 | 4 | 20 | 60 |
@@ -235,7 +237,7 @@ World1 仍读**同一张**坐标表（记录头写的是 148–154），只把�
 
 `[推断]` 这一段是 HD 相对「经典 PK 0–213」多出来的装备块：紧挨 213 古代仪典之后；亚瑟王盾、爱情灵药材料、星彩水晶这一路名字不像套 A/B。namu 写「人物装备品全 62 种」与 HD kind 4=62 一致，不能证明 1999 PK 没有它们。
 
-无论是不是 HD 独有：**不要**写进 `ancient_treasures.yaml`。它们走人物槽，圈号哨兵 8，搜索也不走 kind==8 分支。
+无论是不是 HD 独有：**不要**写进 `ancient_treasures.yaml`。它们走人物槽，海域号哨兵 8，搜索也不走 kind==8 分支。
 
 `CItem` 每件另存 `+0x3b/+0x3c` 两字节（`vfunc_06/07`）。可能是 `ITEMSTATE_BITS`。是否含「已从海上摘走」`[未知]`。重构用 `owned[item_id]` + 七槽候选下标，不复用这两字节布局。
 
@@ -243,23 +245,23 @@ World1 仍读**同一张**坐标表（记录头写的是 148–154），只把�
 
 | 实体 | ID | 原版计数 | 空 / 非法 | 本系统 |
 | --- | --- | --- | --- | --- |
-| 古宝行 | `item_id` kind 8 | 14 | 0 是南瓜；空槽 232 | `ancient_treasures.yaml` |
-| 霸者之证槽 | `proof_slot_id` / 圈 0–6 | 7 | 无「空圈」；未放置用 `placed: false` | `hegemony_proofs.yaml` |
-| 文化圈 | `culture_circle_id` | 7 | — | 外键，定义在 factions |
-| 贤者地图 | `item_id` kind 9 | 7 | 232 | 槽上的 `clue_map_item_id` |
+| 古宝行 | `item` kind 8 | 14 | 运行时 `Option`；原版 232 只在导入层 | `ancient_treasures.yaml` |
+| 霸者之证槽 | `proof_slot` key / 海域 0–6 | 7 | 无「空槽」；未放置用 `placed: false` | `hegemony_proofs.yaml` |
+| 七大海域 | `major_sea` | 7 | — | 外键，注册表 `config/world/major_seas.yaml`（factions 维护） |
+| 贤者地图 | `item` kind 9 | 7 | `Option` | 槽上的 `clue_map` |
 | 出生候选下标 | `spawn_index` | 每槽 8 | 0 是合法点 | 存档 7 字节 |
-| 遗迹 | `remain_id` | 25 | -1 | **可空**外键，vanilla 全 null |
-| 普通装备 | `item_id` kind 2/3/4 | 含 214–230 | 232 | 不进本表 |
+| 遗迹 | `remains` | 25 | `null` | **可空**外键，vanilla 全 null |
+| 普通装备 | `item` kind 2/3/4 | 含 214–230 | `Option` | 不进本表 |
 
 禁止：
 
 - 给七槽另起 `eProof` 枚举去覆盖 148–154
-- 用 `item_id=0` 当「未收集」
+- 用任何整数（0、232）当「未收集」；收集状态只看 `owned`
 - 把 kind 7 礼物、kind 6 碎片、kind 10 地点地图、214–230 写进古宝表
 - 把「北海」写成 `eSeaArea` 名
-- World0 / World1 在引擎里 `if world==1` 换 192；用内容包换 `placed_item_id`
+- World0 / World1 在引擎里 `if world==1` / `if scenario>=4` 换 192；用内容包选系列
 
-模组可加第三套 7 件（`id>=1000`），七槽表加一列 `pack`。引擎按表长，不写死 14、7、8。
+模组可加第三套 7 件（命名空间字符串 key，如 `mymod:proof_north_sea`，整数加载时分配），七槽表加一列 `pack`。引擎按表长，不写死 14、7、8。
 
 `CItemElement+0x39c8` 原版是 7 个 UCHAR。重构存 `spawn_index: u8` × 槽数；导入器再压回 7 字节。
 
@@ -270,13 +272,14 @@ World1 仍读**同一张**坐标表（记录头写的是 148–154），只把�
 ### 4.1 参数
 
 ```
-proof_slot_count          = 7      # 文化圈；运行时读表长
-spawn_candidates_per_slot = 8      # DAT_1405575d0 每条 8 对
-world1_scenario_min       = 4      # fn_14000864d；scenario >= 4 → 套 B
-kind_hegemony_proof       = 8
+proof_slot_count          = 表长   # 原版 7 = 七大海域
+spawn_candidates_per_slot = 表长   # DAT_1405575d0 每条 8 对
+series                    = 世界包给出   # 原版 fn_14000864d：scenario >= 4 → 套 B；重构不比较剧本号
 item_unique_stack         = 1
 coord_space               = original
 ```
+
+「是不是证」看 `kinds.yaml` 的 `search_presentation: proof`，不写 `kind == 8`。
 
 ### 4.2 开局放置
 
@@ -285,7 +288,7 @@ function place_proofs(scenario_id, pack):
     table = Proofs.slots()                          # 表长
     series = pack.series                            # world0 → original；world1 → hallstatt
     for slot in table:
-        idx = uniform_int(0, len(slot.spawn_candidates)-1)
+        idx = rng("items.proof_spawn").uniform_int(0, len(slot.spawn_candidates)-1)   # 命名随机流，种子进存档
         Proofs.set_spawn_index(slot.id, idx)
         item_id = slot.item_id[series]
         xy = slot.spawn_candidates[idx]
@@ -294,7 +297,7 @@ function place_proofs(scenario_id, pack):
     emit ProofsPlaced { series, slots: snapshot() }
 ```
 
-vanilla：`rand(8)` 对齐 `fn_140005272(8)`。模组可改成固定下标或按剧本锁点。
+vanilla：`rand(8)` 对齐 `fn_140005272(8)`（原版共用 CRT `rand()`，重构改命名流）。模组可改成固定下标或按剧本锁点。
 
 未放置的那一套（World0 的 192–198 / World1 的 148–154）仍在目录里，可以当遗迹/事件报酬，但**没有**默认海上 Locator。
 
@@ -309,15 +312,16 @@ function on_search_hit(fleet_id, item_id):
         emit ItemFound { item_id, presentation: generic }   # 「重大发现」
         return
     slot = Proofs.slot_of(item_id)
-    Items.AcquireItem { fleet_id, item_id }                 # unique
+    Items.acquire(fleet_id, item_id)                        # unique
     Items.clear_world_location(item_id)
     emit ProofDiscovered {
         fleet_id,
         item_id,
-        proof_slot_id: slot.id,
-        culture_circle_id: slot.culture_circle_id
+        proof_slot: slot.key,
+        major_sea: slot.major_sea
     }
     emit DiscoveryUnlocked { kind: item, id: item_id }      # progression / ui 订阅
+    # 经验：progression 订 ProofDiscovered（原版全员 +200/+200），订 ItemFound（原版全员 +10/+5）
 ```
 
 kind==8 的演出（`0xc8` 尺寸、`0x112ab` 文案）由 ui 按事件选择。本系统不读 mesfile。
@@ -346,17 +350,17 @@ all_seven            = proofs_owned(current_series) == len(slots)
 - 放置选套看 `scenario>=4`，与世界包绑死
 - `CItemElement` 把 231 库存和 7 槽出生下标塞在同一个 Element 里存档
 - 搜索、发现镜头、遗迹扫描、道具 kind 菜单搅在同一条「发现了」体验里
-- 七圈 id 还被势力影响力、贤者地图 `+0x15` 使用
+- 七大海域 id 还被势力影响力、贤者地图 `+0x15`、BGM、遗迹首访奖励使用
 
 重构：
 
 ```
-factions.culture_circles     --id 0..6-->  hegemony_proofs.slots
+world.major_seas             --key-->  hegemony_proofs.slots
 items.items.yaml             --item_id-->  ancient_treasures / proofs
 hegemony_proofs              --Locator xy-->  ocean.search
-ocean.SearchHit              --item_id-->  Treasures.on_search_hit
+ocean.DiscoveryFound         --item_id-->  Treasures.on_search_hit
 Treasures                    --ProofDiscovered-->  ui / progression / narrative
-world.remains                --remain_id?-->  本表可空外键
+world.remains                --remains_id?-->  本表可空外键
 items.hunting                --碎片-->  不产出 kind 8
 ```
 
@@ -371,74 +375,64 @@ combat / economy 不出现。势力影响力不因集齐七证而改，除非 na
 schema: dk4.items.ancient_treasures
 version: 1
 pack: vanilla-world0
-kind_id: 8
-kind_key: hegemony_proof
-kind_name_i18n: itemkind.hegemony_proof   # exe「霸者之证」
-equip_target: none                        # +0x17=0；不进人物槽
+kind: vanilla:hegemony_proof                      # kinds.yaml 的 key；exe「霸者之证」
 series:
-  - key: original
+  - key: vanilla:original
     plus_19: 8
-    item_ids: [148, 149, 150, 151, 152, 153, 154]
-  - key: hallstatt
+    items: [vanilla:ullr_bow, vanilla:cambyses_crown, vanilla:aksum_gold_seal, vanilla:vedas, vanilla:kediri_amulet, vanilla:qin_palace_lamp, vanilla:crystal_skull]
+  - key: vanilla:hallstatt
     plus_19: 10
-    item_ids: [192, 193, 194, 195, 196, 197, 198]
+    items: [vanilla:hallstatt_offering_cart, vanilla:agamemnon_mask, vanilla:ram_headed_sphinx, vanilla:sargon_bust, vanilla:trung_tracs_crown, vanilla:shang_square_ding, vanilla:chimu_axe]
 treasures:
-  - item_id: 148
-    key: ullr_bow
-    series: original
-    culture_circle_id: 0
-    remain_id: null                       # 禁止手填巨石阵
+  - item: vanilla:ullr_bow
+    series: vanilla:original
+    major_sea: vanilla:north_sea
+    remains: null                          # 禁止手填巨石阵
     unknown:
       plus_16: 24
       plus_17: 0
       plus_18: 98
       plus_19: 8
-  - item_id: 154
-    key: crystal_skull
-    series: original
-    culture_circle_id: 6
-    remain_id: null
-  - item_id: 192
-    key: hallstatt_offering_cart
-    series: hallstatt
-    culture_circle_id: 0
-    remain_id: null
+  - item: vanilla:crystal_skull
+    series: vanilla:original
+    major_sea: vanilla:new_world
+    remains: null
+  - item: vanilla:hallstatt_offering_cart
+    series: vanilla:hallstatt
+    major_sea: vanilla:north_sea
+    remains: null
     unknown:
       plus_19: 10
-  - item_id: 198
-    key: chimu_axe
-    series: hallstatt
-    culture_circle_id: 6
-    remain_id: null
-# 149–153、193–197 同样填；禁止把 127–147、174–187、214–230 写进来
+  - item: vanilla:chimu_axe
+    series: vanilla:hallstatt
+    major_sea: vanilla:new_world
+    remains: null
+# 其余 10 件同样填；禁止把 gift / fragment / place_map 及 214–230 写进来
 ```
 
-名字、标价、图标仍在 `items.yaml`。本文件是收集覆盖层：系列、圈、遗迹外键。校验：`item_id.kind==8`，`culture_circle_id` 在 0..表长-1，同一系列 7 件圈号不重复。
+名字、标价、图标仍在 `items.yaml`。本文件是收集覆盖层：系列、海域、遗迹外键。校验：`item.kind == hegemony_proof`，`major_sea` 已注册，同一系列各件海域不重复。
 
 ```yaml
 # config/discovery/hegemony_proofs.yaml
 schema: dk4.discovery.hegemony_proofs
 version: 1
 pack: vanilla-world0
-slot_count: 7
-spawn_candidates_per_slot: 8
-world1_scenario_min: 4
+# 槽数、候选数读表长；系列由世界包选（vanilla-world0 → original，vanilla-world1 → hallstatt）
 coord_space: original
-randomize_spawn_on_new_game: true         # [推断] rand(8)
+randomize_spawn_on_new_game: true         # [推断] rand(8)；随机流 items.proof_spawn
 presentation:
   generic_find_i18n: discovery.major_find     # 0x1024b 重大发现
   proof_find_i18n: discovery.hegemony_proof   # 0x112ab %s的霸者之证%s
   kind_search_special: true                   # search 对 kind 8 走 0xc8 分支
 slots:
-  - id: 0
-    key: north_sea
-    culture_circle_id: 0
-    name_i18n: circle.north_sea
+  - key: vanilla:north_sea
+    vanilla_index: 0                          # 原版 7 字节下标
+    major_sea: vanilla:north_sea                      # 名字取 major_seas.yaml，不另起 circle.* 文案
     identify_i18n: proof.identify.north_sea   # 「这是北海的霸者之证。」
-    clue_map_item_id: 155                     # 泰勒斯的纸地图
+    clue_map: vanilla:thales_paper_map
     item_by_series:
-      original: 148
-      hallstatt: 192
+      vanilla:original: vanilla:ullr_bow
+      vanilla:hallstatt: vanilla:hallstatt_offering_cart
     spawn_candidates:
       - { x: 20936, y: 2920 }
       - { x: 20920, y: 4088 }
@@ -448,11 +442,11 @@ slots:
       - { x: 19656, y: 4360 }
       - { x: 21336, y: 3624 }
       - { x: 22328, y: 3704 }
-  - id: 1
-    key: mediterranean
-    culture_circle_id: 1
-    clue_map_item_id: 156
-    item_by_series: { original: 149, hallstatt: 193 }
+  - key: vanilla:mediterranean
+    vanilla_index: 1
+    major_sea: vanilla:mediterranean
+    clue_map: vanilla:cleobulus_cloth_map
+    item_by_series: { vanilla:original: vanilla:cambyses_crown, vanilla:hallstatt: vanilla:agamemnon_mask }
     spawn_candidates:
       - { x: 23624, y: 6152 }
       - { x: 20808, y: 5880 }
@@ -462,11 +456,11 @@ slots:
       - { x: 23592, y: 6536 }
       - { x: 21112, y: 6216 }
       - { x: 24360, y: 5416 }
-  - id: 2
-    key: africa
-    culture_circle_id: 2
-    clue_map_item_id: 157
-    item_by_series: { original: 150, hallstatt: 194 }
+  - key: vanilla:africa
+    vanilla_index: 2
+    major_sea: vanilla:africa
+    clue_map: vanilla:periander_stone_map
+    item_by_series: { vanilla:original: vanilla:aksum_gold_seal, vanilla:hallstatt: vanilla:ram_headed_sphinx }
     spawn_candidates:
       - { x: 17464, y: 8200 }
       - { x: 18408, y: 8872 }
@@ -476,11 +470,11 @@ slots:
       - { x: 25416, y: 11480 }
       - { x: 24424, y: 10872 }
       - { x: 20840, y: 9496 }
-  - id: 3
-    key: indian_ocean
-    culture_circle_id: 3
-    clue_map_item_id: 158
-    item_by_series: { original: 151, hallstatt: 195 }
+  - key: vanilla:indian_ocean
+    vanilla_index: 3
+    major_sea: vanilla:indian_ocean
+    clue_map: vanilla:solon_leaf_map
+    item_by_series: { vanilla:original: vanilla:vedas, vanilla:hallstatt: vanilla:sargon_bust }
     spawn_candidates:
       - { x: 27144, y: 7192 }
       - { x: 28104, y: 7720 }
@@ -490,11 +484,11 @@ slots:
       - { x: 29240, y: 8040 }
       - { x: 29960, y: 7592 }
       - { x: 30040, y: 7432 }
-  - id: 4
-    key: se_asia
-    culture_circle_id: 4
-    clue_map_item_id: 159
-    item_by_series: { original: 152, hallstatt: 196 }
+  - key: vanilla:se_asia
+    vanilla_index: 4
+    major_sea: vanilla:se_asia
+    clue_map: vanilla:bias_coin_map
+    item_by_series: { vanilla:original: vanilla:kediri_amulet, vanilla:hallstatt: vanilla:trung_tracs_crown }
     spawn_candidates:
       - { x: 32168, y: 8584 }
       - { x: 31144, y: 10328 }
@@ -504,11 +498,11 @@ slots:
       - { x: 31224, y: 8552 }
       - { x: 33448, y: 9960 }
       - { x: 33736, y: 8456 }
-  - id: 5
-    key: east_asia
-    culture_circle_id: 5
-    clue_map_item_id: 160
-    item_by_series: { original: 153, hallstatt: 197 }
+  - key: vanilla:east_asia
+    vanilla_index: 5
+    major_sea: vanilla:east_asia
+    clue_map: vanilla:chilon_bamboo_map
+    item_by_series: { vanilla:original: vanilla:qin_palace_lamp, vanilla:hallstatt: vanilla:shang_square_ding }
     spawn_candidates:
       - { x: 34328, y: 6920 }
       - { x: 32536, y: 7592 }
@@ -518,11 +512,11 @@ slots:
       - { x: 33480, y: 5448 }
       - { x: 34312, y: 5800 }
       - { x: 32328, y: 7784 }
-  - id: 6
-    key: new_world
-    culture_circle_id: 6
-    clue_map_item_id: 161
-    item_by_series: { original: 154, hallstatt: 198 }
+  - key: vanilla:new_world
+    vanilla_index: 6
+    major_sea: vanilla:new_world
+    clue_map: vanilla:pittacus_blade_map
+    item_by_series: { vanilla:original: vanilla:crystal_skull, vanilla:hallstatt: vanilla:chimu_axe }
     spawn_candidates:
       - { x: 11800, y: 8744 }
       - { x: 11256, y: 7048 }
@@ -534,30 +528,25 @@ slots:
       - { x: 9480,  y: 7960 }
 ```
 
-`vanilla-world1` 包只改 `pack` 与默认 `series: hallstatt`（或由 `scenarios.yaml` 的 `world_pack` 选系列）。坐标表共用，不复制一份。
+`vanilla-world1` 包只改 `pack` 与默认 `series: vanilla:hallstatt`（由 `scenarios.yaml` 的 `world_pack` 选系列）。坐标表共用，不复制一份。
 
 `config/items/kinds.yaml` 片段：
 
 ```yaml
-- id: 8
-  key: hegemony_proof
-  aliases: [relic]                 # 兼容 01
-  name_i18n: itemkind.hegemony_proof
+- key: vanilla:hegemony_proof
+  vanilla_index: 8
+  aliases: [vanilla:relic]                 # 兼容旧目录名
+  name_key: itemkind.hegemony_proof
   equip_target: none
-- id: 9
-  key: sage_map
-  name_i18n: itemkind.map
+  search_presentation: proof       # 替代引擎里的 kind == 8
+- key: vanilla:sage_map
+  vanilla_index: 9
+  name_key: itemkind.map
 ```
 
-`config/caps.yaml` 片段：
+槽数、候选数、证的种类都不进 `caps.yaml`：前两者读表长，后者是 `kinds.yaml` 的 `search_presentation`。
 
-```yaml
-hegemony_proof_slots: 7
-hegemony_spawn_candidates: 8
-item_kind_hegemony_proof: 8
-```
-
-文案全部 `ui/strings.*.yaml`（`itemkind.*` `proof.*` `discovery.*` `circle.*`）。本文件的中文只作原版包注释。
+文案全部 `ui/strings.*.yaml`（`itemkind.*` `proof.*` `discovery.*`；海域名用 `major_seas.yaml` 的 `name_key`）。本文件的中文只作原版包注释。
 
 `writing-guide` 的目录树没有 `config/discovery/`。本系统按题目落在这里，与 `progression/fame.yaml` 的发现进度相邻；不要把七槽塞进 `items.yaml` 当第 232–238 件道具。
 
@@ -565,17 +554,17 @@ item_kind_hegemony_proof: 8
 
 | 旋钮 | 文件 | 改它不必动 |
 | --- | --- | --- |
-| 14 件系列/圈/遗迹外键 | `ancient_treasures.yaml` | 装备、种植、遗迹定义 |
+| 14 件系列/海域/遗迹外键 | `ancient_treasures.yaml` | 装备、种植、遗迹定义 |
 | 七槽、8 候选坐标 | `hegemony_proofs.yaml` | 搜索半径公式 |
-| World0 放 148 还是 192 | 槽上 `item_by_series` + 剧本选包 | `if scenario>=4` 从引擎删除 |
+| World0 放 148 还是 192 | 槽上 `item_by_series` + 剧本选世界包 | `if scenario>=4` 从引擎删除 |
 | `randomize_spawn_on_new_game` | 同上 | 存档仍是 7 个下标 |
-| 线索地图外键 | `clue_map_item_id` | 贤者地图的百科正文 |
+| 线索地图外键 | `clue_map` | 贤者地图的百科正文 |
 | kind 显示名 | 文案包 | 筛选 UI 按表长画 13 档 |
 | 214–230 效果量 | `items.yaml` / `effects.yaml` | 本两表 |
 | 发现镜头帧数 20 | ui | 本表只发事件 |
 | 集齐条件 | `fame.yaml` `requires` | 本表只供 `count` |
 
-加第八圈：两边表加行，势力 7×uint16 也要加格（那是 factions 的事）。不要在搜索里写死 `==8` 的第二种 kind。
+加第八海域：`major_seas.yaml` 加行（factions），本两表加行；势力影响力格数随海域表长。不要在搜索里写死 `==8` 的第二种 kind。
 
 ## 8. 对外接口
 
@@ -592,8 +581,8 @@ Proofs.owned_count(series?) -> u32
 Proofs.snapshot() -> { slots: [{id, item_id, spawn_index, owned, xy}] }
 ```
 
-`TreasureRow = { item_id, series, culture_circle_id, remain_id | null }`  
-`Slot = { id, culture_circle_id, item_by_series, clue_map_item_id, candidates }`
+`TreasureRow = { item, series, major_sea, remains | null }`  
+`Slot = { key, major_sea, item_by_series, clue_map, candidates }`
 
 命令：
 
@@ -607,11 +596,11 @@ MarkProofFound { fleet_id, item_id }        # ocean 命中后；内部 Acquire+�
 
 ```
 ProofsPlaced { series }
-ProofDiscovered { fleet_id, item_id, proof_slot_id, culture_circle_id }
+ProofDiscovered { fleet_id, item_id, proof_slot, major_sea }
 DiscoveryUnlocked { kind: item, id: item_id }   # 与 fame-titles 共用
 ```
 
-ocean：`SearchHit` 只带 `item_id` + `fleet_id`。world 不读背包。ui：`OpenDiscoverTitleView` 是场景命令。
+ocean：`DiscoveryFound { fleet_id, kind: item, id }` 只带 `item_id` + `fleet_id`。world 不读背包。ui：`OpenDiscoverTitleView` 是场景命令。
 
 存档：
 
@@ -629,15 +618,15 @@ UI 回调只带 id。舰队已解散、点已入包：整段 no-op。
 | 7 字节究竟是候选下标还是「已收集」旗 | `rand(8)` + 8 对坐标 | `[推断]` 下标；收集用 `owned` |
 | 标成析构的函数里 `rand(8)` 是否就是开局 | `CItemElement.cpp` | `[推断]` 开局 |
 | `+0x19` 8 vs 10 除「套」以外的含义 | hex | `[推断]` 系列；可能还有 UI 帧 |
-| 遗迹是否掉 kind 8 | 无对照表 | `[未知]` `remain_id` 保持 null |
+| 遗迹是否掉 kind 8 | 无对照表 | `[未知]` `remains_id` 保持 null |
 | `CDiscoverTitleView` 读七槽还是读背包 | 只有绘制 | `[未知]` |
 | `EvItem.dk4` 39 帧下标 | 头 `tex_count=0x27` | `[未知]`；25+14 只是算术 |
-| `0x112ab` 两个 `%s` 的填法 | 格式串 | `[推断]` 圈名 + 道具名 |
+| `0x112ab` 两个 `%s` 的填法 | 格式串 | `[推断]` 海域名 + 道具名 |
 | 持有线索地图是否画海陆色块 | 文案有「颜色深的部位是海」 | `[未知]` 默认只给文案 |
 | 集齐七证是否改交涉/投资/剧本 | 无公式 | `[未知]` 默认不改 |
 | 214–230 是否 1999 PK 就有 | 无 PK 光盘 | `[推断]` HD 装备增补；**肯定不是** kind 8 |
 | `CItem+0x3b/+0x3c` 是否「已从地图摘走」 | 每件存 2 字节 | `[未知]` |
-| 村落源表 `+0x30` 也是 0–6 | 09-remains 目录 | `[未知]` 禁止直接当成圈号 |
+| 村落源表 `+0x30` 也是 0–6 | 09-remains 目录 | `[未知]` 禁止直接当成海域号 |
 | 未放置那一套如何获得（遗迹/事件/狩猎） | 无函数 | `[未知]` 不要发明「石板=水晶头骨」 |
 
 未还原前：YAML 留 `null` / `unknown`。实现只跑确认项与带注释的推断项。禁止为「图鉴好看」给 25 遗迹各塞一件证，禁止把金币/星粉水晶算进七槽。

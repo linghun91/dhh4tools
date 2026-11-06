@@ -12,7 +12,9 @@
 4. [00-overview/05-config-architecture.md](00-overview/05-config-architecture.md) — `config/` 布局
 5. [00-overview/04-id-registry.md](00-overview/04-id-registry.md) — 全部 ID 与计数
 6. [00-overview/06-system-interfaces.md](00-overview/06-system-interfaces.md) — 查询 / 命令 / 事件
-7. [00-overview/07-open-unknowns.md](00-overview/07-open-unknowns.md) — 实现前必须钉死的未知项
+7. [00-overview/07-open-unknowns.md](00-overview/07-open-unknowns.md) — 实现前必须钉死的未知项、原版哨兵对照
+8. [00-overview/09-architecture-decisions.md](00-overview/09-architecture-decisions.md) — 跨系统架构决策 D1–D10（与之冲突时改系统文档）
+9. [00-overview/10-key-glossary.md](00-overview/10-key-glossary.md) — 全局 key 规范名（写 YAML key、修正器、tick 阶段前先查）
 
 改表从 [15-catalogs](15-catalogs/README.md) 对照原版实例；改公式从 [13-algorithms/01-formulas.md](13-algorithms/01-formulas.md)。
 
@@ -23,19 +25,21 @@
 | 文档 | 内容 |
 | --- | --- |
 | [01-product-vision.md](00-overview/01-product-vision.md) | 要保住的体验、成功标准 |
-| [02-original-architecture.md](00-overview/02-original-architecture.md) | exe / DLL / 场景 / 类 |
-| [03-decoupling-principles.md](00-overview/03-decoupling-principles.md) | 四层、事件、修正器 |
+| [02-original-architecture.md](00-overview/02-original-architecture.md) | exe / DLL / 场景 / 类 / 原版世界 tick |
+| [03-decoupling-principles.md](00-overview/03-decoupling-principles.md) | 四层、事件语义、修正器堆叠、依赖图 |
 | [04-id-registry.md](00-overview/04-id-registry.md) | 枚举、哨兵、上限 |
-| [05-config-architecture.md](00-overview/05-config-architecture.md) | YAML 目录与加载顺序 |
-| [06-system-interfaces.md](00-overview/06-system-interfaces.md) | 跨系统查询、命令、事件 |
+| [05-config-architecture.md](00-overview/05-config-architecture.md) | YAML 目录、加载顺序、模组合并、ID 命名空间、tick 顺序、随机数 |
+| [06-system-interfaces.md](00-overview/06-system-interfaces.md) | 跨系统查询、命令、事件规范名；状态 / 派生量所有权裁决 |
 | [07-open-unknowns.md](00-overview/07-open-unknowns.md) | 阻塞实现的未知项 |
-| [08-expert-coverage.md](00-overview/08-expert-coverage.md) | 对照资深清单：哪些有、哪些薄、本轮补哪些 |
+| [08-expert-coverage.md](00-overview/08-expert-coverage.md) | 对照资深清单：哪些有、哪些薄、本轮补哪些、核查后更正 |
+| [09-architecture-decisions.md](00-overview/09-architecture-decisions.md) | D1 ID / D2 修正器 / D3 公式层 / D4 时间 / D5 剧本旗标 / D6 派生量 / D7 存档 / D8 叙事 / D9 动作执行器 / D10 内容提取 |
+| [10-key-glossary.md](00-overview/10-key-glossary.md) | 全局 key 词表：修正器、六维 / 技能、岗位、舱室 / role、caps、配置路径、海域、特产品槽字段、tick 阶段的唯一规范名，附「别名 → 规范名」文件:行对照 |
 
 ### 01 世界
 
 | 文档 | 配置落点 |
 | --- | --- |
-| [01-map-and-sea-areas.md](01-world/01-map-and-sea-areas.md) | `config/world/map.yaml` `sea_areas.yaml` |
+| [01-map-and-sea-areas.md](01-world/01-map-and-sea-areas.md) | `config/world/map.yaml` `major_seas.yaml` `sea_areas.yaml`（原版空） |
 | [02-towns.md](01-world/02-towns.md) | `config/world/towns.yaml` |
 | [03-villages-discovery.md](01-world/03-villages-discovery.md) | `villages.yaml` `remains.yaml` |
 | [04-climate-weather-zodiac.md](01-world/04-climate-weather-zodiac.md) | `climate.yaml` |
@@ -63,19 +67,19 @@
 | 文档 | 配置落点 |
 | --- | --- |
 | [01-person-model.md](03-characters/01-person-model.md) | `persons.yaml` |
-| [02-protagonists-scenarios.md](03-characters/02-protagonists-scenarios.md) | `protagonists.yaml` |
-| [03-abilities-skills-jobs.md](03-characters/03-abilities-skills-jobs.md) | `abilities.yaml` `skills.yaml` `jobs.yaml` `posts.yaml` |
+| [02-protagonists-scenarios.md](03-characters/02-protagonists-scenarios.md) | 主角人物在 `persons.yaml`；剧本 → 主角 / `player_force` 在 `narrative/scenarios.yaml`（不设 `protagonists.yaml`） |
+| [03-abilities-skills-jobs.md](03-characters/03-abilities-skills-jobs.md) | `abilities.yaml` `skills.yaml` `jobs.yaml` `posts.yaml` `zodiac.yaml` |
 | [04-recruitment-crew.md](03-characters/04-recruitment-crew.md) | 招募规则 |
 | [05-portraits-animation.md](03-characters/05-portraits-animation.md) | Chara / bustup |
 | [06-companions-bonds.md](03-characters/06-companions-bonds.md) | 开局同伴 |
-| [07-fatigue-health-mood.md](03-characters/07-fatigue-health-mood.md) | 疲劳 / 伤病 / 精神 |
+| [07-fatigue-health-mood.md](03-characters/07-fatigue-health-mood.md) | `vitals.yaml`：身体 7 态 / 精神 6 态 |
 
 ### 04 经济
 
 | 文档 | 配置落点 |
 | --- | --- |
 | [01-trading-items.md](04-economy/01-trading-items.md) | `trading_items.yaml` `trading_item_kinds.yaml` |
-| [02-market-price.md](04-economy/02-market-price.md) | `price_curves.yaml` `formulas/economy.yaml` |
+| [02-market-price.md](04-economy/02-market-price.md) | `culture_prices.yaml` `town_state_price_rules.yaml` `formulas/economy.yaml` |
 | [03-trade-loop.md](04-economy/03-trade-loop.md) | 买卖会话、货格、堆叠 |
 | [04-special-products-investment.md](04-economy/04-special-products-investment.md) | `special_products.yaml` `investment.yaml` |
 | [05-goods-art-spawn-display.md](04-economy/05-goods-art-spawn-display.md) | 图标 / 上架 / 星品 |
@@ -87,11 +91,11 @@
 
 | 文档 | 配置落点 |
 | --- | --- |
-| [01-ship-model.md](05-ships-fleet/01-ship-model.md) | `ships/types.yaml` `hulls.yaml` |
+| [01-ship-model.md](05-ships-fleet/01-ship-model.md) | `ships/models.yaml` `hulls.yaml` `rig.yaml` |
 | [02-fleet-proxy.md](05-ships-fleet/02-fleet-proxy.md) | `fleets/templates.yaml` `proxy_rules.yaml` |
 | [03-cabins-crew-posts.md](05-ships-fleet/03-cabins-crew-posts.md) | `cabins.yaml` `characters/posts.yaml` |
 | [04-remodel-guns-supplies.md](05-ships-fleet/04-remodel-guns-supplies.md) | `guns.yaml` `supplies.yaml` `figureheads.yaml` |
-| [05-hull-catalog-market-start.md](05-ships-fleet/05-hull-catalog-market-start.md) | 100 船名、买卖、开局船 |
+| [05-hull-catalog-market-start.md](05-ships-fleet/05-hull-catalog-market-start.md) | 107 船体 / 39 船模、买卖、开局船 |
 | [06-crew-headcount.md](05-ships-fleet/06-crew-headcount.md) | 无名水手人数 |
 | [07-dock-warehouse.md](05-ships-fleet/07-dock-warehouse.md) | 船坞 100 槽 |
 | [08-gun-shell-catalog.md](05-ships-fleet/08-gun-shell-catalog.md) | 六炮中文名 |
@@ -115,7 +119,7 @@
 | [02-boarding.md](07-combat/02-boarding.md) | `boarding.yaml` |
 | [03-battle-ai.md](07-combat/03-battle-ai.md) | `ai.yaml` |
 | [04-ship-vs-port.md](07-combat/04-ship-vs-port.md) | 舰对港 / 占领 |
-| [05-formation-happening.md](07-combat/05-formation-happening.md) | 五槽阵型、命令 2–6 |
+| [05-formation-happening.md](07-combat/05-formation-happening.md) | 五槽阵型、场景 happening |
 | [06-prizes-capture.md](07-combat/06-prizes-capture.md) | 战利品 / 俘船 |
 
 ### 08 港口生活
@@ -123,10 +127,10 @@
 | 文档 | 配置落点 |
 | --- | --- |
 | [01-facilities.md](08-town-life/01-facilities.md) | `town/facilities.yaml` |
-| [02-requests-schemes.md](08-town-life/02-requests-schemes.md) | `requests.yaml` `schemes.yaml` |
+| [02-requests-schemes.md](08-town-life/02-requests-schemes.md) | `request_kinds.yaml` `request_generation.yaml` `schemes.yaml` |
 | [03-minigames.md](08-town-life/03-minigames.md) | `minigames.yaml` |
 | [04-schemes-rhetoric.md](08-town-life/04-schemes-rhetoric.md) | 10 种话术/计谋 |
-| [05-inn-church-palace.md](08-town-life/05-inn-church-palace.md) | 旅馆/教会/王宫规则 |
+| [05-inn-church-palace.md](08-town-life/05-inn-church-palace.md) | 旅馆 / 王宫规则；遗址·教会·城门按日仪式 |
 | [06-plaza-intel-adman.md](08-town-life/06-plaza-intel-adman.md) | 广场招牌 / CAdman |
 
 ### 09 道具
@@ -153,8 +157,8 @@
 | 文档 | 配置落点 |
 | --- | --- |
 | [01-level-exp-skills.md](11-progression/01-level-exp-skills.md) | `progression/level.yaml` `formulas/progression.yaml` |
-| [02-fame-titles.md](11-progression/02-fame-titles.md) | `fame.yaml` |
-| [03-gameover-succession.md](11-progression/03-gameover-succession.md) | 寿终 / 继承旋钮 |
+| [02-fame-titles.md](11-progression/02-fame-titles.md) | 图鉴；原版无名声 / 爵位（`fame.yaml` 默认关闭） |
+| [03-gameover-succession.md](11-progression/03-gameover-succession.md) | 寿终 / Game Over（原版无继承） |
 
 ### 12 界面与存档
 
@@ -196,7 +200,7 @@
 
 ## 系统依赖（允许的方向）
 
-见 [03-decoupling-principles.md](00-overview/03-decoupling-principles.md) 原则 9。叙事可查询一切，不可被经济/战斗反向依赖。事件合同见 [06-system-interfaces.md](00-overview/06-system-interfaces.md)。
+见 [03-decoupling-principles.md](00-overview/03-decoupling-principles.md)「系统依赖图」：查询依赖无环，反向只走事件。叙事可查询一切，不可被经济/战斗反向依赖。事件合同见 [06-system-interfaces.md](00-overview/06-system-interfaces.md)。
 
 ## 事实等级
 
@@ -204,4 +208,6 @@
 
 ## 规模
 
-约 55 篇 Markdown + 10 份 YAML 示例。原版包对照：97 港、235 人、231 道具、105 交易品、25 势力。
+97 篇 Markdown（含 `_meta` 与各目录 README）+ 28 份 YAML 示例（`14-config-schemas/examples/`，含 `mods/mymod/` 6 份）。原版包对照：97 港、235 人、231 道具、105 交易品、25 势力、21 文化圈 / 七大海域、107 船体 / 39 船模、200 航线 / 164 折点、24 村落、25 遗迹、12 种地图点；七剧本、两份世界包。
+
+计数注意：`srcdata` 里部分 `NUM_*` 是 RTC 投票误采（`NUM_SHIPTYPE=5` 实 39、`NUM_BATTLEGUN=5` 实 21、`NUM_SHIPMAST=100` 实 3），引用时注明证据类型（判界 / 循环上界 / 投票）。原版没有名声、爵位、继承；教会不是设施。

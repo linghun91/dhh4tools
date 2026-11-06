@@ -1,6 +1,6 @@
 # 同伴与羁绊
 
-开局带谁上船、谁锁在旗舰、月结时扫哪些在岗人、酒馆怎么打听位置、图鉴传记怎么挂 key。名册招入/解雇见 `04-recruitment-crew.md`；舱室几何见 `05-ships-fleet/03-cabins-crew-posts.md`；EV 何时招人见 `10-narrative`。
+开局带谁上船、谁锁在旗舰、日步 / 在岗经验时扫哪些在岗人、酒馆怎么打听位置、图鉴传记怎么挂 key。名册招入/解雇见 `04-recruitment-crew.md`；舱室几何见 `05-ships-fleet/03-cabins-crew-posts.md`；EV 何时招人见 `10-narrative`。
 
 原版 RTC 把「同伴」用在两处，重构必须拆开：
 
@@ -16,7 +16,7 @@
 
 本系统管：
 
-- 每个 `scenario_id` 开局要 `PersonRecruited` 的 `person_id` 列表
+- 每个剧本（按剧本 key）开局要 `Characters.recruit` 的人物 key 列表
 - 旗舰锁定：哪些人拒绝调到其它船（文案在，映射未钉死）
 - 把 `PLAYERCOMPANION_BITS` 与在岗工作数组封装成 `Characters.companions()` / `Characters.aboard()`
 - 图鉴长传记的文案 key（按 `person_id`）；点数经济仍走叙事画廊
@@ -26,7 +26,7 @@
 
 | 事项 | 归属 |
 | --- | --- |
-| 98 槽名册、雇佣水手人数、三熟练技能 | `04-recruitment-crew.md` |
+| 名册（隶属 == 玩家势力的人物集合；存档完整记录 87 条）、雇佣水手人数、三熟练技能 | `04-recruitment-crew.md` |
 | 舱室 31 槽、岗位、换旗舰解任 | `05-ships-fleet/03-cabins-crew-posts.md` |
 | 委托人 `eRequestPerson`（公会找人/护送） | `08-town-life/02-requests-schemes.md` |
 | EV opcode、事件旗、开场脚本 | `10-narrative/02-event-system.md` |
@@ -35,23 +35,28 @@
 | 道具标价、种类、装备槽 | `09-items` |
 | 酒馆酒价、女招待表、划拳 | `08-town-life/01-facilities.md` |
 
-叙事发 `StartScenario`；人物按本表执行 `PersonRecruited`，再按船侧模板把人绑到旗舰舱室。其它系统只拿 `person_id`，不读 bitfield，不持 `CPlayerFleetData*`。
+叙事发 `ScenarioSelected`；人物按本表执行 `Characters.recruit`，再按船侧模板把人绑到旗舰舱室。其它系统只拿 `person_id`，不读 bitfield，不持 `CPlayerFleetData*`。
 
 ## 2. 原版事实
 
 ### 2.1 在岗工作数组（`asCompanion` / `aeCompanion`）
 
-- `[确认]` RTC 名 `asCompanion` 出现在 `fn_140005a15`（body `0x1400fa870`，4192 字节，补给/新舰队状态）和 `CFleetElement::vfunc_04`（月结）。栈上体积 **1880 字节**。来源：`rtc.json`、`unassigned_named.tsv`、`CFleetElement.cpp`。
+- `[确认]` RTC 名 `asCompanion` 出现在 `fn_140005a15`（body `0x1400fa870`，4192 字节，玩家舰队日步：补给日耗、人物每日结算、海上事件）和 `CFleetElement::vfunc_04`（每拍调度里的 3 日在岗经验，见下）。栈上体积 **1880 字节**。来源：`rtc.json`、`unassigned_named.tsv`、`CFleetElement.cpp`。
 - `[确认]` RTC 名 `aeCompanion` 出现在 `fn_1400044cb`（body `0x1401605f0`，770 字节）。栈上体积 **940 字节**。来源：同上。
 - `[确认]` `1880 / 8 = 235 = NUM_PERSON`，`940 / 4 = 235`。`fn_140002e3c` 的 `aePerson` / `aeCabinKind` 同样各 940 字节。来源：`fn_1401db9d0.cpp` RTC。
 - `[确认]` `fn_140002e3c` 先调 `fn_1400120ee` 填「人物 id 数组 + 舱室种类数组」，再按条打成 8 字节记录（`fn_140004561`）。循环跳过 `person_id == 0xEC`。来源：`fn_140002e3c`、`fn_1400120ee`。
 - `[确认]` `fn_1400120ee` 扫 `ePerson >= 0xEB`（235）建 `abPersonFlag`（940 字节），再扫旗舰 31 舱（`eShipCabin >= 0x1F`）、另外 4 艘船（`eFleetShip >= 5`）。空人物写 `0xEC`，空种类写 `0x18`。来源：同文件。
-- `[确认]` `fn_140009106` 只向 `fn_1400120ee` 要人物 id 列（`aeCompanion` 的填充路径）。`fn_1400044cb` 用它扫在岗人，对身心状态 2/3/4/5 做月结分支。来源：`fn_14015b600.cpp`。
-- `[确认]` `CFleetElement::vfunc_04` 在日历条件命中后：`fn_140002e3c` → 按条读 `*(asCompanion+4)`；若种类 `== 0x11` 走另一条半值路径，否则按表 `DAT_140682bc0` 给该人加两段量。来源：`CFleetElement.cpp`。种类 0x11 的舱室名 `[未知]`。
-- `[确认]` `fn_140005a15` 的 RTC 同时有 `asCompanion`、`aePerson`（124 字节）、`anSupply`、`anSupplyShortage`、`nShipTotal`、`nLatitude`/`nLongitude`。反编译在 `fn_1400f7c10.cpp` 失败（format 字符串），函数体未读懂。来源：`rtc.json`、该 cpp 注释。
+- `[确认]` `fn_140009106` 只向 `fn_1400120ee` 要人物 id 列（`aeCompanion` 的填充路径）。`fn_1400044cb`（body `0x1401605f0`）用它扫在岗人做**休养**：HP +上限/20、身体 1/2→健康、3/4 各 1/3 降一档、疾病按 flag 治愈，精神 5→4、3→2、4→3 掷骰。不是月结。入口 `fn_14000c9eb`（循环 N 次）/ `fn_14000295a`（单次）。规则全文见 `07-fatigue-health-mood.md` 2.12。
+- `[确认]` `CFleetElement::vfunc_04`（每拍都被世界 tick 调）里的**在岗经验**块（原始指令 `0x1400ffa34`–`0x1400ffd68`）。门：`fn_140009b24(cal)` = `cal.packed % 0x90 == 0`（每 144 拍 = **每 3 天**一次，不是月结）；玩家舰队港槽 `fn_14000c144 == 0x62`（在海上）；`fn_14000f26d(fleetdata, 1) == 0`（语义未读）；`n = fn_140012e36(fleetdata) = (world.packed − fleetdata[+0x2C]) / 48 > 0`（无符号除；`+0x2C` 初值 −1，`[推断]` 出港时刻 → `n` = 出港天数）。然后 `fn_140002e3c(fleetdata, 0xF, asCompanion)` 列在舱人，逐条：
+  - 舱种经 `fn_140012dd2` 得岗位 `post`。`post != 0x11`：查 `.data 0x140682bc0` 行 `post`（步长 0x18 = `{a0,d0,s0,a1,d1,s1}`），`e_k = a_k > 0 ? n*a_k/d_k − s_k : 0`，任一 > 0 则 `fn_140011c34(p, e0, e1)`。
+  - 无岗位舱：`e0 = rand(n)/2`、`e1 = rand(n)/2`（有符号 `/2`），任一 > 0 则加。
+  - 再扫舰队船 1–4：该船船长隶属 == 玩家势力（`fn_140013f2f`）则加 `(2n−1, 4n−2)`。
+  - 表值（16 行，岗位序）：舰长 `1,1,0 | 4,1,1`；副官 `1,1,1 | 3,1,2`；参谋 `0,1,0 | 7,2,0`；会计长 `0,1,0 | 3,1,1`；测量员 `0,1,0 | 5,1,4`；操帆手 `4,1,3 | 1,1,1`；舵手 `3,1,2 | 2,1,1`；了望手 `2,1,0 | 2,1,0`；冲锋队长 `2,1,1 | 1,1,0`；炮手 `3,2,0 | 3,2,1`；传教士 `1,1,1 | 3,1,1`；船医 `1,1,1 | 3,1,1`；大厨 `3,1,2 | 2,1,2`；船木工 `2,1,2 | 1,1,1`；饲养员 `4,1,3 | 1,1,1`；甲板主管 `7,1,3 | 0,1,0`。
+  - 经验公式与表归 `11-progression`；本系统只提供在舱名单与岗位映射。
+- `[确认]` `fn_140005a15` 的 RTC 同时有 `asCompanion`、`aePerson`（124 字节）、`anSupply`、`anSupplyShortage`、`nShipTotal`、`nLatitude`/`nLongitude`。反编译失败，已按原始指令读出调用顺序：补给日耗 `fn_140005aa6` → 列在舱人 `fn_140002e3c` → 逐人 HP / 身体恢复 / 身体恶化 / 精神漂移（`0x1400fb578`–`0x1400fb5fc`）→ 海上事件掷骰 `fn_1400f2d90`（`0x1400fb76d`）→ 事件精神转移 `fn_1400ec260` → 写事件态 `fn_14000a8fd` → `fn_1400f0450`。人物部分全文见 `07-fatigue-health-mood.md` §2.11，海上事件见 `06-ocean/05`。
 - `[推断]` `asCompanion` = `{ person_id: u32, cabin_kind_id: u32 }[235]`，`aeCompanion` = `person_id[235]`，都是**栈上工作区**，有效长度由填充函数返回值给出，不是「235 个故事同伴」。依据：体积整除 `NUM_PERSON`、填充来自舱室绑定、空槽 `0xEC`。
 
-这不是剧本开局表。海洋月结要「船上有谁」时走人物查询，禁止自己解析 1880 字节。
+这不是剧本开局表。日步要「船上有谁」时走人物查询，禁止自己解析 1880 字节。
 
 ### 2.2 `CPlayerFleetData` 与 `PLAYERCOMPANION_BITS`
 
@@ -61,11 +66,11 @@
 - `[推断]` `+0x0A` 的 31 字节是旗舰舱室人物（空=`0xEC`）；`+0x38` 起是另外 4 艘船的人物+种类。这是**舱室绑定**，见岗位文档，不是 `PLAYERCOMPANION_BITS` 本身。
 - `[未知]` `+0x130` 那个 dword 是否就是 `PLAYERCOMPANION_BITS`（若 sizeof=4 则 32 位）。禁止把 31 个舱室字节当成同伴位域。
 
-`0xEC=236`：`NUM_PERSON=235` 外侧，空人物哨兵 `[推断]`，与 `INVALID_PERSON=-1` 并存。重构用 `person.empty`，不要用 0（拉斐尔）或 -1 当舱室空槽。
+`0xEC=236`：`NUM_PERSON=235` 外侧，空人物哨兵（`fn_140002e3c` / `fn_1400044cb` 均以 `== 0xEC` 跳过）`[确认]`，与 `INVALID_PERSON=-1` 并存。重构运行时舱室空位一律 `null`（`Option<PersonId>`），`0xEC` 只出现在 `ids/legacy_codec.yaml` 的导入 / 导出（D1）；不要用 0（拉斐尔）、-1 或 236 当空槽。
 
 ### 2.3 开局同伴：世界表势力 + 传记
 
-世界表人物行 `+0x2A` 一字节，与 `eForce` 对齐 `[推断]`。依据：
+世界表人物行 `+0x2A` 一字节是初始隶属 `force_id` `[确认]`（`fn_140014709` 拷到 `CPerson+0x0C`，`fn_14000da85` 读出与玩家势力比较；`fn_1400140ba` 显式判 `== 0x1A` 无所属）。旁证：
 
 - 取值 0–21 落在 `NUM_FORCE=25` 内；**26（`0x1A`）** 与势力运行时空哨兵相同（`CForce::vfunc_05` 写 `0x1A`，`01-forces.md`）。
 - 七个主角的值分别是 0、2、1、3、20、13、21，与「卡斯特罗商会 / 柏格斯通商会 / 阿歌特商会 / 李家 / 佐伯家 / 伍丁商会 / 昆廷韦拉斯」的 `force_id` 一致。来源：`Docs/_data/persons_world0.json` hex、`15-catalogs/forces.md`。
@@ -108,7 +113,7 @@ EV0–EV6 头与触发计数已还原（`02-event-system.md`），opcode 未译�
 
 ### 2.5 酒馆打听 ≠ 委托人
 
-- `[确认]` 酒馆发招募：「有人要乘坐提督的船……让他上船吧？」（`0x7627`）。入队仍走 `PersonRecruited`。
+- `[确认]` 酒馆发招募：「有人要乘坐提督的船……让他上船吧？」（`0x7627`）。入队仍走 `Characters.recruit`（成功后发 `PersonRecruited`）。
 - `[确认]` 位置类传闻模板：「这一带名叫%s的%s的%s很有名。」（`0x8357`）；「提督！我想试着找出%s。好像在%s。」（`0xbcd3`）；「%s的舰队正停泊在%s。」（`0x8743`）。阿科布有专句「好像在%s」（`0x728b`）。
 - `[确认]` `CBar` 构造写 `+0x18=5`。来源：`CBar.cpp`。`[推断]` 同屏/菜单 5 项，不是打听表长。
 - `[确认]` `eRequestPerson` 是**委托委托人**。`fn_14000e23c` 循环 `eRequestPerson >= 0x64`，命中写入 400 字节 `aeRequestPerson`，再随机一个写到委托记录 `+0x11`。来源：`RequestPerson.h`、`fn_1401eb2a0.cpp`。`[推断]` `NUM_REQUESTPERSON=100`。公会「寻找居住在%s某个地方的%s」（`0x152b7`）走这张表，**不是**同伴位。
@@ -144,10 +149,10 @@ EV0–EV6 头与触发计数已还原（`02-event-system.md`），opcode 未译�
 
 | 实体 | 原版 | 计数 | 空 / 非法 | 重构 |
 | --- | --- | --- | --- | --- |
-| 剧本 | `eScenario` | 7 | `INVALID_SCENARIO=-1` | `scenario_id` |
-| 人物 | `ePerson` | 235 | `-1`；舱室空槽 `0xEC` | `person_id` |
+| 剧本 | `eScenario` | 7 | `null`（原版 −1） | 剧本 key（叙事拥有） |
+| 人物 | `ePerson` | 235 | `null`（原版 −1；舱室空槽 `0xEC` 只在 `legacy_codec`） | 人物 key |
 | 开局同伴名单 | （无独立枚举） | 每剧本 0–4 人 `[推断]` | 空列表合法 | `companions.yaml` 行 |
-| 在岗工作数组 | `asCompanion` / `aeCompanion` | 容量 235，有效长度运行时 | `person.empty` | 不进内容包 |
+| 在岗工作数组 | `asCompanion` / `aeCompanion` | 容量 235，有效长度运行时 | 跳过 `null` | 不进内容包 |
 | 同伴位域 | `PLAYERCOMPANION_BITS` | 位宽 `[未知]` | 全 0 | 人物状态，不暴露布局 |
 | 委托人 | `eRequestPerson` | 100 `[推断]` | `-1` | **另一系统** |
 | 已知人物 | `ePERSONKNOWN` | `[未知]` | `-1` | 打听标记，未还原则不建表 |
@@ -155,27 +160,27 @@ EV0–EV6 头与触发计数已还原（`02-event-system.md`），opcode 未译�
 
 `NUM_NOWPERSON=4` 是同时出场立绘槽（`05-portraits-animation.md`），不是同伴上限。
 
-模组可加 `scenario_id` 行或把 `person_ids` 改成别人，引擎按表长，不写 `if scenario==3`。
+模组可加剧本行或把 `persons` 改成别人，引擎按表长，不写 `if scenario==3`。
 
 ## 4. 算法 / 公式
 
 没有伤害式。开局是一次装填；在岗是舱室投影。
 
 ```
-# 开局（StartScenario 之后，人物执行）
-player_force = Forces.leader_force(protagonist_person_id)
-for person_id in companions[scenario_id].person_ids:
-    PersonRecruited { person_id, force_id: player_force }
-    if companions[scenario_id].flagship_locked[person_id]:
-        SetCompanion { person_id, present: true, flagship_locked: true }
-# 船侧再按 start_fleet_template 绑舱室（本系统不写船）
+# 开局（订阅 ScenarioSelected，人物执行）
+player_force = Narrative.scenario(scenario_id).player_force
+for person in companions[scenario_id].persons:
+    Characters.recruit(person, player_force)               # 成功后发 PersonRecruited
+    if person in companions[scenario_id].flagship_locked:
+        SetCompanion { person, present: true, flagship_locked: true }
+# 船侧再按 narrative/starting_fleets.yaml（剧本 key 查行，词表 §14-12）建船、绑舱室（本系统不写船）
 
-# 在岗投影（月结 / 补给查询）
+# 在岗投影（日步 / 在岗经验查询）
 aboard(fleet_id) =
     [ binding.person_id
       for ship in fleet.ships
       for cabin in ship.cabins
-      if binding.person_id != person.empty ]
+      if binding.person != null ]
 
 # 旗舰锁定
 can_reassign(person_id, to_ship):
@@ -185,13 +190,13 @@ can_reassign(person_id, to_ship):
         defer to 04-recruitment / 03-cabins
 ```
 
-参数（进 `caps.yaml` / 本表，禁止写死在引擎）：
+参数（进本表 / `ids/legacy_codec.yaml`，不进 `caps.yaml`；禁止写死在引擎）：
 
 | 参数 | 原版包 | 落点 |
 | --- | --- | --- |
-| `person.empty` | 236（`0xEC`） | `caps.yaml` |
-| `force.empty` | 26（`0x1A`） | `factions` / `caps.yaml` |
-| `aboard_scratch_cap` | 235 | 运行时取 `len(persons)` |
+| 舱室空人物 | 原版 236（`0xEC`） | 运行时 `null`；`ids/legacy_codec.yaml` |
+| 无所属势力 | 原版 26（`0x1A`） | 运行时 `null`；`ids/legacy_codec.yaml` |
+| `aboard_scratch_cap` | 原版 235 | 不建参数：运行时取 `len(persons)` |
 | `gallery.bio_cost` | 1 | 叙事画廊 |
 | `gallery.extra_photo_cost` | `%s` 未还原 | 叙事画廊 |
 
@@ -205,7 +210,7 @@ draft_start(scenario) =
       and p.id not in companions.exclude ]
 ```
 
-原版包 `exclude: [66]`（伊文）。赫德拉姆草稿为空；蒂雅草稿为空，塞维靠 `join: opening_event` 手工补。引擎只读写成的 `person_ids`，不再算 `world_force_id`。
+原版包 `exclude: [vanilla:ivan]`（伊文，原版 66）。赫德拉姆草稿为空；蒂雅草稿为空，塞维靠 `join: opening_event` 手工补。引擎只读写成的 `person_ids`，不再算 `world_force_id`。
 
 打听：
 
@@ -220,7 +225,7 @@ Characters.locate(person_id) ->
 
 原版：
 
-- 月结和补给直接在舰队对象上扫 `asCompanion`，人物/岗位/海洋搅在 `CFleetElement::vfunc_04`。
+- 日步、在岗经验直接在舰队对象上扫 `asCompanion`，人物/岗位/海洋搅在 `CFleetElement::vfunc_04`。
 - 开局同伴写在世界表 `+0x2A`（势力）+ EV 脚本里，选人界面不知情。
 - 酒馆菜单、委托人、阿科布行踪、舰队停泊传闻共用一批 `%s` 句。
 - 画廊点数和选人 UI 焊在一起（`CAcrossGameView`）。
@@ -229,20 +234,21 @@ Characters.locate(person_id) ->
 重构切断：
 
 ```
-Narrative.StartScenario { scenario_id }
+ScenarioSelected { scenario_id, world_pack, event_pack, protagonist_id }   # narrative 发（10-narrative/01；载荷用 <entity>_id，词表 §14-3）
   → Characters.load_start_companions(scenario_id)
-  → Ships.bind start_fleet_template
-  → Narrative.load event_pack          # 开场 EV 可再发 PersonRecruited（蒂雅/塞维）
+  → 舰队 / 船按 narrative/starting_fleets.yaml 以剧本 key 查行建开局舰队（§14-12；本系统不读）
+  → Narrative.load event_pack          # 开场 EV 可再发 Characters.recruit（蒂雅/塞维）
 
-Ocean.MonthTick
-  → Characters.aboard(player_fleet_id)     # 不读 bitfield
-  → 对每人发 Fatigue / 技能月结（07-fatigue / 岗位效果）
+Clock DayStarted（tick.yaml 阶段，D4）
+  → phase daily 步骤 characters.vitals（海上分支；在港分支只做 fleets 疲劳恢复，人物跳过，词表 §14-18）：Characters.aboard(player_fleet_id) → 每人 HP / 身心（07 §4.2）
+  → progression.duty_exp（phase duty_exp：schedule: [day_start] + every_n_days: 3 + when: at_sea）
+       → Characters.aboard() + Characters.post_of_room() → 经验表（11-progression）
 
 Town(Bar).InquirePerson { person_id }
   → Characters.locate(person_id) → UI 只拿 string_key + town_id
 
 Town(Bar).RecruitOfficer { person_id }
-  → 04 的 PersonRecruited，不是本表
+  → 04 的 Characters.recruit（成功后发 PersonRecruited），不是本表
 
 Town(Guild).AcceptRequest
   → RequestPerson 池，禁止问 Characters.companions()
@@ -252,75 +258,62 @@ Town(Guild).AcceptRequest
 
 ## 6. 解耦后的配置
 
-落点：`config/characters/companions.yaml`（本系统）。`narrative/scenarios.yaml` **不复制** `person_ids`，只保留 `scenario_id` / `protagonist_person_id`。传记正文在 `ui/strings.*.yaml`。
+落点：`config/narrative/companions.yaml`（05 目录树；按剧本 key 索引，字段语义由本篇定义）。`narrative/scenarios.yaml` **不复制**同伴名单，只保留剧本 key / `protagonist`。传记正文在 `ui/strings.*.yaml`。
 
 ```yaml
-# config/characters/companions.yaml
-schema: dk4.characters.companions
+# config/narrative/companions.yaml
+schema: dk4.narrative.companions
 version: 1
 pack: vanilla
-
-empty_person: 236              # 原版 0xEC；舱室空槽，不是 INVALID_PERSON
-scratch_cap: 235               # asCompanion 容量 = len(persons)；引擎读表长
 
 # 内容管线启发式，不进运行时
 generate:
   same_force_as_protagonist: true
-  roster_only: true            # 只考虑 person_id < sailor_roster
-  exclude_person_ids: [66]     # 伊文：同伍丁势力，传记不是开局随员
+  roster_only: true            # 只考虑具名航海士（原版 0–97，内容包 category 判定）
+  exclude: [vanilla:ivan]      # 伊文（原版 66）：同伍丁势力，传记不是开局随员
 
-scenarios:
-  - scenario_id: 0
-    key: raphael
-    person_ids: [8]            # 库拉乌迪
-    flagship_locked: [8]       # [推断] 对应「不能离开这艘船」
+scenarios:                     # 人物 key 由 persons.yaml 生成，此处示意
+  - scenario: vanilla:raphael
+    persons: [vanilla:claude]                  # 库拉乌迪（原版 8）
+    flagship_locked: [vanilla:claude]          # [推断] 对应「不能离开这艘船」
     notes: "bio+force 0；EV 未译码"
 
-  - scenario_id: 1
-    key: hedram
-    person_ids: []             # 世界表 force 2 无第二人
+  - scenario: vanilla:helmut
+    persons: []                                # 世界表 force 2 无第二人
     flagship_locked: []
     ev_opening_unknown: true
 
-  - scenario_id: 2
-    key: liru
-    person_ids: [12]           # 卡米尔
-    flagship_locked: [12]
+  - scenario: vanilla:lulu
+    persons: [vanilla:camille]                 # 卡米尔（12）
+    flagship_locked: [vanilla:camille]
 
-  - scenario_id: 3
-    key: hua_mei
-    person_ids: [13]           # 希恩
-    flagship_locked: [13]
+  - scenario: vanilla:hua_mei
+    persons: [vanilla:shien]                   # 希恩（13）
+    flagship_locked: [vanilla:shien]
 
-  - scenario_id: 4
-    key: kyotaro
-    person_ids: [31]           # 令；[推断] force 20 + 传记
-    flagship_locked: [31]
+  - scenario: vanilla:kyotaro
+    persons: [vanilla:rei]                     # 令（31）；[推断] force 20 + 传记
+    flagship_locked: [vanilla:rei]
 
-  - scenario_id: 5
-    key: woodin
-    person_ids: [32, 33, 34, 35]  # 阿米娜 德尼雅 法娣玛 哈希姆
-    flagship_locked: [32, 33, 34, 35]
-    # 66 伊文故意不写
+  - scenario: vanilla:woodin
+    persons: [vanilla:amina, vanilla:denia, vanilla:fatima, vanilla:hashim]   # 32–35
+    flagship_locked: [vanilla:amina, vanilla:denia, vanilla:fatima, vanilla:hashim]
+    # 伊文（66）故意不写
 
-  - scenario_id: 6
-    key: tia
-    person_ids: [25]           # 塞维
-    flagship_locked: [25]
-    join: opening_event        # 世界表 force=26，不是开局隶属；靠 EV0 号包 EV6
+  - scenario: vanilla:tia
+    persons: [vanilla:sevi]                    # 塞维（25）
+    flagship_locked: [vanilla:sevi]
+    join: opening_event        # 世界表 force=26，不是开局隶属；靠 EV6 开场
 ```
 
 图鉴 key（人物拥有，解锁规则在叙事）：
 
 ```yaml
 # 同文件或 characters/bios.yaml —— 只挂 key，不写正文
-bios:
-  - person_id: 0
-    bio_key: ui.bio.raphael          # mesfile 0x1ef2f
-  - person_id: 8
-    bio_key: ui.bio.claude           # 0x1fb04 后半
-  - person_id: 12
-    bio_key: ui.bio.camille          # 0x202c2
+bios:                                # 缺省 bio_key = person.<key>.bio，可省略
+  - person: vanilla:raphael_castro   # mesfile 0x1ef2f
+  - person: vanilla:claude           # 0x1fb04 后半
+  - person: vanilla:camille          # 0x202c2
   # … 其余具名者按 mesfile 顺序生成；无传记则缺行
 ```
 
@@ -341,9 +334,9 @@ bios:
 查询：
 
 ```
-Characters.start_companions(scenario_id) -> [person_id]
+Characters.start_companions(scenario_id) -> [person]
 Characters.companions() -> [person_id]          # 封装 PLAYERCOMPANION_BITS
-Characters.aboard(fleet_id) -> [person_id]      # 舱室投影，月结用这个
+Characters.aboard(fleet_id) -> [person_id]      # 舱室投影，日步 / 在岗经验用这个
 Characters.flagship_locked(person_id) -> bool
 Characters.locate(person_id) -> { town_id | fleet_id | unknown }
 Characters.bio_key(person_id) -> string_key | none
@@ -352,23 +345,23 @@ Characters.bio_key(person_id) -> string_key | none
 命令：
 
 ```
-LoadStartCompanions { scenario_id }             # StartScenario 的人物侧
+LoadStartCompanions { scenario_id }             # 订阅 ScenarioSelected 的人物侧
 SetCompanion        { person_id, present, flagship_locked? }
 InquirePerson       { person_id }               # 酒馆；返回 locate + string_key
 ```
 
 事件：`CompanionChanged`、`CompanionLocked`。`PersonRecruited` 仍由 04 发出；本系统订阅后可把开局名单里的人标 `present`。
 
-海洋 / 补给 / 身心月结：`Ocean.MonthTick` → `Characters.aboard()`。禁止订阅方缓存 `person_id` 列表跨月；下一次 tick 再问。
+每日身心结算与 3 日在岗经验都在 `tick.yaml` 的阶段里调 `Characters.aboard()`（D4）。禁止订阅方缓存在舱名单跨日；下一次阶段再问。
 
-画廊 UI：`Narrative.gallery_can_show_bio(person_id)` 为真时，向本系统取 `bio_key`。人物系统不读 `scenario_id` 通关位。
+画廊 UI：`Narrative.gallery_can_show_bio(person_id)` 为真时，向本系统取 `bio_key`。人物系统不读剧本通关位。
 
 ## 9. 未核实字段
 
 - `PLAYERCOMPANION_BITS` 的 sizeof、存档偏移、与 `+0x130` dword 的关系。
-- `fn_140005a15` 函数体（反编译失败）；补给短缺如何用到 `asCompanion`。
-- 月结种类 `0x11` 是哪一间舱。
-- EV 开场是否立刻 `PersonRecruited`（尤其赫德拉姆空表、蒂雅/塞维、杏太郎/令）。
+- `fn_140005a15` 里补给短缺如何用到 `asCompanion`（人物部分已读，见 `07`）。
+- 在岗经验门 `fn_14000f26d(fleetdata, 1)` 的语义；`CPlayerFleetData+0x2C` 何时写（出港？）。
+- EV 开场是否立刻 `Characters.recruit`（尤其赫德拉姆空表、蒂雅/塞维、杏太郎/令）。
 - 伊文（66）同伍丁势力：开局在不在船上。
 - 旗舰锁定句对应的 `person_id` 集合。
 - 酒馆打听：菜单项、金价、失败句、是否写 `PERSONKNOWN`。
@@ -378,4 +371,4 @@ InquirePerson       { person_id }               # 酒馆；返回 locate + strin
 - 画廊点数存档位置、额外照片价。
 - 爱情灵药 / 誓言戒指剧本的使用效果。道具说明已写「不清楚效果」——效果表保持 `null`，禁止补结婚。
 - `CBar+0x18=5` 是否含「打听」项。
-- 世界表 `+0x2A` 升格为确认的 `force_id`：对照强，但 `01-person-model.md` 仍标未知；本文件按 `[推断]` 用，不改那一行的确认等级。
+- （已解决）世界表 `+0x2A` 已在 `01-person-model.md` 与本文件升为 `[确认]` `force_id`。

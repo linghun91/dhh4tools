@@ -1,27 +1,44 @@
 schema: dk4.formulas.progression
-version: 1
-# F-PROG-*  所属：Docs/13-algorithms/01-formulas.md
-# 魔数只出现在本文件。系统代码读参数名。
+version: 3
+# F-PROG-*  所属：Docs/11-progression/01-level-exp-skills.md；总表 Docs/13-algorithms/01-formulas.md
+# 每条 = { impl, int_mode, quirks, params, tables, refs, inputs, expr, golden }。规格见 README「公式层」。
 
-level_from_exp:
-  exp_divisor: 30
-  overflow: saturate
+level_from_exp:                       # F-PROG-01
+  impl: expr
+  int_mode: { div: trunc, width: sat64 }
+  quirks:
+    q65536_div_zero: false            # 原版 q 为 65536 整倍数时 div 除零崩溃；只供对拍
+  params:
+    exp_divisor: 30
+    quirk_min_q: 2                    # 原版怪癖：q < 2（exp 30–59 的 q==1）仍 0 级；设 1 = 数学 isqrt（名随 11-progression/01 §6）
+  inputs: [exp]
+  expr: "q = exp / exp_divisor; q < quirk_min_q ? 0 : min(isqrt(q), $caps.level_per_track)"
+  golden: [{exp: 59, out: 0}, {exp: 60, out: 1}, {exp: 119, out: 1}, {exp: 120, out: 2}, {exp: 300000, out: 100}]
 
-exp_from_level:
-  exp_divisor: 30
+exp_from_level:                       # F-PROG-02
+  impl: expr
+  params: { exp_divisor: 30 }
+  inputs: [level]
+  expr: "exp_divisor * level * level"
 
-track_level:
-  exp_divisor: 30
-  # level_per_track 来自 caps.yaml，不在此重复
+total_level:                          # F-PROG-04
+  impl: vanilla.total_level           # 按 track_count 求和
+  params: { track_count: $caps.track_count }
 
-total_level:
-  track_count: 2
+stat_growth:                          # F-PROG-10
+  impl: vanilla.stat_growth
+  params:
+    growth_rand_a: 2                  # rand(2)
+    growth_rand_bias: 3               # rand(g+3)/2
+    roll_mode_default: once_per_call  # once_per_call | per_level（两条原版入口）；名随 11-progression/01 §6
+  tables:
+    track_stats: { track_a: [vanilla:stamina, vanilla:agility, vanilla:charm], track_b: [vanilla:intelligence, vanilla:spirit, vanilla:luck] }   # 轨用 key（11-progression/01）
+  rng_stream: progression.growth      # 命名流（11-progression/01 §4.4），种子进存档
+  # g 来自 characters/zodiac.yaml signs[].growth；结果夹 $caps.ability_cap
 
-skill_value:
-  skill_cap: 200          # 也可只读 caps.skill_cap；两处必须一致，校验器检查
-  level_bias: 100
-  skill_divisor: 150
-  # stat_a / stat_b 配对在 characters/skills.yaml
+# 技能值 F-PROG-05 在 formulas/character.yaml（characters 拥有）；本文件只管等级、成长、经验授予。
+# 经验授予路由 grant_routes 见 Docs/11-progression/01-level-exp-skills.md（事件 → 受益人 → add{track_a|track_b: n}）。
 
-clamp_settled:
-  ability_settled_cap: 500
+duty_exp:                             # 在岗经验：每 3 天、仅海上（engine/tick.yaml duty_exp 阶段）
+  impl: vanilla.duty_exp              # 表与公式见 03-characters/06 §2.1
+  schedule: day_start

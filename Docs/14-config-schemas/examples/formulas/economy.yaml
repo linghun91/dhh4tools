@@ -1,67 +1,60 @@
 schema: dk4.formulas.economy
-version: 1
-# F-ECO-*  所属：Docs/13-algorithms/01-formulas.md
-# ref_* 把原版 1000/500/100 收成命名参数。
+version: 3
+# F-ECO-*  所属：Docs/04-economy/*；总表 Docs/13-algorithms/01-formulas.md
+# 投资 / 上缴 / 出租费（F-ECO-11/12/19）在 formulas/investment.yaml、tribute.yaml，归 04-economy。
+# 道具店还价（F-ECO-02 item_bargain）在 formulas/items.yaml，归 09-items。
+# 流行品份额 / 发信（F-ECO-04/05/06：fashion_*、share_letter_cut、letter_*）在 formulas/factions.yaml，消费方 factions（词表 §14-9）。
 
-npc_buy_cost:
-  ref_1000: 1000
-  rand_span: 100
-  buy_ability_clamp: 500
-  buy_skill_index: 4
-  overflow: saturate_signed
+npc_buy_cost:                         # F-ECO-01
+  impl: expr
+  int_mode: vanilla_i32
+  quirks: { unsigned_div: true }      # 原版：ability > ref_1000 时被无符号 div 放大成几百万；新包设 false
+  params:
+    ref_1000: 1000
+    rand_span: 100
+    buy_ability_clamp: $caps.buy_ability_clamp
+  refs: { skill: vanilla:accounting } # 取舰队领队（提督）的 skill.accounting
+  inputs: [price, qty, ability]       # ability = Modifiers.eval("skill.accounting", {person: leader})
+  rng_stream: economy
+  expr: "price * qty * (ref_1000 - clamp(ability, 0, buy_ability_clamp) + rand(rand_span)) udiv ref_1000"
+  golden: [{price: 100, qty: 10, ability: 500, rand: 0, out: 500}]
+  # 经验不在这里：economy 发 NpcTradeCommitted，progression 按 formulas/progression.yaml grant_routes 给（轨 B +10）
 
-item_price_factor:
-  ref_100: 100
-  ability_div: 50
-  item_skill_index: 4
-  item_price_scale: 100    # [推断] 反编译丢失除数；未核实前禁止删键
-  unverified: [item_price_scale]
+share_apply_cap:                      # F-ECO-07
+  impl: vanilla.share_apply           # 3 槽挤占逻辑在 factions
+  params: { share_cap: $caps.share_cap, share_slots: 3 }
 
-ledger_balance:
-  # balance = income - expense - investment
-  fields: [income, expense, investment]
+count_fleet_item:                     # F-ECO-08
+  impl: vanilla.count_fleet_item
+  params: { count_by: quantity }
 
-fashion_share_threshold:
-  fashion_threshold_factor: 1
-  hold_scan: 10
+add_load:                             # F-ECO-09
+  impl: vanilla.add_load
+  params: { max_new_slots: derived }  # = fleet_ships * hold_slots_per_ship * cargo_stack
 
-fashion_share_gain:
-  share_high: 80
-  fashion_div: 6
-  fashion_gain_add: 1
+same_item_market_adjust:              # F-ECO-10：卖出 ≥15 件时文化圈卖价向目录价回拉
+  impl: expr
+  params: { bulk_qty: 15, num: 2, den: 10 }
+  inputs: [sold, ref, cur]            # ref = 交易品目录价；cur = 文化圈卖价
+  expr: "sold < bulk_qty || ref <= cur ? cur : min(ref, cur + (ref - cur) * num udiv den)"
 
-fashion_letter:
-  letter_lo: 10
-  letter_hi: 16
-  share_high: 80
+sell_quote:                           # F-ECO-16（片段）
+  impl: vanilla.quote_gold
+  modifiers: trade.sell_price_pct     # 剧本 2 ×105/100 由剧本修正器贡献，公式不比较剧本号
 
-share_apply_cap:
-  share_cap: 100
+special_supply:                       # F-ECO-18：月初配额 = supply_base × (商业/50+100)/100
+  impl: expr
+  int_mode: vanilla_i32
+  inputs: [supply_base, commerce]
+  expr: "supply_base * (commerce / 50 + 100) / 100"
+  golden: [{supply_base: 15, commerce: 5000, out: 30}]
 
-count_fleet_item:
-  # 船数/格数读 caps；此处只声明按件数
-  count_by: quantity
+local_fleet_founding_gold:            # F-ECO-14
+  impl: expr
+  params: { gold: 100000 }            # mesfile 0x2f33 文案常数；与 NPC 买货预算 0x186A0 分成两键
+  expr: "gold"
 
-add_load:
-  # max_new_slots 由 fleet_ships * hold_slots_per_ship 推导
-  derive_max_new_slots_from_holds: true
-
-same_item_market_adjust:
-  same_item_adjust_threshold: 15
-  unverified: [formula_body]
-
-local_fleet_founding_gold:
-  gold: 100000
-
-# 占位：无原版 default，禁止填假数
-investment:
+repair_cost:                          # F-ECO-13：底价无原版 default，禁止填假数
+  impl: null
   unverified: true
-  params: []
-
-tribute:
-  unverified: true
-  params: []
-
-repair_cost:
-  unverified: true
-  params: []
+  params: { repair_gold_per_durability: null }
