@@ -2090,7 +2090,7 @@ static int patch_stack_extras(uint8_t *data, size_t n, int cave, uint32_t stack,
     return 1;
 }
 
-/* Stacking ("DK4STK4").
+/* Stacking ("DK4STK5").
  *
  * Every 8-byte cargo record (exchange slot, ship hold, sell list) keeps the
  * piece count in byte +3, which the vanilla game never reads or writes.
@@ -2101,7 +2101,8 @@ static int patch_stack_extras(uint8_t *data, size_t n, int cave, uint32_t stack,
  * In place:  the record copy also copies byte +3, the record clear and the
  *            record builder write 0 to it.
  * Hooks:     buy (stack onto a slot of the same good bought this visit),
- *            Shift + click on a market good (buy up to one full stack),
+ *            Shift + click on a market good (buy until the slot the next
+ *            piece lands in is full),
  *            undo-buy, sell, sell all, cancel sell, the five price columns,
  *            the trade statistics at commit, ship save/load (the save file
  *            has no byte for +3, so the count rides in the top byte of the
@@ -2113,19 +2114,27 @@ static int patch_stack_extras(uint8_t *data, size_t n, int cave, uint32_t stack,
  *            it) with the plaza handout that uses that view (relief of a
  *            town in plague, famine or shortage, the fashion it starts and
  *            the culture price it lifts count pieces).
+ * One piece or the whole slot: a plain click on a hold slot, on the sell
+ *            list or on an organize-cargo card moves one piece; Shift +
+ *            click moves the whole slot as before. One piece joins a slot
+ *            or card with the same record (all bytes but the count) that
+ *            is not full yet; otherwise the click runs the vanilla code
+ *            with the count set to 1 and the rest goes back to the source,
+ *            so money, refunds and supply stay the vanilla bookkeeping.
  * All new code sits in the int3 pad after the incremental-link jump thunks.
  * The cave starts with a header and ends with a table of the original bytes
  * of every site, so writing stack 1 restores the vanilla bytes exactly.
  *
- * Older "DK4STK3" (same layout, fewer sites) and "DK4STK2" installs (limit
- * 9, code after the cargo list draw function) are recognised and removed
- * before writing. */
+ * Older "DK4STK4" and "DK4STK3" (same layout, fewer sites) and "DK4STK2"
+ * installs (limit 9, code after the cargo list draw function) are recognised
+ * and removed before writing. */
 #define V4_MAGIC "DK4STK2"
 #define V5_MAGIC "DK4STK3"
 #define V6_MAGIC "DK4STK4"
+#define V7_MAGIC "DK4STK5"
 /* The count is one byte. */
 enum { kStackMax = 255 };
-enum { kV4Head = 16, kV4Max = 1200, kV5Max = 4096 };
+enum { kV4Head = 16, kV4Max = 1200, kV5Max = 8192 };
 
 typedef struct V4Asm {
     uint8_t *b;
@@ -2194,6 +2203,19 @@ static void v4_fix(V4Asm *a, int at, int label) {
     int32_t rel = (int32_t)(label - (at + 6));
     if (at + 6 > a->cap) { a->bad = 1; return; }
     memcpy(a->b + at + 2, &rel, 4);
+}
+
+/* E9 rel32 to a label in the cave, filled in by v4_fixj. */
+static int v4_jmpf(V4Asm *a) {
+    int at = a->n;
+    v4_hex(a, "E9 00 00 00 00");
+    return at;
+}
+
+static void v4_fixj(V4Asm *a, int at, int label) {
+    int32_t rel = (int32_t)(label - (at + 5));
+    if (at + 5 > a->cap) { a->bad = 1; return; }
+    memcpy(a->b + at + 1, &rel, 4);
 }
 
 static void v4_lea_rdx(V4Asm *a, int target) {
@@ -2276,6 +2298,7 @@ static int stk_cave(const uint8_t *data, size_t n, const char *magic, int lo, in
 static int v4_cave(const uint8_t *data, size_t n) { return stk_cave(data, n, V4_MAGIC, 2, 10); }
 static int v5_cave(const uint8_t *data, size_t n) { return stk_cave(data, n, V5_MAGIC, 2, kStackMax); }
 static int v6_cave(const uint8_t *data, size_t n) { return stk_cave(data, n, V6_MAGIC, 2, kStackMax); }
+static int v7_cave(const uint8_t *data, size_t n) { return stk_cave(data, n, V7_MAGIC, 2, kStackMax); }
 
 /* Target of a call, following the incremental-link jmp thunk. */
 static int call_body(const uint8_t *data, size_t n, int at) {
@@ -2404,6 +2427,9 @@ static int v5_apply(uint8_t *data, size_t n, uint32_t stack, wchar_t *err, int e
     int shift, c_buy, xfer[2], c_xfer[2], np_price, np_kind, np_fash, cap1, cap2, c_cap, np_load, c_mine;
     int q_cnt, q_take, q_cap, q_done, c_6474;
     int L_cnt, L_disp, L_fmt2, L_fmtn, L_ncnt, j1, j2, j3, j4, imm_at, loop, hits[4];
+    int click, wd, c_click, c_wd, b_click, b_wd, c_ship, c_slot, c_sellrec, c_grade, c_item, c_sprice;
+    int c_inc, c_dec, c_draw1, c_draw2, c_draw3, o_body, o_thunk, c_freepool, c_setcard, c_sort;
+    int c_hov, c_cardrec, c_freehold, c_clrslot, c_clrrec, L_same, L_hover, one, jd[6];
     uint32_t key_rva;
     int32_t rel;
 
@@ -2645,6 +2671,111 @@ static int v5_apply(uint8_t *data, size_t n, uint32_t stack, wchar_t *err, int e
         V4ERR(L"找不到广场发放交易品的位置。");
     d_kind = hits[0];
 
+    /* One piece or the whole slot. The exchange window sends button 5..9 to
+     * OnClickSlot(this, button - 5) and 0x0A..0x0E to WithdrawSell(this,
+     * button - 0x0A), with the same code as the market buttons above. */
+    if (v4_findall(data, n, "48 83 E8 05 48 8B 8C 24 C0 00 00 00 48 81 E9 98 08 00 00 8B D0 E8", hits, 4) != 1)
+        V4ERR(L"找不到交易所点舱位的位置。");
+    click = hits[0] + 21;
+    if (v4_findall(data, n, "48 83 E8 0A 48 8B 8C 24 C0 00 00 00 48 81 E9 98 08 00 00 8B D0 E8", hits, 4) != 1)
+        V4ERR(L"找不到交易所撤回卖出的位置。");
+    wd = hits[0] + 21;
+    c_click = slot_call_off(data, n, click);
+    c_wd = slot_call_off(data, n, wd);
+    b_click = call_body(data, n, click);
+    b_wd = call_body(data, n, wd);
+    if (click - shift != 0x3A || wd - shift != 0x74 || c_click < 0 || c_wd < 0 || b_click < 0 || b_wd < 0)
+        V4ERR(L"交易所按钮的代码和原版对不上。");
+    /* OnClickSlot: current ship, exchange slot, sell record, grade, good,
+     * sell price, income, then the three redraws. */
+    if (!v4_is(data, n, b_click, "89 54 24 10 48 89 4C 24 08 57 48 83 EC 70") ||
+        !v4_is(data, n, b_click + 0x25, "48 8B 8C 24 80 00 00 00 E8") ||
+        !v4_is(data, n, b_click + 0x41, "44 8B 84 24 88 00 00 00 8B 54 24 20 48 8B 84 24 80 00 00 00 48 8B 88 88 05 00 00 E8") ||
+        !v4_is(data, n, b_click + 0xB4, "44 8B 44 24 44 8B 54 24 20 48 8B 84 24 80 00 00 00 48 8B 88 88 05 00 00 E8") ||
+        !v4_is(data, n, b_click + 0x102, "48 8B 4C 24 28 E8") ||
+        !v4_is(data, n, b_click + 0x10C, "48 8B 4C 24 58 E8") ||
+        !v4_is(data, n, b_click + 0x11A, "48 8B 4C 24 58 E8") ||
+        !v4_is(data, n, b_click + 0x124, "8B 4C 24 60 44 8B C1 8B D0 48 8B 84 24 80 00 00 00 8B 88 80 05 00 00 E8") ||
+        !v4_is(data, n, b_click + 0x140, "8B D0 48 8B 84 24 80 00 00 00 48 8B 88 88 05 00 00 E8") ||
+        !v4_is(data, n, b_click + 0x156, "48 8B 8C 24 80 00 00 00 E8") ||
+        !v4_is(data, n, b_click + 0x163, "48 8B 8C 24 80 00 00 00 E8") ||
+        !v4_is(data, n, b_click + 0x170, "48 8B 8C 24 80 00 00 00 E8"))
+        V4ERR(L"点舱位的代码和原版对不上。");
+    c_ship = slot_call_off(data, n, b_click + 0x2D);
+    c_slot = slot_call_off(data, n, b_click + 0x5C);
+    c_sellrec = slot_call_off(data, n, b_click + 0xCC);
+    c_clrslot = slot_call_off(data, n, b_click + 0x107);
+    c_grade = slot_call_off(data, n, b_click + 0x111);
+    c_item = slot_call_off(data, n, b_click + 0x11F);
+    c_sprice = slot_call_off(data, n, b_click + 0x13B);
+    c_inc = slot_call_off(data, n, b_click + 0x151);
+    c_draw1 = slot_call_off(data, n, b_click + 0x15E);
+    c_draw2 = slot_call_off(data, n, b_click + 0x16B);
+    c_draw3 = slot_call_off(data, n, b_click + 0x178);
+    /* WithdrawSell uses the same helpers and takes the income back. */
+    if (!v4_is(data, n, b_wd, "89 54 24 10 48 89 4C 24 08 57 48 83 EC 70") ||
+        !v4_is(data, n, b_wd + 0x113, "48 8B 4C 24 60 E8") ||
+        !v4_is(data, n, b_wd + 0x146, "8B 88 80 05 00 00 E8") ||
+        !v4_is(data, n, b_wd + 0x15B, "48 8B 88 88 05 00 00 E8") ||
+        slot_call_off(data, n, b_wd + 0x2D) != c_ship ||
+        slot_call_off(data, n, b_wd + 0xB5) != c_slot ||
+        slot_call_off(data, n, b_wd + 0xFA) != c_sellrec ||
+        slot_call_off(data, n, b_wd + 0x122) != c_grade ||
+        slot_call_off(data, n, b_wd + 0x130) != c_item ||
+        slot_call_off(data, n, b_wd + 0x14C) != c_sprice ||
+        slot_call_off(data, n, b_wd + 0x16F) != c_draw2 ||
+        slot_call_off(data, n, b_wd + 0x17C) != c_draw1 ||
+        slot_call_off(data, n, b_wd + 0x189) != c_draw3)
+        V4ERR(L"撤回卖出的代码和原版对不上。");
+    c_dec = slot_call_off(data, n, b_wd + 0x162);
+    c_clrrec = slot_call_off(data, n, b_wd + 0x118);
+    if (c_ship < 0 || c_slot < 0 || c_sellrec < 0 || c_grade < 0 || c_item < 0 || c_sprice < 0 ||
+        c_inc < 0 || c_dec < 0 || c_draw1 < 0 || c_draw2 < 0 || c_draw3 < 0 ||
+        c_clrslot != c_14d3a || c_clrrec < 0)
+        V4ERR(L"交易所里的调用对不上。");
+
+    /* Organize-cargo view, vfunc 13 (button handler; o_pool sits in it).
+     * r8 = button: 5..9 hold card j of the current ship ([this+0x1C4]),
+     * whose record is this+0x1C8+ship*0x28+j*8 and whose card is
+     * [this+0x290+j*8]; 0x0B..0x23 pool card i at [this+0x2B8+i*8] with its
+     * record at card+0xC8. It is reached only through its jump thunk. */
+    o_body = o_pool - 0x306;
+    if (!v4_is(data, n, o_body, "4C 89 4C 24 20 4C 89 44 24 18 48 89 54 24 10 48 89 4C 24 08 56 57 48 81 EC 48 01 00 00") ||
+        !v4_is(data, n, o_body + 0x46, "48 83 BC 24 70 01 00 00 05") ||
+        !v4_is(data, n, o_body + 0x55, "48 83 BC 24 70 01 00 00 0A") ||
+        !v4_is(data, n, o_body + 0x7C, "48 63 80 C4 01 00 00 48 6B C0 28 48 8B 8C 24 60 01 00 00 48 8D 84 01 C8 01 00 00") ||
+        !v4_is(data, n, o_body + 0xB8, "48 8B 8C 24 60 01 00 00 E8") ||
+        !v4_is(data, n, o_body + 0xE6, "48 8B 8C C1 B8 02 00 00 E8") ||
+        !v4_is(data, n, o_body + 0xF3, "48 8B 4C 24 38 E8") ||
+        !v4_is(data, n, o_body + 0x10F, "48 8B 8C C1 90 02 00 00 E8") ||
+        !v4_is(data, n, o_body + 0x11C, "48 8B 8C 24 60 01 00 00 E8") ||
+        !v4_is(data, n, o_body + 0x14E, "48 8B 80 90 00 00 00 48 63 40 08 48 8B 8C 24 E0 00 00 00 48 8D 84 01 90 00 00 00 48 8B C8 E8") ||
+        !v4_is(data, n, o_body + 0x1E0, "BA 01 00 00 00 48 8B C8 48 8B 84 24 F0 00 00 00 FF 50 78") ||
+        !v4_is(data, n, o_body + 0x1F8, "48 83 BC 24 70 01 00 00 0B") ||
+        !v4_is(data, n, o_body + 0x207, "48 83 BC 24 70 01 00 00 24") ||
+        !v4_is(data, n, o_body + 0x233, "48 8B 8C C1 B8 02 00 00 E8") ||
+        !v4_is(data, n, o_body + 0x25B, "48 8B 8C 24 60 01 00 00 E8"))
+        V4ERR(L"整理货物按钮的代码和原版对不上。");
+    c_freepool = slot_call_off(data, n, o_body + 0xC0);
+    c_setcard = slot_call_off(data, n, o_body + 0xEE);
+    c_sort = slot_call_off(data, n, o_body + 0x124);
+    c_hov = slot_call_off(data, n, o_body + 0x16C);
+    c_cardrec = slot_call_off(data, n, o_body + 0x23B);
+    c_freehold = slot_call_off(data, n, o_body + 0x263);
+    if (c_freepool < 0 || c_setcard < 0 || c_sort < 0 || c_hov < 0 || c_cardrec < 0 || c_freehold < 0 ||
+        slot_call_off(data, n, o_body + 0x117) != c_setcard ||
+        slot_call_off(data, n, o_body + 0xF8) != c_clrrec)
+        V4ERR(L"整理货物按钮里的调用对不上。");
+    o_thunk = -1;
+    for (i = tx_raw, j1 = 0; i + 5 <= tx_raw + tx_size; i++) {
+        if (data[i] != 0xE9) continue;
+        memcpy(&rel, data + i + 1, 4);
+        if (i + 5 + rel != o_body) continue;
+        o_thunk = i;
+        j1++;
+    }
+    if (j1 != 1 || o_thunk >= o_body) V4ERR(L"找不到整理货物按钮的跳板。");
+
     /* The cave: the int3 pad after the jump thunk table. */
     cave = -1;
     for (i = tx_raw; i < tx_raw + tx_size; ) {
@@ -2662,7 +2793,7 @@ static int v5_apply(uint8_t *data, size_t n, uint32_t stack, wchar_t *err, int e
 
     a.b = code; a.n = 0; a.base = cave; a.cap = kV5Max; a.bad = 0;
     memset(code, 0xCC, sizeof code);
-    memcpy(code, V6_MAGIC, 8);
+    memcpy(code, V7_MAGIC, 8);
     code[8] = (uint8_t)stack;
     a.n = kV4Head;
 
@@ -2853,24 +2984,426 @@ static int v5_apply(uint8_t *data, size_t n, uint32_t stack, wchar_t *err, int e
     v4_hex(&a, "48 8B 84 24 B8 05 00 00  8B 00  03 C1");
     v4_jmp(&a, l110 + 0xAC + 12);
 
-    /* Shift + click on a market good: BuyOne up to `stack` times. A call
-     * that cannot buy (no money, no room) returns early and changes nothing. */
+    /* same: rcx, rdx = records -> ZF when they differ only in the count. */
+    L_same = a.n;
+    v4_hex(&a, "48 8B 01  48 33 02  49 BA FF FF FF 00 FF FF FF FF  4C 85 D0  C3");
+
+    /* hover: rcx = organize card. vfunc 13 does this to the card it just
+     * changed: if the UI says so, call the card's vfunc at +0x78 with 1. */
+    L_hover = a.n;
+    v4_hex(&a, "53  48 83 EC 20  48 8B 81 90 00 00 00  48 63 40 08  48 8D 9C 01 90 00 00 00  48 89 D9");
+    v4_call(&a, c_hov);
+    v4_hex(&a, "85 C0");
+    j1 = v4_jcc(&a, 0x84);
+    v4_hex(&a, "48 8B 03  BA 01 00 00 00  48 89 D9  FF 50 78");
+    v4_fix(&a, j1, a.n);
+    v4_hex(&a, "48 83 C4 20  5B C3");
+
+    /* Market good. Click: BuyOne once. Shift + click: BuyOne until the slot
+     * the first piece went to is full, or a call buys nothing (no money, no
+     * supply, no room). The first piece goes to the first slot of the ship
+     * that takes it, so comparing the five counts before and after finds it. */
     SITE(shift, 5, 2);
-    v4_hex(&a, "53 56 57  48 83 EC 20");
-    v4_hex(&a, "48 89 CB  89 D6  BF 01 00 00 00  B9 10 00 00 00");
+    v4_hex(&a, "53 56 57  41 54 41 55 41 56  48 83 EC 48  48 89 CB  89 D6  B9 10 00 00 00");
     v4_calli(&a, iat_key);
     v4_hex(&a, "66 85 C0");
-    j1 = v4_jcc(&a, 0x89);                      /* jns one */
-    v4_hex(&a, "BF");
-    v4_u32(&a, stack);
-    v4_fix(&a, j1, a.n);
-    loop = a.n;
+    j1 = v4_jcc(&a, 0x88);                      /* js fill */
+    one = a.n;
     v4_hex(&a, "48 89 D9  89 F2");
     v4_call(&a, c_buy);
-    v4_hex(&a, "FF CF");
+    jd[0] = v4_jmpf(&a);                        /* jmp done */
+    v4_fix(&a, j1, a.n);                        /* fill: */
+    v4_hex(&a, "48 89 D9");
+    v4_call(&a, c_ship);
+    v4_hex(&a, "41 89 C4  41 83 FC 06");
+    j1 = v4_jcc(&a, 0x84);
+    v4_fix(&a, j1, one);                        /* no ship: one */
+    v4_hex(&a, "31 FF");
+    loop = a.n;                                 /* counts[edi] before */
+    v4_hex(&a, "48 8B 8B 88 05 00 00  44 89 E2  41 89 F8");
+    v4_call(&a, c_slot);
+    v4_hex(&a, "31 C9  80 38 6A");
+    j1 = v4_jcc(&a, 0x84);
+    v4_hex(&a, "48 89 C1");
+    v4_call(&a, cave + L_cnt);
+    v4_fix(&a, j1, a.n);
+    v4_hex(&a, "89 4C BC 20  FF C7  83 FF 05");
+    j1 = v4_jcc(&a, 0x82);
+    v4_fix(&a, j1, loop);
+    v4_hex(&a, "48 89 D9  89 F2");
+    v4_call(&a, c_buy);
+    v4_hex(&a, "31 FF");
+    loop = a.n;                                 /* the slot that grew */
+    v4_hex(&a, "48 8B 8B 88 05 00 00  44 89 E2  41 89 F8");
+    v4_call(&a, c_slot);
+    v4_hex(&a, "49 89 C5  31 C9  80 38 6A");
+    j1 = v4_jcc(&a, 0x84);
+    v4_hex(&a, "48 89 C1");
+    v4_call(&a, cave + L_cnt);
+    v4_fix(&a, j1, a.n);
+    v4_hex(&a, "3B 4C BC 20");
+    j2 = v4_jcc(&a, 0x87);                      /* ja found */
+    v4_hex(&a, "FF C7  83 FF 05");
+    j1 = v4_jcc(&a, 0x82);
+    v4_fix(&a, j1, loop);
+    jd[1] = v4_jmpf(&a);
+    v4_fix(&a, j2, a.n);                        /* found: r13 = slot, ecx = pieces */
+    v4_hex(&a, "41 BE");
+    v4_u32(&a, stack);
+    loop = a.n;
+    v4_hex(&a, "81 F9");
+    v4_u32(&a, stack);
+    jd[2] = v4_jcc(&a, 0x83);                   /* full: done */
+    v4_hex(&a, "89 CF  48 89 D9  89 F2");
+    v4_call(&a, c_buy);
+    v4_hex(&a, "4C 89 E9  80 39 6A");
+    jd[3] = v4_jcc(&a, 0x84);
+    v4_call(&a, cave + L_cnt);
+    v4_hex(&a, "39 F9");
+    jd[4] = v4_jcc(&a, 0x86);                   /* bought nothing: done */
+    v4_hex(&a, "41 FF CE");
     j1 = v4_jcc(&a, 0x85);
     v4_fix(&a, j1, loop);
-    v4_hex(&a, "48 83 C4 20  5F 5E 5B C3");
+    v4_fixj(&a, jd[0], a.n);                    /* done: */
+    v4_fixj(&a, jd[1], a.n);
+    v4_fix(&a, jd[2], a.n);
+    v4_fix(&a, jd[3], a.n);
+    v4_fix(&a, jd[4], a.n);
+    v4_hex(&a, "48 83 C4 48  41 5E 41 5D 41 5C 5F 5E 5B C3");
+
+    /* Hold slot (OnClickSlot). Shift, an empty slot or no ship: vanilla.
+     * Otherwise one piece. Not bought this visit: it joins a sell record of
+     * this ship with the same record that is not full (the slot is cleared
+     * as vanilla does when that was its last piece) and the sell price of
+     * one piece goes to the income. With no such record, a slot of one
+     * piece goes vanilla; a bigger one, and one bought this visit (refund
+     * of one piece), runs the vanilla click with the count set to 1 and
+     * gets the rest back afterwards. */
+    SITE(click, 5, 2);
+    v4_hex(&a, "53 56 57  41 54 41 55 41 56  48 83 EC 48  48 89 CB  89 D6  B9 10 00 00 00");
+    v4_calli(&a, iat_key);
+    v4_hex(&a, "66 85 C0");
+    jd[0] = v4_jcc(&a, 0x88);                   /* js whole */
+    v4_hex(&a, "48 89 D9");
+    v4_call(&a, c_ship);
+    v4_hex(&a, "83 F8 06");
+    jd[1] = v4_jcc(&a, 0x84);
+    v4_hex(&a, "41 89 C4  48 8B 8B 88 05 00 00  44 89 E2  41 89 F0");
+    v4_call(&a, c_slot);
+    v4_hex(&a, "49 89 C5  41 80 7D 00 6A");
+    jd[2] = v4_jcc(&a, 0x84);
+    v4_hex(&a, "4C 89 E9");
+    v4_call(&a, cave + L_cnt);
+    v4_hex(&a, "89 CF  41 83 7D 08 00");
+    j3 = v4_jcc(&a, 0x85);                      /* bought this visit */
+    v4_hex(&a, "45 31 F6");
+    loop = a.n;
+    v4_hex(&a, "48 8B 8B 88 05 00 00  44 89 E2  45 89 F0");
+    v4_call(&a, c_sellrec);
+    v4_hex(&a, "80 38 6A");
+    j1 = v4_jcc(&a, 0x84);
+    v4_hex(&a, "48 89 44 24 28  48 89 C1  4C 89 EA");
+    v4_call(&a, cave + L_same);
+    j2 = v4_jcc(&a, 0x85);
+    v4_hex(&a, "48 8B 4C 24 28");
+    v4_call(&a, cave + L_cnt);
+    v4_hex(&a, "81 F9");
+    v4_u32(&a, stack);
+    j4 = v4_jcc(&a, 0x83);
+    v4_hex(&a, "48 8B 44 24 28  FF C1  88 48 03  83 FF 01");
+    jd[3] = v4_jcc(&a, 0x87);                   /* ja part */
+    v4_hex(&a, "4C 89 E9");
+    v4_call(&a, c_clrslot);
+    jd[4] = v4_jmpf(&a);                        /* jmp money */
+    v4_fix(&a, jd[3], a.n);                     /* part: */
+    v4_hex(&a, "8D 4F FF  41 88 4D 03");
+    v4_fixj(&a, jd[4], a.n);                    /* money: */
+    v4_hex(&a, "48 8B 4C 24 28");
+    v4_call(&a, c_grade);
+    v4_hex(&a, "41 89 C6  48 8B 4C 24 28");
+    v4_call(&a, c_item);
+    v4_hex(&a, "45 89 F0  89 C2  8B 8B 80 05 00 00");
+    v4_call(&a, c_sprice);
+    v4_hex(&a, "89 C2  48 8B 8B 88 05 00 00");
+    v4_call(&a, c_inc);
+    v4_hex(&a, "48 89 D9");
+    v4_call(&a, c_draw1);
+    v4_hex(&a, "48 89 D9");
+    v4_call(&a, c_draw2);
+    v4_hex(&a, "48 89 D9");
+    v4_call(&a, c_draw3);
+    jd[4] = v4_jmpf(&a);                        /* jmp done */
+    v4_fix(&a, j1, a.n);                        /* next sell record */
+    v4_fix(&a, j2, a.n);
+    v4_fix(&a, j4, a.n);
+    v4_hex(&a, "41 FF C6  41 83 FE 05");
+    j1 = v4_jcc(&a, 0x82);
+    v4_fix(&a, j1, loop);
+    v4_fix(&a, j3, a.n);                        /* bought / no record: */
+    v4_hex(&a, "83 FF 01");
+    jd[3] = v4_jcc(&a, 0x86);                   /* one piece: whole */
+    v4_hex(&a, "49 8B 45 00  48 89 44 24 30  41 8B 45 08  89 44 24 38  41 C6 45 03 01  48 89 D9  89 F2");
+    v4_call(&a, c_click);
+    v4_hex(&a, "41 80 7D 00 6A");
+    j1 = v4_jcc(&a, 0x85);                      /* still there: keep */
+    v4_hex(&a, "48 8B 44 24 30  49 89 45 00  8B 44 24 38  41 89 45 08  8D 4F FF  41 88 4D 03  48 89 D9");
+    v4_call(&a, c_draw1);
+    v4_hex(&a, "48 89 D9");
+    v4_call(&a, c_draw2);
+    v4_hex(&a, "48 89 D9");
+    v4_call(&a, c_draw3);
+    jd[5] = v4_jmpf(&a);
+    v4_fix(&a, j1, a.n);                        /* keep: count back */
+    v4_hex(&a, "41 88 7D 03");
+    j2 = v4_jmpf(&a);
+    v4_fix(&a, jd[0], a.n);                     /* whole: */
+    v4_fix(&a, jd[1], a.n);
+    v4_fix(&a, jd[2], a.n);
+    v4_fix(&a, jd[3], a.n);
+    v4_hex(&a, "48 89 D9  89 F2");
+    v4_call(&a, c_click);
+    v4_fixj(&a, jd[4], a.n);                    /* done: */
+    v4_fixj(&a, jd[5], a.n);
+    v4_fixj(&a, j2, a.n);
+    v4_hex(&a, "48 83 C4 48  41 5E 41 5D 41 5C 5F 5E 5B C3");
+
+    /* Sell list (WithdrawSell). Shift, an empty record or no ship: vanilla.
+     * Otherwise one piece goes back: it joins a slot of this ship that was
+     * not bought this visit, has the same record and is not full (the sell
+     * record is cleared when that was its last piece) and the sell price of
+     * one piece comes off the income. With no such slot, a record of one
+     * piece goes vanilla; a bigger one runs the vanilla withdraw with the
+     * count set to 1 and keeps the rest on the sell list. */
+    SITE(wd, 5, 2);
+    v4_hex(&a, "53 56 57  41 54 41 55 41 56  48 83 EC 48  48 89 CB  89 D6  B9 10 00 00 00");
+    v4_calli(&a, iat_key);
+    v4_hex(&a, "66 85 C0");
+    jd[0] = v4_jcc(&a, 0x88);
+    v4_hex(&a, "48 89 D9");
+    v4_call(&a, c_ship);
+    v4_hex(&a, "83 F8 06");
+    jd[1] = v4_jcc(&a, 0x84);
+    v4_hex(&a, "41 89 C4  48 8B 8B 88 05 00 00  44 89 E2  41 89 F0");
+    v4_call(&a, c_sellrec);
+    v4_hex(&a, "49 89 C5  41 80 7D 00 6A");
+    jd[2] = v4_jcc(&a, 0x84);
+    v4_hex(&a, "4C 89 E9");
+    v4_call(&a, cave + L_cnt);
+    v4_hex(&a, "89 CF  45 31 F6");
+    loop = a.n;
+    v4_hex(&a, "48 8B 8B 88 05 00 00  44 89 E2  45 89 F0");
+    v4_call(&a, c_slot);
+    v4_hex(&a, "80 38 6A");
+    j1 = v4_jcc(&a, 0x84);
+    v4_hex(&a, "83 78 08 00");
+    j2 = v4_jcc(&a, 0x85);
+    v4_hex(&a, "48 89 44 24 28  48 89 C1  4C 89 EA");
+    v4_call(&a, cave + L_same);
+    j3 = v4_jcc(&a, 0x85);
+    v4_hex(&a, "48 8B 4C 24 28");
+    v4_call(&a, cave + L_cnt);
+    v4_hex(&a, "81 F9");
+    v4_u32(&a, stack);
+    j4 = v4_jcc(&a, 0x83);
+    v4_hex(&a, "48 8B 44 24 28  FF C1  88 48 03  83 FF 01");
+    jd[3] = v4_jcc(&a, 0x87);                   /* ja part */
+    v4_hex(&a, "4C 89 E9");
+    v4_call(&a, c_clrrec);
+    jd[4] = v4_jmpf(&a);                        /* jmp money */
+    v4_fix(&a, jd[3], a.n);                     /* part: */
+    v4_hex(&a, "8D 4F FF  41 88 4D 03");
+    v4_fixj(&a, jd[4], a.n);                    /* money: */
+    v4_hex(&a, "48 8B 4C 24 28");
+    v4_call(&a, c_grade);
+    v4_hex(&a, "41 89 C6  48 8B 4C 24 28");
+    v4_call(&a, c_item);
+    v4_hex(&a, "45 89 F0  89 C2  8B 8B 80 05 00 00");
+    v4_call(&a, c_sprice);
+    v4_hex(&a, "89 C2  48 8B 8B 88 05 00 00");
+    v4_call(&a, c_dec);
+    v4_hex(&a, "48 89 D9");
+    v4_call(&a, c_draw2);
+    v4_hex(&a, "48 89 D9");
+    v4_call(&a, c_draw1);
+    v4_hex(&a, "48 89 D9");
+    v4_call(&a, c_draw3);
+    jd[4] = v4_jmpf(&a);
+    v4_fix(&a, j1, a.n);                        /* next slot */
+    v4_fix(&a, j2, a.n);
+    v4_fix(&a, j3, a.n);
+    v4_fix(&a, j4, a.n);
+    v4_hex(&a, "41 FF C6  41 83 FE 05");
+    j1 = v4_jcc(&a, 0x82);
+    v4_fix(&a, j1, loop);
+    v4_hex(&a, "83 FF 01");
+    jd[3] = v4_jcc(&a, 0x86);                   /* one piece: whole */
+    v4_hex(&a, "49 8B 45 00  48 89 44 24 30  41 C6 45 03 01  48 89 D9  89 F2");
+    v4_call(&a, c_wd);
+    v4_hex(&a, "41 80 7D 00 6A");
+    j1 = v4_jcc(&a, 0x85);
+    v4_hex(&a, "48 8B 44 24 30  49 89 45 00  8D 4F FF  41 88 4D 03  48 89 D9");
+    v4_call(&a, c_draw2);
+    v4_hex(&a, "48 89 D9");
+    v4_call(&a, c_draw1);
+    v4_hex(&a, "48 89 D9");
+    v4_call(&a, c_draw3);
+    jd[5] = v4_jmpf(&a);
+    v4_fix(&a, j1, a.n);
+    v4_hex(&a, "41 88 7D 03");
+    j2 = v4_jmpf(&a);
+    v4_fix(&a, jd[0], a.n);
+    v4_fix(&a, jd[1], a.n);
+    v4_fix(&a, jd[2], a.n);
+    v4_fix(&a, jd[3], a.n);
+    v4_hex(&a, "48 89 D9  89 F2");
+    v4_call(&a, c_wd);
+    v4_fixj(&a, jd[4], a.n);
+    v4_fixj(&a, jd[5], a.n);
+    v4_fixj(&a, j2, a.n);
+    v4_hex(&a, "48 83 C4 48  41 5E 41 5D 41 5C 5F 5E 5B C3");
+
+    /* Organize-cargo view: its jump thunk comes here. Buttons other than the
+     * cards, Shift and empty cards go to vanilla.
+     * Hold card -> pool: one piece joins a pool card with the same record
+     * that is not full, else (more than one piece) a free pool card; none
+     * free: nothing happens, as in vanilla. Pool card -> hold: one piece
+     * joins a hold of the current ship with the same record that is not
+     * full, else (more than one piece) the first free hold within the
+     * ship's hold count; none: nothing. A card of one piece with nothing to
+     * join goes to vanilla. The source keeps one piece less, or is cleared
+     * as vanilla clears it; then the pool is sorted and the clicked card
+     * gets its hover state back, in the order vanilla does it. */
+    SITE(o_thunk, 5, 2);
+    v4_hex(&a, "49 8D 40 FB  48 83 F8 05");
+    j1 = v4_jcc(&a, 0x82);
+    v4_hex(&a, "49 8D 40 F5  48 83 F8 19");
+    j2 = v4_jcc(&a, 0x82);
+    v4_jmp(&a, o_body);
+    v4_fix(&a, j1, a.n);
+    v4_fix(&a, j2, a.n);
+    v4_hex(&a, "53 56 57  41 54 41 55 41 56 41 57  48 83 EC 60");
+    v4_hex(&a, "48 89 4C 24 20  48 89 54 24 28  4C 89 44 24 30  4C 89 4C 24 38  48 89 CB  B9 10 00 00 00");
+    v4_calli(&a, iat_key);
+    v4_hex(&a, "66 85 C0");
+    jd[0] = v4_jcc(&a, 0x88);                   /* js pass */
+    v4_hex(&a, "48 63 83 C4 01 00 00  48 6B C0 28  4C 8D BC 03 C8 01 00 00  48 8B 44 24 30  48 83 F8 0B");
+    j4 = v4_jcc(&a, 0x83);                      /* jae from pool */
+    v4_hex(&a, "48 8D 70 FB  49 8D 3C F7  80 3F 6A");
+    jd[1] = v4_jcc(&a, 0x84);
+    v4_hex(&a, "48 89 F9");
+    v4_call(&a, cave + L_cnt);
+    v4_hex(&a, "41 89 CE  45 31 E4");
+    loop = a.n;
+    v4_hex(&a, "4A 8B 8C E3 B8 02 00 00");
+    v4_call(&a, c_cardrec);
+    v4_hex(&a, "80 38 6A");
+    j1 = v4_jcc(&a, 0x84);
+    v4_hex(&a, "49 89 C5  48 89 C1  48 89 FA");
+    v4_call(&a, cave + L_same);
+    j2 = v4_jcc(&a, 0x85);
+    v4_hex(&a, "4C 89 E9");
+    v4_call(&a, cave + L_cnt);
+    v4_hex(&a, "81 F9");
+    v4_u32(&a, stack);
+    j3 = v4_jcc(&a, 0x83);
+    v4_hex(&a, "49 8B 45 00  48 89 44 24 48  FF C1  88 4C 24 4B");
+    one = v4_jmpf(&a);                          /* jmp set */
+    v4_fix(&a, j1, a.n);
+    v4_fix(&a, j2, a.n);
+    v4_fix(&a, j3, a.n);
+    v4_hex(&a, "41 FF C4  41 83 FC 19");
+    j1 = v4_jcc(&a, 0x82);
+    v4_fix(&a, j1, loop);
+    v4_hex(&a, "41 83 FE 01");
+    jd[2] = v4_jcc(&a, 0x86);                   /* one piece: pass */
+    v4_hex(&a, "48 89 D9");
+    v4_call(&a, c_freepool);
+    v4_hex(&a, "83 F8 FF");
+    jd[3] = v4_jcc(&a, 0x84);                   /* no free card: done */
+    v4_hex(&a, "4C 63 E0  48 8B 07  48 89 44 24 48  C6 44 24 4B 01");
+    v4_fixj(&a, one, a.n);                      /* set: */
+    v4_hex(&a, "4A 8B 8C E3 B8 02 00 00  48 8D 54 24 48");
+    v4_call(&a, c_setcard);
+    v4_hex(&a, "41 83 FE 01");
+    j1 = v4_jcc(&a, 0x87);                      /* ja part */
+    v4_hex(&a, "48 89 F9");
+    v4_call(&a, c_clrrec);
+    j2 = v4_jmpf(&a);
+    v4_fix(&a, j1, a.n);                        /* part: */
+    v4_hex(&a, "41 8D 46 FF  88 47 03");
+    v4_fixj(&a, j2, a.n);
+    v4_hex(&a, "48 8B 8C F3 90 02 00 00  48 89 FA");
+    v4_call(&a, c_setcard);
+    v4_hex(&a, "48 89 D9");
+    v4_call(&a, c_sort);
+    v4_hex(&a, "48 8B 8C F3 90 02 00 00");
+    v4_call(&a, cave + L_hover);
+    jd[4] = v4_jmpf(&a);
+    v4_fix(&a, j4, a.n);                        /* from pool: */
+    v4_hex(&a, "48 8D 70 F5  48 8B 8C F3 B8 02 00 00");
+    v4_call(&a, c_cardrec);
+    v4_hex(&a, "48 89 C7  80 3F 6A");
+    jd[5] = v4_jcc(&a, 0x84);
+    v4_hex(&a, "48 89 F9");
+    v4_call(&a, cave + L_cnt);
+    v4_hex(&a, "41 89 CE  45 31 E4");
+    loop = a.n;
+    v4_hex(&a, "4F 8D 2C E7  41 80 7D 00 6A");
+    j1 = v4_jcc(&a, 0x84);
+    v4_hex(&a, "4C 89 E9  48 89 FA");
+    v4_call(&a, cave + L_same);
+    j2 = v4_jcc(&a, 0x85);
+    v4_hex(&a, "4C 89 E9");
+    v4_call(&a, cave + L_cnt);
+    v4_hex(&a, "81 F9");
+    v4_u32(&a, stack);
+    j3 = v4_jcc(&a, 0x83);
+    v4_hex(&a, "FF C1  41 88 4D 03");
+    one = v4_jmpf(&a);                          /* jmp set */
+    v4_fix(&a, j1, a.n);
+    v4_fix(&a, j2, a.n);
+    v4_fix(&a, j3, a.n);
+    v4_hex(&a, "41 FF C4  41 83 FC 05");
+    j1 = v4_jcc(&a, 0x82);
+    v4_fix(&a, j1, loop);
+    v4_hex(&a, "41 83 FE 01");
+    j4 = v4_jcc(&a, 0x86);                      /* one piece: pass */
+    v4_hex(&a, "48 89 D9");
+    v4_call(&a, c_freehold);
+    v4_hex(&a, "83 F8 06");
+    j1 = v4_jcc(&a, 0x84);                      /* no free hold: done */
+    v4_hex(&a, "4C 63 E0  4F 8D 2C E7  48 8B 07  49 89 45 00  41 C6 45 03 01");
+    v4_fixj(&a, one, a.n);                      /* set: */
+    v4_hex(&a, "4A 8B 8C E3 90 02 00 00  4C 89 EA");
+    v4_call(&a, c_setcard);
+    v4_hex(&a, "48 8B 07  48 89 44 24 48  41 83 FE 01");
+    j2 = v4_jcc(&a, 0x87);                      /* ja part */
+    v4_hex(&a, "48 8D 4C 24 48");
+    v4_call(&a, c_clrrec);
+    one = v4_jmpf(&a);
+    v4_fix(&a, j2, a.n);                        /* part: */
+    v4_hex(&a, "41 8D 46 FF  88 44 24 4B");
+    v4_fixj(&a, one, a.n);
+    v4_hex(&a, "48 8B 8C F3 B8 02 00 00  48 8D 54 24 48");
+    v4_call(&a, c_setcard);
+    v4_hex(&a, "48 89 D9");
+    v4_call(&a, c_sort);
+    v4_hex(&a, "48 8B 8C F3 B8 02 00 00");
+    v4_call(&a, cave + L_hover);
+    j2 = v4_jmpf(&a);
+    v4_fix(&a, jd[0], a.n);                     /* pass: */
+    v4_fix(&a, jd[1], a.n);
+    v4_fix(&a, jd[2], a.n);
+    v4_fix(&a, jd[5], a.n);
+    v4_fix(&a, j4, a.n);
+    v4_hex(&a, "48 8B 4C 24 20  48 8B 54 24 28  4C 8B 44 24 30  4C 8B 4C 24 38");
+    v4_hex(&a, "48 83 C4 60  41 5F 41 5E 41 5D 41 5C 5F 5E 5B");
+    v4_jmp(&a, o_body);
+    v4_fix(&a, jd[3], a.n);                     /* done: */
+    v4_fixj(&a, jd[4], a.n);
+    v4_fix(&a, j1, a.n);
+    v4_fixj(&a, j2, a.n);
+    v4_hex(&a, "48 83 C4 60  41 5F 41 5E 41 5D 41 5C 5F 5E 5B C3");
 
     /* Ship save/load, rdx = &record.price. The save stream has no byte for
      * +3, so the count travels in the price's top byte (prices are far below
@@ -3121,11 +3654,12 @@ static int v5_apply(uint8_t *data, size_t n, uint32_t stack, wchar_t *err, int e
     return 1;
 }
 
-/* 0 = not installed, otherwise the stack limit. DK4STK4 first, then the
- * older DK4STK3 (same header) and DK4STK2. */
+/* 0 = not installed, otherwise the stack limit. DK4STK5 first, then the
+ * older DK4STK4 / DK4STK3 (same header) and DK4STK2. */
 static uint32_t v4_stack(const uint8_t *data, size_t n) {
-    int cave = v6_cave(data, n), imm;
+    int cave = v7_cave(data, n), imm;
     uint32_t s;
+    if (cave < 0) cave = v6_cave(data, n);
     if (cave < 0) cave = v5_cave(data, n);
     if (cave >= 0) {
         imm = v4_u16(data + cave + 14);
@@ -3142,10 +3676,11 @@ static uint32_t v4_stack(const uint8_t *data, size_t n) {
     return data[cave + 8];
 }
 
-/* An older stacking patch (DK4STK3 or DK4STK2) is installed: it still counts
- * slots in the organize-cargo view and the plaza handout. */
+/* An older stacking patch (DK4STK4, DK4STK3 or DK4STK2) is installed: a
+ * click always moves the whole slot. */
 static int stk_outdated(const uint8_t *data, size_t n) {
-    return v6_cave(data, n) < 0 && (v5_cave(data, n) >= 0 || v4_cave(data, n) >= 0);
+    return v7_cave(data, n) < 0 &&
+        (v6_cave(data, n) >= 0 || v5_cave(data, n) >= 0 || v4_cave(data, n) >= 0);
 }
 
 /* Fashion goods at the exchange ("DK4FSH1").
@@ -3598,7 +4133,12 @@ static int patch_cap_buffer(uint8_t *data, size_t n, const CapValues *v, wchar_t
         if (kind == 2 && (size_t)cargo_at + 34 <= n)
             data[cargo_at + (int)sizeof kCargoVanilla] = 0xCC;
         {
-            int c6 = v6_cave(data, n), c5, c4;
+            int c7 = v7_cave(data, n), c6, c5, c4;
+            if (c7 >= 0 && !stk_restore(data, n, c7, kV5Max)) {
+                StringCchCopyW(err, (size_t)errn, L"已写入的商品堆叠认不出来，不能改。");
+                return 0;
+            }
+            c6 = v6_cave(data, n);
             if (c6 >= 0 && !stk_restore(data, n, c6, kV5Max)) {
                 StringCchCopyW(err, (size_t)errn, L"已写入的商品堆叠认不出来，不能改。");
                 return 0;
@@ -3801,7 +4341,7 @@ static int read_game_caps(const wchar_t *dir, CapValues *v, wchar_t *status, int
             ? L"还没有地方舰队亏损修正，属性结算超过 500 时舰队每月会巨亏，请再点一次“写入主程序”。"
             : L"",
         old_stk
-            ? L"商品堆叠补丁是旧版：整理货物会把放回的整格变成 1 件，广场发放交易品按格数算，请再点一次“写入主程序”。"
+            ? L"商品堆叠补丁是旧版：交易所和整理货物点一下总是整格，不能单件买卖、搬运，请再点一次“写入主程序”。"
             : L"",
         names,
         xp_off ? L"经验上限和单段等级对不上，写入时会按 30×等级² 重写。" : L"");
@@ -4139,10 +4679,10 @@ static LRESULT CALLBACK cap_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPar
             L"技能按 (两项属性之和) × (不超过封顶的等级 + 100) ÷ 150 计算。封顶原版是 200。设成两段之和后，剑术、生命、交易会按真实等级上涨。\r\n"
             L"地方舰队和下属 NPC 舰队买货时，游戏按船长交易能力打折，只考虑了能力不超过 500 的情况。能力超过 1000 后每月会亏上亿金币。每次写入主程序都会顺带修正：这里的能力按 500 算，和原版满能力一样，其他地方不受影响。\r\n"
             L"港口商业和军事存在 16 位无符号数里，原版 9999，最高 65535。点“解除港口上限”填入 65535。海力上限保持 9999。商业度会参与商品定价，提到很高以后物价会跟着变。\r\n"
-            L"同商品堆叠原版是 1：每买 1 件就占 1 个舱位，可填 1 到 255。填 N 以后，这次交易里买的同一个商品先堆在同一个舱位里，满 N 件才再占下一个舱位；船上原有的货不会并进来。在交易所按住 Shift 点商品，一次最多买 N 件（钱或舱位不够时买到为止）。"
+            L"同商品堆叠原版是 1：每买 1 件就占 1 个舱位，可填 1 到 255。填 N 以后，这次交易里买的同一个商品先堆在同一个舱位里，满 N 件才再占下一个舱位；船上原有的货不会并进来。交易所里左键点商品买 1 件，按住 Shift 点商品把这一格买满（钱、货或舱位不够时买到为止）；左键点船舱或卖出列表卖出、退货、撤回 1 件，按住 Shift 点是整格。"
             L"舱位价格放得下时显示成“件数x单价”，放不下时分两行：上行“件数x”，下行单价。卖出、退货按件数算钱，存档、读档保留件数。"
             L"玩家势力的舰队（地方舰队、下属 NPC 舰队）自动买货时也按 N 件一格装货，卖货按件数结算；其他势力的 NPC 保持原版。物价不改。"
-            L"整理货物界面（整理货物、卖船或入坞时搬货、战后装战利品、广场发放交易品都用它）每格右下角显示“x件数”，货物整格移动，放回船舱时件数不变。"
+            L"整理货物界面（整理货物、卖船或入坞时搬货、战后装战利品、广场发放交易品都用它）每格右下角显示“x件数”；左键点一格挪 1 件，按住 Shift 点整格挪，放回船舱时件数不变。"
             L"广场发放交易品按件数算：救济疫病、饥荒、缺货的城市，带出新流行（最多按 25 件算，和原版整支舰队 25 格一样），文化圈卖价回升，都按发出去的件数。"
             L"存过堆叠货物的存档不要再用原版主程序读：原版会把件数当成买入价的一部分。\r\n"
             L"卖流行品（在交易所确认交易时）：占有率不到 80 时，每种流行品要卖到 货舱格数×门槛÷2 件（向上取整），占有率才加 两种流行品件数÷除数+1（最多加到 100）；"
