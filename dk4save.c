@@ -2090,7 +2090,7 @@ static int patch_stack_extras(uint8_t *data, size_t n, int cave, uint32_t stack,
     return 1;
 }
 
-/* Stacking ("DK4STK3").
+/* Stacking ("DK4STK4").
  *
  * Every 8-byte cargo record (exchange slot, ship hold, sell list) keeps the
  * piece count in byte +3, which the vanilla game never reads or writes.
@@ -2106,17 +2106,23 @@ static int patch_stack_extras(uint8_t *data, size_t n, int cave, uint32_t stack,
  *            the trade statistics at commit, ship save/load (the save file
  *            has no byte for +3, so the count rides in the top byte of the
  *            saved purchase price), the auto-trade of fleets that belong
- *            to the player's force (capacity, loading, selling), and the
+ *            to the player's force (capacity, loading, selling), the
  *            fleet cargo count / take used by requests, story and event
- *            scripts (pieces, not slots).
+ *            scripts (pieces, not slots), and the organize-cargo view
+ *            (a card put back into a hold keeps its count, each card shows
+ *            it) with the plaza handout that uses that view (relief of a
+ *            town in plague, famine or shortage, the fashion it starts and
+ *            the culture price it lifts count pieces).
  * All new code sits in the int3 pad after the incremental-link jump thunks.
  * The cave starts with a header and ends with a table of the original bytes
  * of every site, so writing stack 1 restores the vanilla bytes exactly.
  *
- * Older "DK4STK2" installs (limit 9, code after the cargo list draw
- * function) are recognised and removed before writing. */
+ * Older "DK4STK3" (same layout, fewer sites) and "DK4STK2" installs (limit
+ * 9, code after the cargo list draw function) are recognised and removed
+ * before writing. */
 #define V4_MAGIC "DK4STK2"
 #define V5_MAGIC "DK4STK3"
+#define V6_MAGIC "DK4STK4"
 /* The count is one byte. */
 enum { kStackMax = 255 };
 enum { kV4Head = 16, kV4Max = 1200, kV5Max = 4096 };
@@ -2269,6 +2275,16 @@ static int stk_cave(const uint8_t *data, size_t n, const char *magic, int lo, in
 
 static int v4_cave(const uint8_t *data, size_t n) { return stk_cave(data, n, V4_MAGIC, 2, 10); }
 static int v5_cave(const uint8_t *data, size_t n) { return stk_cave(data, n, V5_MAGIC, 2, kStackMax); }
+static int v6_cave(const uint8_t *data, size_t n) { return stk_cave(data, n, V6_MAGIC, 2, kStackMax); }
+
+/* Target of a call, following the incremental-link jmp thunk. */
+static int call_body(const uint8_t *data, size_t n, int at) {
+    int t = slot_call_off(data, n, at);
+    int32_t rel;
+    if (t < 0 || (size_t)t + 5 > n || data[t] != 0xE9) return t;
+    memcpy(&rel, data + t + 1, 4);
+    return t + 5 + rel;
+}
 
 /* Put the vanilla bytes back. Returns 0 if the table does not look right,
  * in which case nothing is changed. */
@@ -2377,8 +2393,10 @@ typedef struct V4Site {
 static int v5_apply(uint8_t *data, size_t n, uint32_t stack, wchar_t *err, int errn) {
     uint8_t code[kV5Max];
     V4Asm a;
-    V4Site site[40];
+    V4Site site[48];
     int ns = 0, i;
+    int o_pool, o_font, o_draw, c_fc5e, c_4093, c_1e65, L_fmtx, L_cdraw;
+    int d_relief, d_finc, d_fnew, d_dinc, d_dnew, d_kind;
     int slot, jne, sell, disp, la0, l110, f110b8, fc662, f14d80, cave, run, tx_raw, tx_size, tx_delta;
     int imul, unbuy, unbuy_after, sell_own, sell_all, unsell;
     int dispA, dispB, dispS, dispPA, dispPS, fmt6, c_draw, iat_fmt, iat_key;
@@ -2557,6 +2575,76 @@ static int v5_apply(uint8_t *data, size_t n, uint32_t stack, wchar_t *err, int e
         V4ERR(L"扣除舰队货物的代码和原版对不上。");
     q_cap = hits[0] + 12;
 
+    /* Organize-cargo view (COrganizeLoadView): cargo sorting, moving cargo
+     * off a ship that is sold or docked, loading prizes, and the plaza
+     * handout all use it. Ship slots and the 25-card pool copy whole 8-byte
+     * records, but a card put back into a hold is rebuilt from its fields by
+     * the record builder, which writes 0 to +3. The card stays at [rsp+0x58]
+     * and the builder returns the hold record in rax. */
+    if (v4_findall(data, n, "8B 94 24 F8 00 00 00 89 54 24 20 8B 94 24 FC 00 00 00 44 8B CA 8B 94 24 00 01 00 00"
+                            " 44 8B C2 8B D0 E8 ? ? ? ? 48 63 44 24 64 48 8D 54 24 58", hits, 4) != 1)
+        V4ERR(L"找不到整理货物放回船舱的位置。");
+    o_pool = hits[0] + 0x26;
+    if (call_body(data, n, hits[0] + 0x21) != f14d80 - 0x59 ||
+        !v4_is(data, n, f14d80 - 0x59, "44 89 4C 24 20 44 89 44 24 18"))
+        V4ERR(L"整理货物放回船舱的代码和原版对不上。");
+
+    /* Card drawing: icon, then the grade (or the star) in the top-right box,
+     * written through a text writer at [rsp+0xE0]; the card is [rsp+0x200].
+     * The count goes in the bottom-right corner after the grade. */
+    if (v4_findall(data, n, "48 8D 94 24 98 00 00 00 48 8D 8C 24 E0 00 00 00 E8 ? ? ? ? C7 84 24 A0 01 00 00 0B 00 00 00"
+                            " C7 84 24 A4 01 00 00 16 00 00 00 BA 01 00 00 00 48 8B 8C 24 A0 01 00 00 E8", hits, 4) != 1)
+        V4ERR(L"找不到整理货物格子的绘制位置。");
+    o_font = hits[0];
+    o_draw = o_font + 248 + 19;
+    if (!v4_is(data, n, o_font + 0x5A, "48 8B 84 24 00 02 00 00 48 05 C8 00 00 00") ||
+        !v4_is(data, n, o_font + 248, "45 33 C0 48 8B D0 48 8D 8C 24 E0 00 00 00 E8") ||
+        !v4_is(data, n, o_draw, "48 8D 8C 24 E0 00 00 00 E8") ||
+        !v4_is(data, n, o_draw + 13, "90 48 8D 8C 24 E0 00 00 00 E8"))
+        V4ERR(L"整理货物格子的绘制代码和原版对不上。");
+    c_fc5e = slot_call_off(data, n, o_font + 16);
+    c_4093 = slot_call_off(data, n, o_font + 56);
+    c_1e65 = slot_call_off(data, n, o_font + 248 + 14);
+    if (c_fc5e < 0 || c_4093 < 0 || c_1e65 < 0) V4ERR(L"整理货物格子绘制里的调用对不上。");
+
+    /* Plaza handout (missionary): the view returns the chosen cards, up to
+     * 25 records, and three functions use them, each counting one per card.
+     * Relief: a town in plague, famine or shortage recovers once the needed
+     * kind reaches 5 + x/500 pieces. Cards at [rsp+0x78], i at [rsp+0x38],
+     * matches at [rsp+0x34]. */
+    if (v4_findall(data, n, "E8 ? ? ? ? 3B 44 24 2C 0F 85 ? ? ? ? 8B 44 24 34 FF C0 89 44 24 34 8B 44 24 28 39 44 24 34",
+                   hits, 4) != 1 ||
+        !v4_is(data, n, hits[0] - 0x27, "48 63 44 24 38 48 8B 4C 24 78 48 8D 04 C1"))
+        V4ERR(L"找不到广场发放交易品的位置。");
+    d_relief = hits[0] + 15;
+    /* Fashion it may start elsewhere: (good, amount) pairs; the amount is
+     * the roll bonus against rand(25) and the new fashion level byte, so it
+     * stays at most 25 as in vanilla. Cards at [rsp+0x58], i at [rsp+0x24]. */
+    if (v4_findall(data, n, "48 63 44 24 30 48 8B 4C 24 50 8B 44 C1 04 FF C0 48 63 4C 24 30 48 8B 54 24 50 89 44 CA 04",
+                   hits, 4) != 1 ||
+        !v4_is(data, n, hits[0] - 0x53, "48 63 44 24 24 48 8B 4C 24 58 48 8D 04 C1") ||
+        !v4_is(data, n, hits[0] + 66, "48 63 44 24 20 48 8B 4C 24 50 C7 44 C1 04 01 00 00 00 8B 44 24 20"))
+        V4ERR(L"找不到广场发放交易品的位置。");
+    d_finc = hits[0] + 10;
+    d_fnew = hits[0] + 66 + 10;
+    /* Culture price and kind demand: (good, grade, amount) triples.
+     * Same frame as above. */
+    if (v4_findall(data, n, "48 6B C0 0C 48 8B 4C 24 50 8B 44 01 08 FF C0 48 63 4C 24 2C 48 6B C9 0C 48 8B 54 24 50 89 44 0A 08",
+                   hits, 4) != 1 ||
+        !v4_is(data, n, hits[0] - 0xAF, "48 63 44 24 24 48 8B 4C 24 58 48 8D 04 C1") ||
+        !v4_is(data, n, hits[0] + 139, "48 6B C0 0C 48 8B 4C 24 50 C7 44 01 08 01 00 00 00 8B 44 24 20"))
+        V4ERR(L"找不到广场发放交易品的位置。");
+    d_dinc = hits[0] + 9;
+    d_dnew = hits[0] + 139 + 9;
+    /* Kind demand = (weighted / plain mean price ratio) * 200 * pieces / 100,
+     * clamped to 1..25 afterwards. The plain mean divides the sum of unit
+     * prices by the piece count, which reaches 0 once pieces outnumber it,
+     * and the product overflows 32 bits. */
+    if (v4_findall(data, n, "33 D2 8B 8C 24 DC 01 00 00 8B C1 8B 8C 24 E0 01 00 00 F7 F1 0F AF 84 24 9C 01 00 00"
+                            " 33 D2 B9 64 00 00 00 F7 F1 89 84 24 C8 01 00 00 41 B8 19 00 00 00", hits, 4) != 1)
+        V4ERR(L"找不到广场发放交易品的位置。");
+    d_kind = hits[0];
+
     /* The cave: the int3 pad after the jump thunk table. */
     cave = -1;
     for (i = tx_raw; i < tx_raw + tx_size; ) {
@@ -2574,7 +2662,7 @@ static int v5_apply(uint8_t *data, size_t n, uint32_t stack, wchar_t *err, int e
 
     a.b = code; a.n = 0; a.base = cave; a.cap = kV5Max; a.bad = 0;
     memset(code, 0xCC, sizeof code);
-    memcpy(code, V5_MAGIC, 8);
+    memcpy(code, V6_MAGIC, 8);
     code[8] = (uint8_t)stack;
     a.n = kV4Head;
 
@@ -2888,6 +2976,93 @@ static int v5_apply(uint8_t *data, size_t n, uint32_t stack, wchar_t *err, int e
     v4_hex(&a, "29 C1  48 8B 94 24 D8 02 00 00  48 63 84 24 E4 02 00 00  88 4C C2 5B");
     v4_jmp(&a, q_done);
 
+    /* Organize-cargo view, card back into a hold: copy the count too. */
+    SITE(o_pool, 5, 0);
+    v4_hex(&a, "8A 4C 24 5B  88 48 03  48 63 44 24 64");
+    v4_jmp(&a, o_pool + 5);
+
+    /* Organize-cargo view, card drawing: "x<count>" for more than one piece,
+     * centred in the bottom-right 60x38 of the 96x96 card (the grade box is
+     * the top-right 42x42), scaled like the grade box.
+     * cdraw: rcx = writer, rdx = record. */
+    L_fmtx = a.n;
+    v4_hex(&a, "78 25 64 00");                  /* "x%d" */
+    L_cdraw = a.n;
+    v4_hex(&a, "53 56  48 83 EC 58  48 89 CB  48 89 D1");
+    v4_call(&a, cave + L_cnt);
+    v4_hex(&a, "83 F9 01");
+    j1 = v4_jcc(&a, 0x86);                      /* jbe done */
+    v4_hex(&a, "89 CE  48 B9");
+    v4_u32(&a, 36);
+    v4_u32(&a, 58);
+    v4_hex(&a, "BA 01 00 00 00");
+    v4_call(&a, c_4093);
+    v4_hex(&a, "48 89 44 24 30  48 B9");
+    v4_u32(&a, 60);
+    v4_u32(&a, 38);
+    v4_hex(&a, "BA 01 00 00 00");
+    v4_call(&a, c_4093);
+    v4_hex(&a, "48 89 44 24 40");
+    v4_hex(&a, "8B 44 24 30  03 44 24 40  89 44 24 38");
+    v4_hex(&a, "8B 44 24 34  03 44 24 44  89 44 24 3C");
+    v4_hex(&a, "48 8D 54 24 30  48 89 D9");
+    v4_call(&a, c_fc5e);
+    v4_hex(&a, "48 8D 4C 24 48");
+    v4_lea_rdx(&a, cave + L_fmtx);
+    v4_hex(&a, "41 89 F0");
+    v4_calli(&a, iat_fmt);
+    v4_hex(&a, "48 C7 44 24 20 00 00 00 00  45 31 C9  45 31 C0  48 8D 54 24 48  48 89 D9");
+    v4_call(&a, c_1e65);
+    v4_fix(&a, j1, a.n);                        /* done: */
+    v4_hex(&a, "48 83 C4 58  5E 5B C3");
+    SITE(o_draw, 8, 0);
+    v4_hex(&a, "48 8D 8C 24 E0 00 00 00  48 8B 94 24 00 02 00 00  48 81 C2 C8 00 00 00");
+    v4_call(&a, cave + L_cdraw);
+    v4_hex(&a, "48 8D 8C 24 E0 00 00 00");
+    v4_jmp(&a, o_draw + 8);
+
+    /* Plaza handout, relief: matches += pieces. */
+    SITE(d_relief, 10, 0);
+    v4_hex(&a, "48 63 4C 24 38  48 8B 44 24 78  48 8D 0C C8");
+    v4_call(&a, cave + L_cnt);
+    v4_hex(&a, "8B 44 24 34  01 C8  89 44 24 34");
+    v4_jmp(&a, d_relief + 10);
+    /* Fashion pairs: amount += pieces / = pieces, at most 25. */
+    SITE(d_finc, 6, 0);
+    v4_hex(&a, "8B 44 C1 04  48 63 54 24 24  48 8B 4C 24 58  48 8D 0C D1");
+    v4_call(&a, cave + L_cnt);
+    v4_hex(&a, "01 C8  83 F8 19  76 05  B8 19 00 00 00");
+    v4_jmp(&a, d_finc + 6);
+    SITE(d_fnew, 8, 0);
+    v4_hex(&a, "48 8D 14 C1  48 63 44 24 24  48 8B 4C 24 58  48 8D 0C C1");
+    v4_call(&a, cave + L_cnt);
+    v4_hex(&a, "83 F9 19  76 05  B9 19 00 00 00  89 4A 04");
+    v4_jmp(&a, d_fnew + 8);
+    /* Culture price triples: amount += pieces / = pieces. */
+    SITE(d_dinc, 6, 0);
+    v4_hex(&a, "8B 44 01 08  48 63 54 24 24  48 8B 4C 24 58  48 8D 0C D1");
+    v4_call(&a, cave + L_cnt);
+    v4_hex(&a, "01 C8");
+    v4_jmp(&a, d_dinc + 6);
+    SITE(d_dnew, 8, 0);
+    v4_hex(&a, "48 8D 54 01 08  48 63 44 24 24  48 8B 4C 24 58  48 8D 0C C1");
+    v4_call(&a, cave + L_cnt);
+    v4_hex(&a, "89 0A");
+    v4_jmp(&a, d_dnew + 8);
+    /* Kind demand: a zero divisor gives the cap, the product is 64-bit, and
+     * anything above 25 is 25 (the clamp that follows would do the same).
+     * Vanilla-sized inputs give the vanilla result. */
+    SITE(d_kind, 44, 0);
+    v4_hex(&a, "8B 84 24 DC 01 00 00  8B 8C 24 E0 01 00 00  85 C9");
+    j1 = v4_jcc(&a, 0x84);                      /* jz cap */
+    v4_hex(&a, "33 D2  F7 F1  8B 8C 24 9C 01 00 00  48 0F AF C1  33 D2  B9 64 00 00 00  48 F7 F1  48 83 F8 19");
+    j2 = v4_jcc(&a, 0x86);                      /* jbe store */
+    v4_fix(&a, j1, a.n);                        /* cap: */
+    v4_hex(&a, "B8 19 00 00 00");
+    v4_fix(&a, j2, a.n);                        /* store: */
+    v4_hex(&a, "89 84 24 C8 01 00 00");
+    v4_jmp(&a, d_kind + 44);
+
     {
         int jumps = ns;
         /* In-place sites follow; they have no cave entry. */
@@ -2946,11 +3121,12 @@ static int v5_apply(uint8_t *data, size_t n, uint32_t stack, wchar_t *err, int e
     return 1;
 }
 
-/* 0 = not installed, otherwise the stack limit. DK4STK3 first, then the
- * older DK4STK2. */
+/* 0 = not installed, otherwise the stack limit. DK4STK4 first, then the
+ * older DK4STK3 (same header) and DK4STK2. */
 static uint32_t v4_stack(const uint8_t *data, size_t n) {
-    int cave = v5_cave(data, n), imm;
+    int cave = v6_cave(data, n), imm;
     uint32_t s;
+    if (cave < 0) cave = v5_cave(data, n);
     if (cave >= 0) {
         imm = v4_u16(data + cave + 14);
         if (imm <= kV4Head || (size_t)cave + (size_t)imm + 4 > n) return 0;
@@ -2964,6 +3140,12 @@ static uint32_t v4_stack(const uint8_t *data, size_t n) {
     if (imm <= kV4Head || (size_t)cave + (size_t)imm >= n) return 0;
     if (data[cave + imm] != data[cave + 8]) return 0;
     return data[cave + 8];
+}
+
+/* An older stacking patch (DK4STK3 or DK4STK2) is installed: it still counts
+ * slots in the organize-cargo view and the plaza handout. */
+static int stk_outdated(const uint8_t *data, size_t n) {
+    return v6_cave(data, n) < 0 && (v5_cave(data, n) >= 0 || v4_cave(data, n) >= 0);
 }
 
 /* Fashion goods at the exchange ("DK4FSH1").
@@ -3416,7 +3598,12 @@ static int patch_cap_buffer(uint8_t *data, size_t n, const CapValues *v, wchar_t
         if (kind == 2 && (size_t)cargo_at + 34 <= n)
             data[cargo_at + (int)sizeof kCargoVanilla] = 0xCC;
         {
-            int c5 = v5_cave(data, n), c4;
+            int c6 = v6_cave(data, n), c5, c4;
+            if (c6 >= 0 && !stk_restore(data, n, c6, kV5Max)) {
+                StringCchCopyW(err, (size_t)errn, L"已写入的商品堆叠认不出来，不能改。");
+                return 0;
+            }
+            c5 = v5_cave(data, n);
             if (c5 >= 0 && !stk_restore(data, n, c5, kV5Max)) {
                 StringCchCopyW(err, (size_t)errn, L"已写入的商品堆叠认不出来，不能改。");
                 return 0;
@@ -3564,7 +3751,7 @@ static int save_exe_bytes(const wchar_t *path, const uint8_t *data, size_t n, wc
 }
 
 static int read_game_caps(const wchar_t *dir, CapValues *v, wchar_t *status, int statusn) {
-    int i, found = 0, xp_off = 0, first_i = 0, no_fix = 0;
+    int i, found = 0, xp_off = 0, first_i = 0, no_fix = 0, old_stk = 0;
     CapValues first, cur;
     wchar_t path[MAX_PATH], err[240], names[120];
     memset(&first, 0, sizeof first);
@@ -3582,6 +3769,7 @@ static int read_game_caps(const wchar_t *dir, CapValues *v, wchar_t *status, int
             return 0;
         }
         if (find_proxy_buy(data, n, &site, &stub) != 2) no_fix = 1;
+        if (stk_outdated(data, n)) old_stk = 1;
         free(data);
         if (!found) {
             first = cur;
@@ -3608,9 +3796,12 @@ static int read_game_caps(const wchar_t *dir, CapValues *v, wchar_t *status, int
     }
     *v = first;
     StringCchPrintfW(status, (size_t)statusn,
-        L"%s已读取%s。%s",
+        L"%s%s已读取%s。%s",
         (no_fix && first.stat > 500)
             ? L"还没有地方舰队亏损修正，属性结算超过 500 时舰队每月会巨亏，请再点一次“写入主程序”。"
+            : L"",
+        old_stk
+            ? L"商品堆叠补丁是旧版：整理货物会把放回的整格变成 1 件，广场发放交易品按格数算，请再点一次“写入主程序”。"
             : L"",
         names,
         xp_off ? L"经验上限和单段等级对不上，写入时会按 30×等级² 重写。" : L"");
@@ -3951,6 +4142,8 @@ static LRESULT CALLBACK cap_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPar
             L"同商品堆叠原版是 1：每买 1 件就占 1 个舱位，可填 1 到 255。填 N 以后，这次交易里买的同一个商品先堆在同一个舱位里，满 N 件才再占下一个舱位；船上原有的货不会并进来。在交易所按住 Shift 点商品，一次最多买 N 件（钱或舱位不够时买到为止）。"
             L"舱位价格放得下时显示成“件数x单价”，放不下时分两行：上行“件数x”，下行单价。卖出、退货按件数算钱，存档、读档保留件数。"
             L"玩家势力的舰队（地方舰队、下属 NPC 舰队）自动买货时也按 N 件一格装货，卖货按件数结算；其他势力的 NPC 保持原版。物价不改。"
+            L"整理货物界面（整理货物、卖船或入坞时搬货、战后装战利品、广场发放交易品都用它）每格右下角显示“x件数”，货物整格移动，放回船舱时件数不变。"
+            L"广场发放交易品按件数算：救济疫病、饥荒、缺货的城市，带出新流行（最多按 25 件算，和原版整支舰队 25 格一样），文化圈卖价回升，都按发出去的件数。"
             L"存过堆叠货物的存档不要再用原版主程序读：原版会把件数当成买入价的一部分。\r\n"
             L"卖流行品（在交易所确认交易时）：占有率不到 80 时，每种流行品要卖到 货舱格数×门槛÷2 件（向上取整），占有率才加 两种流行品件数÷除数+1（最多加到 100）；"
             L"占有率 80 以上时，卖到“介绍信件数”给介绍信，卖到“推荐信件数”给推荐信（已有介绍信时升级成推荐信）。原版是 1、6、10、16，是按一格一件定的。"
