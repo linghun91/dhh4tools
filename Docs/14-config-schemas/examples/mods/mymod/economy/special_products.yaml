@@ -1,9 +1,0 @@
-schema: dk4.economy.special_products
-version: 2
-# 覆盖：只改伦敦 3 号槽，其余槽保持原版。
-towns:
-  - town: vanilla:london
-    $op: patch
-    slots:
-      $merge_by: slot          # slots 无 key 字段，按 slot 匹配（05-config-architecture「覆盖与合并」）
-      $patch: [{ slot: 3, trading_item: mymod:tea_brick }]

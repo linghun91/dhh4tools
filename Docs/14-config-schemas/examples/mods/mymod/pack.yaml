@@ -1,5 +1,0 @@
-# 包清单。规则见 Docs/00-overview/05-config-architecture.md「包清单」「覆盖与合并」。
-id: mymod
-version: 0.1.0
-requires: [{ id: vanilla-core, version: ">=1" }, { id: vanilla-world0, version: ">=1" }]
-load_after: [vanilla-world0]

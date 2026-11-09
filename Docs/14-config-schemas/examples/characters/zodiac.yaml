@@ -1,8 +1,0 @@
-schema: dk4.characters.zodiac
-version: 1
-# 片段。原版 .data 0x140688970，12 条 × 0x20，fn_14000b852 判界 < 0xC。所属：Docs/03-characters/03-abilities-skills-jobs.md
-# growth 是 F-PROG-10 的 g（rand(g+3)/2），按六维 key；11-progression 只读。
-signs:
-  - { key: vanilla:capricorn, vanilla_index: 0, growth: { vanilla:stamina: 0, vanilla:agility: 2, vanilla:charm: 1, vanilla:intelligence: 2, vanilla:spirit: 0, vanilla:luck: 1 } }
-  - { key: vanilla:aquarius,  vanilla_index: 1, growth: { vanilla:stamina: 1, vanilla:agility: 1, vanilla:charm: 0, vanilla:intelligence: 1, vanilla:spirit: 2, vanilla:luck: 1 } }
-  # 其余 10 行由导出脚本按段映射生成，不手抄（D10）

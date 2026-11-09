@@ -1,6 +1,0 @@
-schema: dk4.formulas.economy
-version: 2
-# 覆盖参数：patch 一个数
-npc_buy_cost:
-  $op: patch
-  params: { rand_span: 50 }
