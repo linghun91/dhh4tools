@@ -1,10 +1,19 @@
 @echo off
-setlocal
+setlocal EnableDelayedExpansion
 cd /d "%~dp0"
 
 if exist "C:\mingw64\bin\gcc.exe" set "PATH=C:\mingw64\bin;%PATH%"
 for /d %%D in ("%LOCALAPPDATA%\Microsoft\WinGet\Packages\BrechtSanders.WinLibs.POSIX.UCRT*") do (
   if exist "%%D\mingw64\bin\gcc.exe" set "PATH=%%D\mingw64\bin;%PATH%"
+)
+
+rem Every .c under src\ is part of the build; new files need no change here.
+rem File names must be unique across folders (MSVC puts all .obj in one folder).
+set "SRC="
+for /r "src" %%F in (*.c) do set "SRC=!SRC! "%%F""
+if not defined SRC (
+  echo No source files under src\.
+  exit /b 1
 )
 
 where gcc >nul 2>&1
@@ -34,7 +43,7 @@ echo windres not found. Building without the visual-styles manifest.
 :gcc_link
 set "SPECS="
 if not "%RES%"=="" set "SPECS=-specs=mingw-endfile.specs"
-gcc -O2 -std=c11 -Wall -Wextra -mwindows -static-libgcc -finput-charset=UTF-8 -fexec-charset=UTF-8 %SPECS% -o dk4save.exe dk4save.c %RES% -lcomctl32 -lcomdlg32 -lgdi32 -luser32
+gcc -O2 -std=c11 -Wall -Wextra -mwindows -static-libgcc -finput-charset=UTF-8 -fexec-charset=UTF-8 %SPECS% -Isrc -o dk4save.exe !SRC! %RES% -lcomctl32 -lcomdlg32 -lgdi32 -luser32
 set "ERR=%errorlevel%"
 if exist dk4save_res.o del dk4save_res.o
 if not "%ERR%"=="0" exit /b %ERR%
@@ -51,10 +60,11 @@ goto msvc_link
 :msvc_nometa
 echo rc not found. Building without the visual-styles manifest.
 :msvc_link
-cl /nologo /O2 /W3 /utf-8 /DUNICODE /D_UNICODE /Fe:dk4save.exe dk4save.c %RES% /link /SUBSYSTEM:WINDOWS comctl32.lib comdlg32.lib gdi32.lib user32.lib
+if not exist obj mkdir obj
+cl /nologo /O2 /W3 /utf-8 /DUNICODE /D_UNICODE /Isrc /Foobj\ /Fe:dk4save.exe !SRC! %RES% /link /SUBSYSTEM:WINDOWS comctl32.lib comdlg32.lib gdi32.lib user32.lib
 set "ERR=%errorlevel%"
 if exist dk4save.res del dk4save.res
-if exist dk4save.obj del dk4save.obj
+if exist obj rmdir /s /q obj
 if not "%ERR%"=="0" exit /b %ERR%
 
 :done

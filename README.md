@@ -6,7 +6,7 @@
 
 | 文件 | 作用 |
 | --- | --- |
-| `dk4save.c` | 全部源码（单文件，Win32 API） |
+| `src/` | 全部源码（C11，Win32 API），按功能分目录，见下节 |
 | `build.bat` | 构建脚本，优先 MinGW gcc，其次 MSVC |
 | `dk4save.rc` | 资源脚本，把清单嵌进 exe |
 | `dk4save.manifest` | Common Controls 6、DPI、长路径 |
@@ -16,7 +16,65 @@
 
 没有第三方库。链接的是系统自带的 `comctl32`、`comdlg32`、`gdi32`、`user32`。
 
-不进仓库的：`dk4save.exe`（构建产物）、`dk4save.ini`（运行时记下的游戏目录）、`.o` / `.obj` / `.res`（中间文件）。
+不进仓库的：`dk4save.exe`（构建产物）、`dk4save.ini`（运行时记下的游戏目录）、`.o` / `.obj` / `.res`、`obj/`（中间文件）。
+
+## 源码结构
+
+```
+src/
+  main.c                程序入口 WinMain
+  common/               与业务无关的基础设施
+    platform.h          Win32 编译设置与系统头文件（所有文件最先包含）
+    bytes.[ch]          小端读写
+    backup.[ch]         写入前备份（name.bak 与带时间戳的备份）
+  save/                 存档
+    save.h              存档格式（偏移、记录结构）与本目录全部接口
+    save_file.c         读取、校验和增量、写入、旧版损坏检查
+    person.c            人物记录：六维、等级、势力、名字
+    sailor_names.c      人物 0..86 的显示名
+    save_dir.c          存档目录与存档栏文件名
+  exe/                  主程序文件层（不含具体补丁）
+    game_exe.[ch]       四个语言版主程序：定位游戏目录、读写（带备份）、还原原版
+    pe.[ch]             PE 解析：.text 范围、RVA 换算、导入表
+    x64asm.[ch]         x64 机器码拼装（asm_*）与字节模式查找（pat_*）
+  patch/                主程序补丁
+    caps.[ch]           等级/属性/技能/港口上限；读写全部补丁的总入口
+                        read_exe_image() / patch_exe_image()
+    cave.[ch]           补丁共用的代码洞格式（魔数、头、原字节表、还原）
+    stack/              商品堆叠（DK4STK5）
+      stack.h
+      stack_slot.c      买卖与货物代码里的补丁点，移除旧版布局
+      stack_cave.c      识别各版本堆叠代码洞，读回堆叠数
+      stack_apply.c     生成并安装堆叠补丁代码
+    fashion.[ch]        卖流行品参数（DK4FSH1）
+    proxy_buy.[ch]      地方舰队买货亏损修正
+    game_patch.[ch]     对游戏目录下所有语言版主程序批量读取 / 写入
+  ui/                   界面
+    app.[ch]            主窗口全局状态 g、控件 id、DPI 缩放 S() 等
+    widgets.[ch]        控件小工具（列表视图、数字输入框）
+    main_window.[ch]    主窗口：创建控件、布局、窗口过程
+    person_editor.[ch]  人物列表与编辑表单
+    save_slots.[ch]     存档栏，打开 / 刷新 / 保存
+    cap_window.[ch]     "游戏上限"窗口
+```
+
+依赖只能向下：`ui` → `patch` → `exe` / `save` → `common`。`save` 与 `exe`/`patch` 互不引用。
+
+约定：
+
+- 一个模块一对 `.c` / `.h`；一个功能拆成多个 `.c` 时共用一个头文件（`save/save.h`、`patch/stack/stack.h`）。
+- 只在本文件用的函数、常量一律 `static`；别的文件要用的才写进头文件。
+- 头文件都有 include guard，并先包含 `common/platform.h`；`.c` 先包含自己的头文件。
+- include 路径从 `src/` 算起，如 `#include "patch/stack/stack.h"`。
+- 整个 `src/` 里 `.c` 文件名不能重名（MSVC 把 `.obj` 放进同一目录）。
+- 注释用简短中文。
+
+新增功能放哪里：
+
+- **新的主程序补丁**：在 `patch/` 下新建 `xxx.c` / `xxx.h`，复杂的建子目录（参照 `stack/`）。需要能还原原版时用 `cave.h` 的代码洞格式，另起一个魔数。要在界面上调的数值加进 `caps.h` 的 `CapValues`，在 `caps.c` 的 `read_exe_image()` / `patch_exe_image()` 里调用，输入框加在 `ui/cap_window.c`。
+- **新的存档字段**：偏移写进 `save/save.h`，读写放 `save/` 下对应文件。写入的字段要在 `save_file.c` 的 `field_at()` 里登记宽度，否则保存时算不出校验和、会拒绝写入。
+- **新的窗口**：`ui/` 下新建 `xxx_window.[ch]`。
+- `build.bat` 自动编译 `src/` 下全部 `.c`，加文件不用改它。
 
 ## 构建
 

@@ -4,7 +4,8 @@
 !.gitignore
 !README.md
 !build.bat
-!dk4save.c
+!src/
+!src/**
 !dk4save.rc
 !dk4save.manifest
 !mingw-endfile.specs
